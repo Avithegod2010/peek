@@ -16,3 +16,4 @@ kotlin-log*.txt
 hs_err_pid*.log
 .kotlin/
 kotlin-js-store/
+*.apk
