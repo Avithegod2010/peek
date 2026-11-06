@@ -20,9 +20,16 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 
 ### Following
 - Add by username, `@handle`, or a full `instagram.com/...` link
+- **Global search by name** — look for “Cristiano Ronaldo” without knowing `@cristiano`
 - Local follow / unfollow, pin favourites to the top of your circle
-- Starter pack of curated public accounts for a quick first run
 - Optional searchable overview of everyone in your circle
+
+### Discover & Explore
+- Curated **Starter pack** with real avatars, bios and follower counts loaded live
+- **Explore popular creators** across Sport, Music, Film & TV, Tech, Nature, Art, Fashion, Food, Gaming, Travel, Business and Comedy
+- Material You category colours, animated cards and one-tap local follow
+- Name search falls back to public web discovery; the profile itself is always read directly
+- Recent searches and suggested names
 
 ### Home feed
 - A quiet feed of the latest posts from accounts you follow
@@ -53,10 +60,16 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 
 ### Under the hood
 - Guest-access parsing of Instagram's server-rendered public pages
+- Name discovery through a public web search, then direct public-profile reading
 - Room database as the single source of truth
 - WorkManager background sync with optional new-post notifications
 - Coil image cache with stable cache keys, Media3 ExoPlayer video
 - Offline banner and graceful handling of rate limits / private accounts
+- Material You motion: animated tab pills, category transitions, press states and haptic feedback
+
+## Roadmap
+
+A large, opinionated idea list lives in [IDEAS.md](IDEAS.md) — search filters, collections, widgets, tablet layouts, offline archives, accessibility, privacy controls and more.
 
 ## Screenshots
 
@@ -64,17 +77,21 @@ Sometimes you just want to see what a few public accounts are sharing, without s
   <img src="docs/screenshots/onboarding.png" width="260" alt="Peek onboarding" />
 </p>
 
-| Home | Discover |
+| Home | Explore |
 | --- | --- |
-| <img src="docs/screenshots/home.png" width="330" alt="Home feed" /> | <img src="docs/screenshots/discover.png" width="330" alt="Discover" /> |
+| <img src="docs/screenshots/home.png" width="330" alt="Home feed" /> | <img src="docs/screenshots/explore.png" width="330" alt="Explore popular creators" /> |
 
-| Profile | Reels |
+| Search by name | Profile |
 | --- | --- |
-| <img src="docs/screenshots/profile.png" width="330" alt="Profile" /> | <img src="docs/screenshots/reels.png" width="330" alt="Reels" /> |
+| <img src="docs/screenshots/search.png" width="330" alt="Global name search" /> | <img src="docs/screenshots/profile.png" width="330" alt="Profile" /> |
 
-| Post | Settings |
+| Reels | Post viewer |
 | --- | --- |
-| <img src="docs/screenshots/post.png" width="330" alt="Post viewer" /> | <img src="docs/screenshots/settings.png" width="330" alt="Settings" /> |
+| <img src="docs/screenshots/reels.png" width="330" alt="Reels" /> | <img src="docs/screenshots/post.png" width="330" alt="Post viewer" /> |
+
+| Library | Settings |
+| --- | --- |
+| <img src="docs/screenshots/library.png" width="330" alt="Library" /> | <img src="docs/screenshots/settings.png" width="330" alt="Settings" /> |
 
 ## Build
 

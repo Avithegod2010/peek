@@ -6,6 +6,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -58,16 +62,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.data.repo.SyncEvent
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.LocalReduceMotion
 import com.avi.peek.ui.components.LocalSnackbarHostState
-import com.avi.peek.ui.screens.DiscoverScreen
+import com.avi.peek.ui.screens.ExploreScreen
 import com.avi.peek.ui.screens.DownloadsScreen
 import com.avi.peek.ui.screens.FollowingScreen
 import com.avi.peek.ui.screens.HomeScreen
@@ -77,6 +83,7 @@ import com.avi.peek.ui.screens.PostScreen
 import com.avi.peek.ui.screens.ProfileScreen
 import com.avi.peek.ui.screens.ReelsScreen
 import com.avi.peek.ui.screens.SavedScreen
+import com.avi.peek.ui.screens.SearchScreen
 import com.avi.peek.ui.screens.SettingsScreen
 import com.avi.peek.ui.theme.PeekTheme
 import com.avi.peek.util.DeepLinkBus
@@ -93,7 +100,7 @@ private data class TopTab(
 private val topTabs = listOf(
     TopTab("home", "Home", Icons.Rounded.Home),
     TopTab("reels", "Reels", Icons.Rounded.Movie),
-    TopTab("discover", "Discover", Icons.Rounded.Explore),
+    TopTab("discover", "Explore", Icons.Rounded.Explore),
     TopTab("library", "Library", Icons.Rounded.CollectionsBookmark),
 )
 
@@ -159,6 +166,11 @@ private fun MainScaffold(
 
     fun openPost(code: String) {
         navController.navigate("post/$code")
+    }
+
+    fun openSearch(query: String = "") {
+        val route = if (query.isBlank()) "search" else "search?q=${Uri.encode(query)}"
+        navController.navigate(route)
     }
 
     LaunchedEffect(Unit) {
@@ -233,15 +245,33 @@ private fun MainScaffold(
                     onOpenPost = { openPost(it) },
                     onOpenProfile = { openProfile(it) },
                     onOpenDiscover = { navigateTab("discover") },
+                    onOpenSearch = { openSearch() },
                 )
             }
             composable("reels") {
                 ReelsScreen(onOpenProfile = { openProfile(it) })
             }
             composable("discover") {
-                DiscoverScreen(
+                ExploreScreen(
+                    onOpenSearch = { openSearch() },
                     onOpenProfile = { openProfile(it) },
                     onOpenFollowing = { navController.navigate("following") },
+                )
+            }
+            composable(
+                route = "search?q={q}",
+                arguments = listOf(
+                    navArgument("q") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
+            ) { entry ->
+                val initialQuery = entry.arguments?.getString("q").orEmpty()
+                SearchScreen(
+                    initialQuery = initialQuery,
+                    onBack = { navController.popBackStack() },
+                    onOpenProfile = { openProfile(it) },
                 )
             }
             composable("library") {
@@ -323,6 +353,16 @@ private fun PeekBottomBar(
             topTabs.forEach { tab ->
                 val selected = currentRoute == tab.route
                 val interaction = remember { MutableInteractionSource() }
+                val pillColor by animateColorAsState(
+                    targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    animationSpec = tween(220),
+                    label = "tabPill",
+                )
+                val iconScale by animateFloatAsState(
+                    targetValue = if (selected) 1.08f else 1f,
+                    animationSpec = spring(dampingRatio = 0.55f, stiffness = 650f),
+                    label = "tabScale",
+                )
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -342,17 +382,19 @@ private fun PeekBottomBar(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (selected) MaterialTheme.colorScheme.primaryContainer
-                                else Color.Transparent,
-                            ),
+                            .background(pillColor),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             tab.icon,
                             contentDescription = tab.label,
                             tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(21.dp),
+                            modifier = Modifier
+                                .size(21.dp)
+                                .graphicsLayer {
+                                    scaleX = iconScale
+                                    scaleY = iconScale
+                                },
                         )
                     }
                     Spacer(Modifier.height(2.dp))

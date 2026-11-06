@@ -71,6 +71,7 @@ import com.avi.peek.ui.components.LocalReduceMotion
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.OfflineBanner
 import com.avi.peek.ui.components.PeekImage
+import com.avi.peek.ui.components.SearchEntry
 import com.avi.peek.ui.components.ShimmerBox
 import com.avi.peek.ui.components.VerifiedBadge
 import com.avi.peek.util.LocalPeekHaptics
@@ -88,6 +89,7 @@ fun HomeScreen(
     onOpenPost: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
     onOpenDiscover: () -> Unit,
+    onOpenSearch: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -125,10 +127,36 @@ fun HomeScreen(
                     onAdd = onOpenDiscover,
                 )
             }
+            item(key = "search") {
+                SearchEntry(
+                    modifier = Modifier.padding(horizontal = 18.dp),
+                    onClick = { haptics.tap(); onOpenSearch() },
+                )
+            }
             item(key = "offline") {
                 OfflineBanner(visible = !online)
             }
             if (following.isNotEmpty()) {
+                item(key = "circle-label") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Your circle",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            "${following.size} ${if (following.size == 1) "follow" else "follows"}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 item(key = "stories") {
                     StoryStrip(
                         profiles = following,
@@ -192,7 +220,9 @@ fun HomeScreen(
                         post = post,
                         hideLikeCounts = settings.hideLikeCounts,
                         downloadProgress = downloads[post.media.code],
-                        modifier = Modifier.padding(horizontal = 12.dp),
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .animateItem(),
                         onOpenPost = { onOpenPost(post.media.code) },
                         onOpenProfile = { onOpenProfile(post.profile.username) },
                         onToggleLike = { viewModel.toggleLike(post.media.code) },
@@ -280,7 +310,7 @@ private fun HomeHeader(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Peek", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Peek", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text(
                     if (followingCount == 0) "Your quiet Instagram" else "$followingCount in your quiet circle",
                     style = MaterialTheme.typography.labelMedium,

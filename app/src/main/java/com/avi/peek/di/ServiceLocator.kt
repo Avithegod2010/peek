@@ -5,6 +5,7 @@ import coil.ImageLoader
 import coil.disk.DiskCache
 import com.avi.peek.data.local.PeekDatabase
 import com.avi.peek.data.local.SettingsStore
+import com.avi.peek.data.remote.GlobalSearchClient
 import com.avi.peek.data.remote.GuestInstagramClient
 import com.avi.peek.data.repo.BackupManager
 import com.avi.peek.data.repo.DownloadStore
@@ -32,6 +33,8 @@ object ServiceLocator {
     val okHttp by lazy { GuestInstagramClient.defaultClient() }
 
     val client: GuestInstagramClient by lazy { GuestInstagramClient(okHttp) }
+
+    val globalSearch: GlobalSearchClient by lazy { GlobalSearchClient(okHttp) }
 
     val database: PeekDatabase by lazy { PeekDatabase.build(appContext) }
 

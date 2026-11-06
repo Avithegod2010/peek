@@ -111,6 +111,40 @@ class PeekRepository(
 
     suspend fun followScraped(scraped: ScrapedProfile): CacheResult = cacheAndFollow(scraped)
 
+    /**
+     * Loads a profile for the Explore directory/search without following it.
+     * The profile (and its first page of media) is cached so opening it later is instant.
+     */
+    suspend fun prefetchDirectoryProfile(raw: String): ProfileEntity? = withContext(Dispatchers.IO) {
+        val username = GuestInstagramClient.normalizeUsername(raw) ?: return@withContext null
+        val cached = db.profiles().get(username)
+        if (cached != null && cached.pk != null &&
+            System.currentTimeMillis() - cached.lastFetchedAt < 12 * 60 * 60 * 1000
+        ) {
+            return@withContext cached
+        }
+        runCatching {
+            val scraped = client.fetchProfile(username)
+            cacheProfile(scraped, followed = null, followedAt = null, source = "catalog").profile
+        }.onFailure {
+            cached?.let { old -> db.profiles().setError(username, it.userMessage()) }
+        }.getOrNull()
+    }
+
+    /** Follows an already cached directory profile without a second network request. */
+    suspend fun followCached(username: String): Boolean = withContext(Dispatchers.IO) {
+        val normalized = GuestInstagramClient.normalizeUsername(username) ?: return@withContext false
+        db.profiles().get(normalized) ?: return@withContext false
+        db.profiles().setFollowed(normalized, true, System.currentTimeMillis())
+        settings.setLastFullSync(System.currentTimeMillis())
+        true
+    }
+
+    suspend fun cachedProfile(username: String): ProfileEntity? = withContext(Dispatchers.IO) {
+        val normalized = GuestInstagramClient.normalizeUsername(username) ?: return@withContext null
+        db.profiles().get(normalized)
+    }
+
     private suspend fun cacheAndFollow(scraped: ScrapedProfile): CacheResult {
         val now = System.currentTimeMillis()
         val result = cacheProfile(scraped, followed = true, followedAt = now)
@@ -149,6 +183,8 @@ class PeekRepository(
         scraped: ScrapedProfile,
         followed: Boolean?,
         followedAt: Long?,
+        source: String? = null,
+        cacheMedia: Boolean = true,
     ): CacheResult = withContext(Dispatchers.IO) {
         val username = scraped.username.lowercase()
         val existingProfile = db.profiles().get(username)
@@ -177,10 +213,10 @@ class PeekRepository(
             lastFetchedAt = now,
             lastViewedAt = existingProfile?.lastViewedAt,
             lastError = null,
-            source = existingProfile?.source ?: "manual",
+            source = source ?: existingProfile?.source ?: "manual",
         )
 
-        val items = scraped.media.mapIndexed { index, node ->
+        val items = if (!cacheMedia) emptyList() else scraped.media.mapIndexed { index, node ->
             val old = existingMedia[node.code]
             MediaEntity(
                 code = node.code,
@@ -221,12 +257,14 @@ class PeekRepository(
         }
 
         db.profiles().upsert(profile)
-        db.media().upsertAll(items)
-        if (items.isNotEmpty()) {
-            db.media().pruneProfile(username, items.map { it.code })
+        if (cacheMedia) {
+            db.media().upsertAll(items)
+            if (items.isNotEmpty()) {
+                db.media().pruneProfile(username, items.map { it.code })
+            }
         }
 
-        val newCodes = if (existingMedia.isEmpty()) {
+        val newCodes = if (existingMedia.isEmpty() || !cacheMedia) {
             emptyList()
         } else {
             scraped.media.map { it.code }.filterNot { existingMedia.containsKey(it) }

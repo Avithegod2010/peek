@@ -29,24 +29,3 @@ data class NewPostNotice(
     val count: Int,
     val latestCode: String,
 )
-
-data class StarterAccount(
-    val username: String,
-    val label: String,
-    val category: String,
-)
-
-val STARTER_PACK = listOf(
-    StarterAccount("nasa", "NASA", "Space"),
-    StarterAccount("natgeo", "National Geographic", "Nature"),
-    StarterAccount("bbcearth", "BBC Earth", "Nature"),
-    StarterAccount("nasawebb", "NASA Webb", "Space"),
-    StarterAccount("google", "Google", "Tech"),
-    StarterAccount("netflix", "Netflix", "Film"),
-    StarterAccount("f1", "Formula 1", "Sport"),
-    StarterAccount("louvre", "Louvre Museum", "Art"),
-    StarterAccount("voguemagazine", "Vogue", "Fashion"),
-    StarterAccount("spotify", "Spotify", "Music"),
-    StarterAccount("unitednations", "United Nations", "World"),
-    StarterAccount("instagram", "Instagram", "Product"),
-)

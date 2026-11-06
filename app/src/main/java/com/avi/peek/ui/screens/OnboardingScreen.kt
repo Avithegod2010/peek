@@ -46,7 +46,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.avi.peek.data.repo.STARTER_PACK
+import com.avi.peek.data.directory.CreatorDirectory
 import com.avi.peek.ui.components.LocalReduceMotion
 import com.avi.peek.ui.components.colorForUsername
 import com.avi.peek.util.LocalPeekHaptics
@@ -202,19 +202,19 @@ fun OnboardingScreen(
             }
             Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                STARTER_PACK.take(5).forEach { account ->
+                CreatorDirectory.starter.take(5).forEach { creator ->
                     Box(
                         Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(colorForUsername(account.username).copy(alpha = 0.22f)),
+                            .background(colorForUsername(creator.username).copy(alpha = 0.22f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            account.label.take(1),
+                            creator.name.take(1),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = colorForUsername(account.username),
+                            color = colorForUsername(creator.username),
                         )
                     }
                 }

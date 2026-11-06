@@ -466,6 +466,16 @@ private fun ReelAction(
             }
         }
         Spacer(Modifier.height(3.dp))
-        Text(label, color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.labelSmall)
+        Text(
+            label,
+            color = Color.White.copy(alpha = 0.86f),
+            style = MaterialTheme.typography.labelSmall.copy(
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = Color.Black.copy(alpha = 0.65f),
+                    offset = androidx.compose.ui.geometry.Offset(0f, 1f),
+                    blurRadius = 4f,
+                ),
+            ),
+        )
     }
 }
