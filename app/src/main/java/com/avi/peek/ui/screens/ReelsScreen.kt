@@ -1,5 +1,7 @@
 package com.avi.peek.ui.screens
 
+import android.app.PictureInPictureParams
+import android.util.Rational
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Share
@@ -75,6 +78,7 @@ import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.PeekImage
 import com.avi.peek.ui.components.PeekVideoSurface
 import com.avi.peek.ui.components.VerifiedBadge
+import com.avi.peek.ui.components.findActivity
 import com.avi.peek.ui.components.rememberPeekPlayer
 import com.avi.peek.util.LocalPeekHaptics
 import com.avi.peek.util.compactCount
@@ -94,6 +98,7 @@ fun ReelsScreen(
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val context = LocalContext.current
+    val activity = context.findActivity()
     val haptics = LocalPeekHaptics.current
     var muted by remember { mutableStateOf(settings.muteVideos) }
 
@@ -166,6 +171,28 @@ fun ReelsScreen(
                 )
             }
             Spacer(Modifier.weight(1f))
+            if (activity != null) {
+                Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.3f)) {
+                    IconButton(
+                        onClick = {
+                            runCatching {
+                                activity.enterPictureInPictureMode(
+                                    PictureInPictureParams.Builder()
+                                        .setAspectRatio(Rational(9, 16))
+                                        .build(),
+                                )
+                            }
+                        },
+                    ) {
+                        Icon(
+                            Icons.Rounded.PictureInPictureAlt,
+                            contentDescription = "Picture in picture",
+                            tint = Color.White,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(6.dp))
+            }
             Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.3f)) {
                 IconButton(onClick = { muted = !muted; haptics.tap() }) {
                     Icon(

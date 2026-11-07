@@ -4,12 +4,17 @@ import android.content.Context
 import coil.ImageLoader
 import coil.disk.DiskCache
 import com.avi.peek.data.local.PeekDatabase
+import com.avi.peek.data.local.SearchStore
 import com.avi.peek.data.local.SettingsStore
 import com.avi.peek.data.remote.GlobalSearchClient
 import com.avi.peek.data.remote.GuestInstagramClient
 import com.avi.peek.data.repo.BackupManager
+import com.avi.peek.data.repo.DownloadQueue
 import com.avi.peek.data.repo.DownloadStore
 import com.avi.peek.data.repo.PeekRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import com.avi.peek.util.NetworkMonitor
 import java.io.File
 
@@ -28,6 +33,8 @@ object ServiceLocator {
 
     val settings: SettingsStore by lazy { SettingsStore(appContext) }
 
+    val searchStore: SearchStore by lazy { SearchStore(appContext) }
+
     val network: NetworkMonitor by lazy { NetworkMonitor(appContext) }
 
     val okHttp by lazy { GuestInstagramClient.defaultClient() }
@@ -40,6 +47,8 @@ object ServiceLocator {
 
     val downloads: DownloadStore by lazy { DownloadStore(appContext) }
 
+    private val appScope: CoroutineScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+
     val repository: PeekRepository by lazy {
         PeekRepository(
             context = appContext,
@@ -50,6 +59,8 @@ object ServiceLocator {
             downloads = downloads,
         )
     }
+
+    val downloadQueue: DownloadQueue by lazy { DownloadQueue(repository, appScope) }
 
     val backupManager: BackupManager by lazy { BackupManager(appContext, repository) }
 

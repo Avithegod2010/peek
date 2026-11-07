@@ -26,50 +26,72 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 
 ### Discover & Explore
 - Curated **Starter pack** with real avatars, bios and follower counts loaded live
-- **Explore popular creators** across Sport, Music, Film & TV, Tech, Nature, Art, Fashion, Food, Gaming, Travel, Business and Comedy
+- **Explore popular creators** across Sport, Music, Film & TV, Tech, Nature, Art, Photography, Fashion, Food, Gaming, Travel, Business and Comedy
+- Themed **packs** — Museums, Formula 1, Food, Architecture, Photography — plus a **Hidden gems** pack for smaller public accounts
+- Import a shared pack from text or JSON; export any pack as a readable list plus a `peek://pack` link
+- **Local suggestions** based on the categories you already follow
+- Recently viewed profiles, recent searches and suggested names
 - Material You category colours, animated cards and one-tap local follow
 - Name search falls back to public web discovery; the profile itself is always read directly
-- Recent searches and suggested names
+
+### Search
+- Search by **name**, `@handle`, or a pasted profile / post / reel link
+- Resolve a post or reel link to its author without leaving the app
+- **Filters** for category, verified accounts, follower range and country
+- **Saved searches and aliases** — teach Peek that "CR7" means `@cristiano`
+- **Offline search** across cached bios, usernames and captions
+- Official-looking accounts are marked from their public verified badge, never guessed
 
 ### Home feed
 - A quiet feed of the latest posts from accounts you follow
-- Story-style avatar strip with unread rings
+- Story-style avatar strip with unread rings and a count badge in the navigation bar
 - Filters for **All / Photos / Reels / Videos**
 - Double-tap to like with a particle heart burst and haptics
-- Local likes, bookmarks and "save offline" downloads
+- Local liked feed, bookmarks and "save offline" downloads
 - Pull to refresh; cached content opens instantly
 
 ### Profiles
 - Full profile header with avatar, bio, links, stats and highlights
 - Posts and Reels tabs, plus bookmarks saved from that profile
+- **More like this** — related public creators from the same category, with local follow
 - Local saved state shown on the grid
 - Share, copy, open on Instagram, pin, unfollow or remove a profile
+- Shared-element avatar transition from your Home circle into the profile header
 
 ### Posts & reels
-- Full-screen post viewer with carousel paging
-- Video playback with mute, play/pause and loop
+- Full-screen post viewer with carousel paging and **swipe-down dismissal**
+- **Pinch-to-zoom** photos with pan and double-tap reset
+- Video playback with mute, play/pause, loop, **scrubbing**, **speed control** and a caption overlay
+- **Picture-in-picture** from the Reels tab
+- **Audio pages** for every cached reel: tap the audio line to see other posts using it
 - Reels tab with a vertically snapping player and action rail
-- Double-tap like, comment jump, share, bookmark, download
+- Double-tap like, read-only comments sheet, share, bookmark, download
 - Caption, date, location, like count, comment count and audio
 
 ### Library
 - **Saved** posts grid with filters
-- **Offline** downloads manager with file sizes
-- Backup export / import as a small JSON (follows, bookmarks, likes)
+- **Liked** local feed and a **Weekly recap** with saved/downloaded/viewed counts
+- **Offline** downloads manager with file sizes and a **download queue** that can pause, resume, retry and remove carousel downloads
+- **Passphrase-encrypted backups** (AES-256-GCM + PBKDF2), with legacy JSON restore
+- **HTML and JSON archive export** of cached, saved and liked posts
 - Settings for theme, palette, haptics, motion, sync depth, Wi-Fi only, notifications and storage
+- Biometric / device-lock app lock and a one-handed Home search action
+- Adaptive navigation rail on tablets and foldables, bottom bar on phones
 
 ### Under the hood
 - Guest-access parsing of Instagram's server-rendered public pages
 - Name discovery through a public web search, then direct public-profile reading
-- Room database as the single source of truth
+- Room database as the single source of truth; DataStore for settings, aliases and saved searches
 - WorkManager background sync with optional new-post notifications
 - Coil image cache with stable cache keys, Media3 ExoPlayer video
 - Offline banner and graceful handling of rate limits / private accounts
-- Material You motion: animated tab pills, category transitions, press states and haptic feedback
+- Material You motion: animated tab pills, shared elements, category transitions, press states and haptic feedback
+- Home-screen widget, Quick Settings search tile, app shortcuts and an Instagram share target
+- RTL-ready layouts, meaningful content descriptions and scalable typography
 
 ## Roadmap
 
-A large, opinionated idea list lives in [IDEAS.md](IDEAS.md) — search filters, collections, widgets, tablet layouts, offline archives, accessibility, privacy controls and more.
+A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are intentionally partial: Instagram does not expose comment text to guests, so Peek shows the public count and a read-only hand-off; video captions fall back to the post caption because no subtitle track is published. Full translation and a high-contrast runtime audit are still on the list.
 
 ## Screenshots
 
@@ -93,6 +115,10 @@ A large, opinionated idea list lives in [IDEAS.md](IDEAS.md) — search filters,
 | --- | --- |
 | <img src="docs/screenshots/library.png" width="330" alt="Library" /> | <img src="docs/screenshots/settings.png" width="330" alt="Settings" /> |
 
+| Themed pack | Explore packs |
+| --- | --- |
+| <img src="docs/screenshots/pack.png" width="330" alt="Museums pack" /> | <img src="docs/screenshots/explore.png" width="330" alt="Explore packs" /> |
+
 ## Build
 
 Requirements: Android Studio or a JDK 17 + Android SDK 36 setup.
@@ -106,6 +132,10 @@ cd peek
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 Minimum Android version: **8.0 (API 26)**. Material You dynamic colour is used on Android 12+; older devices get a hand-tuned fallback palette.
+
+### F-Droid
+
+The repository includes F-Droid metadata in [`fdroid/com.avi.peek.yml`](fdroid/com.avi.peek.yml) and reproducible-build notes in [`docs/FDROID.md`](docs/FDROID.md). The app has no Google Play Services, Firebase, analytics or proprietary binaries.
 
 ## How the guest reader works
 

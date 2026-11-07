@@ -54,6 +54,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -182,6 +184,9 @@ fun FeedPostCard(
                     .fillMaxWidth()
                     .aspectRatio(4f / 5f)
                     .clip(RoundedCornerShape(24.dp))
+                    .semantics {
+                        contentDescription = "Open post by ${media.username}"
+                    }
                     .pointerInput(media.code, media.isLiked) {
                         detectTapGestures(
                             onTap = { onOpenPost() },
@@ -422,6 +427,7 @@ fun MediaGridItem(
             .aspectRatio(1f)
             .clip(RoundedCornerShape(14.dp))
             .pressScale(interaction, 0.94f)
+            .semantics { contentDescription = "Open post by ${media.username}" }
             .clickable(
                 interactionSource = interaction,
                 indication = null,

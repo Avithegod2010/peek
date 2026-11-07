@@ -26,6 +26,7 @@ class ReelsViewModel : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val downloads = repo.downloadProgress
+    private val queue = ServiceLocator.downloadQueue
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages = _messages.asSharedFlow()
@@ -52,10 +53,7 @@ class ReelsViewModel : ViewModel() {
     }
 
     fun download(code: String) {
-        viewModelScope.launch {
-            runCatching { repo.download(code) }
-                .onFailure { _messages.emit(it.userMessage()) }
-                .onSuccess { _messages.emit("Reel saved offline") }
-        }
+        queue.enqueue(code)
+        _messages.tryEmit("Reel added to the download queue")
     }
 }

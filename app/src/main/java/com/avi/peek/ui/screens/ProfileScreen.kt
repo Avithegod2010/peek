@@ -85,7 +85,9 @@ import com.avi.peek.ui.components.Avatar
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.MediaGridItem
+import com.avi.peek.ui.components.MiniCreatorCard
 import com.avi.peek.ui.components.PeekImage
+import com.avi.peek.ui.components.SectionHeader
 import com.avi.peek.ui.components.ShimmerBox
 import com.avi.peek.ui.components.VerifiedBadge
 import com.avi.peek.ui.components.pressScale
@@ -102,6 +104,8 @@ fun ProfileScreen(
     username: String,
     onBack: () -> Unit,
     onOpenPost: (String) -> Unit,
+    onOpenProfile: (String) -> Unit,
+    headerAvatarModifier: Modifier = Modifier,
     viewModel: ProfileViewModel = viewModel(
         key = "profile_$username",
         factory = SimpleViewModelFactory { ProfileViewModel(username) },
@@ -109,6 +113,9 @@ fun ProfileScreen(
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val visibleMedia by viewModel.visibleMedia.collectAsStateWithLifecycle()
+    val relatedProfiles by viewModel.relatedProfiles.collectAsStateWithLifecycle()
+    val relatedBusy by viewModel.relatedBusy.collectAsStateWithLifecycle()
+    val following by viewModel.following.collectAsStateWithLifecycle()
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     val downloads by viewModel.downloadProgress.collectAsStateWithLifecycle()
@@ -164,6 +171,13 @@ fun ProfileScreen(
                             },
                             onMenu = { menuOpen = true },
                             onRefresh = viewModel::refresh,
+                            relatedCreators = viewModel.relatedCreators,
+                            relatedProfiles = relatedProfiles,
+                            following = following.map { it.username }.toSet(),
+                            relatedBusy = relatedBusy,
+                            onOpenRelated = onOpenProfile,
+                            onFollowRelated = viewModel::followRelated,
+                            headerAvatarModifier = headerAvatarModifier,
                         )
                     }
                     if (visibleMedia.isEmpty()) {
@@ -262,6 +276,13 @@ private fun ProfileHeader(
     onShare: () -> Unit,
     onMenu: () -> Unit,
     onRefresh: () -> Unit,
+    relatedCreators: List<com.avi.peek.data.directory.PopularCreator>,
+    relatedProfiles: Map<String, ProfileEntity>,
+    following: Set<String>,
+    relatedBusy: Set<String>,
+    onOpenRelated: (String) -> Unit,
+    onFollowRelated: (com.avi.peek.data.directory.PopularCreator) -> Unit,
+    headerAvatarModifier: Modifier,
 ) {
     val profile = value.profile
     val media = value.media
@@ -314,6 +335,7 @@ private fun ProfileHeader(
                 url = profile.profilePicUrl,
                 username = profile.username,
                 size = 112.dp,
+                modifier = headerAvatarModifier,
                 ring = true,
             )
             Spacer(Modifier.height(12.dp))
@@ -462,6 +484,34 @@ private fun ProfileHeader(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
+        if (relatedCreators.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            SectionHeader(
+                title = "More like this",
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+            Spacer(Modifier.height(9.dp))
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(relatedCreators, key = { "related-${it.username}" }) { creator ->
+                    MiniCreatorCard(
+                        creator = creator,
+                        profile = relatedProfiles[creator.username],
+                        following = creator.username in following,
+                        busy = creator.username in relatedBusy,
+                        onClick = { onOpenRelated(creator.username) },
+                        onFollow = {
+                            haptics.confirm()
+                            onFollowRelated(creator)
+                        },
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))

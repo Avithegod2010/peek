@@ -27,6 +27,8 @@ import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Sync
@@ -61,6 +63,8 @@ fun LibraryScreen(
     onOpenFollowing: () -> Unit,
     onOpenSaved: () -> Unit,
     onOpenDownloads: () -> Unit,
+    onOpenLiked: () -> Unit,
+    onOpenRecap: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPost: (String) -> Unit,
     onOpenDiscover: () -> Unit,
@@ -220,7 +224,9 @@ fun LibraryScreen(
                 Column {
                     LibraryRow(Icons.Rounded.People, "Manage following", "$followingCount local ${if (followingCount == 1) "profile" else "profiles"}", onOpenFollowing)
                     LibraryRow(Icons.Rounded.Bookmarks, "Saved posts", "$savedCount bookmarked", onOpenSaved)
+                    LibraryRow(Icons.Rounded.Favorite, "Liked posts", "Your local liked feed", onOpenLiked)
                     LibraryRow(Icons.Rounded.Download, "Offline posts", "$downloadCount downloaded", onOpenDownloads)
+                    LibraryRow(Icons.Rounded.Insights, "Weekly recap", "A private look at your week", onOpenRecap)
                     LibraryRow(Icons.Rounded.DarkMode, "Appearance & feel", "Material You, palette, haptics", onOpenSettings)
                     LibraryRow(Icons.Rounded.Sync, "Sync & notifications", "Refresh, background sync", onOpenSettings)
                     LibraryRow(Icons.Rounded.Backup, "Backup & settings", "Export follows and saves", onOpenSettings)

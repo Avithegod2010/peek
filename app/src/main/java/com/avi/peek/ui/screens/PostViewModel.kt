@@ -28,6 +28,8 @@ class PostViewModel(private val code: String) : ViewModel() {
         .map { it[code] }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    private val queue = ServiceLocator.downloadQueue
+
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages = _messages.asSharedFlow()
 
@@ -60,11 +62,8 @@ class PostViewModel(private val code: String) : ViewModel() {
     }
 
     fun download() {
-        viewModelScope.launch {
-            runCatching { repo.download(code) }
-                .onFailure { _messages.emit(it.userMessage()) }
-                .onSuccess { _messages.emit("Saved offline · find it in Library → Downloads") }
-        }
+        queue.enqueue(code)
+        _messages.tryEmit("Added to the download queue · Library → Downloads")
     }
 
     fun encouragingMessage(text: String) {

@@ -1,0 +1,26 @@
+Categories:
+  - Internet
+License: MIT
+AuthorName: Avithegod2010
+AuthorWebSite: https://github.com/Avithegod2010
+WebSite: https://github.com/Avithegod2010/peek
+SourceCode: https://github.com/Avithegod2010/peek
+IssueTracker: https://github.com/Avithegod2010/peek/issues
+Changelog: https://github.com/Avithegod2010/peek/releases
+
+AutoName: Peek
+
+RepoType: git
+Repo: https://github.com/Avithegod2010/peek.git
+
+Builds:
+  - versionName: 1.2.0
+    versionCode: 3
+    commit: v1.2.0
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.2.0
+CurrentVersionCode: 3

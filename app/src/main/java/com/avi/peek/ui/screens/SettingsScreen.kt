@@ -2,6 +2,7 @@ package com.avi.peek.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.DataSaverOn
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Vibration
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,6 +78,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -115,13 +120,23 @@ fun SettingsScreen(
         }
     }
 
+    var backupAction by remember { mutableStateOf<Pair<Uri, Boolean>?>(null) }
+
     val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri -> if (uri != null) viewModel.exportBackup(uri) }
+        ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri -> if (uri != null) backupAction = uri to false }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
-    ) { uri -> if (uri != null) viewModel.importBackup(uri) }
+    ) { uri -> if (uri != null) backupAction = uri to true }
+
+    val archiveHtmlLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html"),
+    ) { uri -> if (uri != null) viewModel.exportArchive(uri, html = true) }
+
+    val archiveJsonLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> if (uri != null) viewModel.exportArchive(uri, html = false) }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -193,6 +208,13 @@ fun SettingsScreen(
                         subtitle = "Calmer transitions and no particle bursts",
                         checked = settings.reduceMotion,
                         onCheckedChange = { viewModel.setReduceMotion(it) },
+                    )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Smartphone,
+                        title = "One-handed mode",
+                        subtitle = "Put a search action near the bottom of Home",
+                        checked = settings.oneHanded,
+                        onCheckedChange = { viewModel.setOneHanded(it) },
                     )
                 }
             }
@@ -300,6 +322,13 @@ fun SettingsScreen(
                         checked = settings.hideLikeCounts,
                         onCheckedChange = { viewModel.setHideLikeCounts(it) },
                     )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Fingerprint,
+                        title = "Biometric app lock",
+                        subtitle = "Require a biometric or screen lock next time Peek opens",
+                        checked = settings.appLock,
+                        onCheckedChange = { viewModel.setAppLock(it) },
+                    )
                     SettingsInfoRow(
                         icon = Icons.Rounded.Storage,
                         title = "Storage used",
@@ -326,14 +355,30 @@ fun SettingsScreen(
                     SettingsClickRow(
                         icon = Icons.Rounded.Backup,
                         title = "Export backup",
-                        subtitle = "A small JSON of your follows and bookmarks",
-                        onClick = { exportLauncher.launch("peek-backup.json") },
+                        subtitle = "Passphrase-encrypted by default · follows, saves and likes",
+                        onClick = { exportLauncher.launch("peek-backup.peek") },
                     )
                     SettingsClickRow(
                         icon = Icons.Rounded.Restore,
                         title = "Restore backup",
-                        subtitle = "Re-follow accounts from a Peek backup",
-                        onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
+                        subtitle = "Open an encrypted or legacy JSON Peek backup",
+                        onClick = {
+                            importLauncher.launch(
+                                arrayOf("application/octet-stream", "application/json", "text/plain"),
+                            )
+                        },
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Code,
+                        title = "Export HTML archive",
+                        subtitle = "A readable page of cached posts, captions and images",
+                        onClick = { archiveHtmlLauncher.launch("peek-archive.html") },
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Code,
+                        title = "Export JSON archive",
+                        subtitle = "Metadata for your cached, saved and liked posts",
+                        onClick = { archiveJsonLauncher.launch("peek-archive.json") },
                     )
                 }
             }
@@ -389,6 +434,56 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmWipe = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    backupAction?.let { action ->
+        val importing = action.second
+        var passphrase by remember(action) { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { backupAction = null },
+            title = { Text(if (importing) "Restore this backup" else "Protect this backup") },
+            text = {
+                Column {
+                    Text(
+                        if (importing) {
+                            "Enter the passphrase used when this backup was exported. Legacy unencrypted JSON backups can be restored with the field blank."
+                        } else {
+                            "A passphrase encrypts the backup with AES-256-GCM. Leave it blank to write a plain JSON file you can read elsewhere."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = passphrase,
+                        onValueChange = { passphrase = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Passphrase") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "The passphrase is never stored. Lose it and the encrypted backup cannot be recovered.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val uri = action.first
+                        backupAction = null
+                        if (importing) viewModel.importBackup(uri, passphrase)
+                        else viewModel.exportBackup(uri, passphrase)
+                    },
+                ) { Text(if (importing) "Restore" else "Export") }
+            },
+            dismissButton = {
+                TextButton(onClick = { backupAction = null }) { Text("Cancel") }
             },
         )
     }

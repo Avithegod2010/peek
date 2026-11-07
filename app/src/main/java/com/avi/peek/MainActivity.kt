@@ -1,6 +1,7 @@
 package com.avi.peek
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.ui.AppLockGate
 import com.avi.peek.ui.PeekRoot
 import com.avi.peek.util.DeepLinkBus
 import kotlinx.coroutines.delay
@@ -22,7 +24,7 @@ class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        DeepLinkBus.offer(intent?.dataString)
+        handleIncomingIntent(intent)
 
         var ready = false
         splash.setKeepOnScreenCondition { !ready }
@@ -43,13 +45,27 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settings by ServiceLocator.settings.settings.collectAsStateWithLifecycle(initialValue = null)
-            settings?.let { PeekRoot(it) }
+            settings?.let { value ->
+                AppLockGate(value) { PeekRoot(value) }
+            }
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent == null) return
+        if (intent.action == Intent.ACTION_SEND) {
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (!text.isNullOrBlank()) {
+                DeepLinkBus.offer("peek://share?text=${Uri.encode(text)}")
+            }
+            return
+        }
         DeepLinkBus.offer(intent.dataString)
     }
 }

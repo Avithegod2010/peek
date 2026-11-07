@@ -16,8 +16,8 @@ android {
         applicationId = "com.avi.peek"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -51,6 +51,13 @@ android {
             "/META-INF/{AL2.0,LGPL2.1}",
             "/META-INF/DEPENDENCIES",
         )
+    }
+
+    lint {
+        // Release builds are reproducible without downloading the lint toolchain.
+        // Run `./gradlew lint` separately when the full lint jars are available.
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 

@@ -75,6 +75,8 @@ class PeekRepository(
     val mediaCount: Flow<Int> = db.media().observeMediaCount()
     val saved: Flow<List<MediaEntity>> = db.media().observeSaved()
     val downloaded: Flow<List<MediaEntity>> = db.media().observeDownloads()
+    val liked: Flow<List<MediaEntity>> = db.media().observeLiked()
+    val recentlyViewed: Flow<List<ProfileEntity>> = db.profiles().observeRecentlyViewed()
     val recentSearches = db.searches().observeRecent()
 
     val feed: Flow<List<FeedPost>> = combine(
@@ -95,6 +97,39 @@ class PeekRepository(
     }
 
     fun observeMedia(code: String): Flow<MediaEntity?> = db.media().observe(code)
+
+    fun observeAudio(title: String): Flow<List<MediaEntity>> = db.media().observeAudio(title)
+
+    fun savedSince(since: Long): Flow<Int> = db.media().observeSavedSince(since)
+    fun downloadedSince(since: Long): Flow<Int> = db.media().observeDownloadedSince(since)
+    fun viewedSince(since: Long): Flow<List<ProfileEntity>> = db.profiles().observeViewedSince(since)
+
+    suspend fun searchCachedProfiles(query: String): List<ProfileEntity> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) emptyList() else db.profiles().searchCached(query.trim())
+    }
+
+    suspend fun searchCachedMedia(query: String): List<MediaEntity> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) emptyList() else db.media().searchCached(query.trim())
+    }
+
+    fun extractPostShortcode(raw: String): String? {
+        val value = raw.trim()
+        val urlMatch = Regex(
+            """(?i)(?:instagram\.com)?/(?:p|reel|reels|tv)/([A-Za-z0-9_-]{5,})""",
+        ).find(value)
+        if (urlMatch != null) return urlMatch.groupValues.getOrNull(1)
+        return value.takeIf {
+            it.matches(Regex("""[A-Za-z0-9_-]{5,20}""")) && !it.contains(' ')
+        }
+    }
+
+    /** Resolves a public post/reel URL (or shortcode) to its author profile. */
+    suspend fun resolvePostAuthor(raw: String): ProfileEntity? = withContext(Dispatchers.IO) {
+        val code = extractPostShortcode(raw) ?: return@withContext null
+        val post = runCatching { client.fetchPost(code) }.getOrNull() ?: return@withContext null
+        val username = post.username.takeIf { it.isNotBlank() } ?: return@withContext null
+        prefetchDirectoryProfile(username)
+    }
 
     suspend fun lookup(raw: String): ScrapedProfile {
         val username = GuestInstagramClient.normalizeUsername(raw)

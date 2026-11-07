@@ -15,6 +15,20 @@ interface ProfileDao {
     @Query("SELECT * FROM profiles WHERE isFollowed = 1 ORDER BY isPinned DESC, latestReelMedia DESC, username ASC")
     suspend fun following(): List<ProfileEntity>
 
+    @Query("SELECT * FROM profiles WHERE lastViewedAt IS NOT NULL ORDER BY lastViewedAt DESC LIMIT 24")
+    fun observeRecentlyViewed(): Flow<List<ProfileEntity>>
+
+    @Query("SELECT * FROM profiles WHERE lastViewedAt >= :since ORDER BY lastViewedAt DESC")
+    fun observeViewedSince(since: Long): Flow<List<ProfileEntity>>
+
+    @Query(
+        """SELECT * FROM profiles WHERE username LIKE '%' || :query || '%'
+        OR fullName LIKE '%' || :query || '%'
+        OR biography LIKE '%' || :query || '%'
+        ORDER BY isFollowed DESC, followerCount DESC LIMIT 24""",
+    )
+    suspend fun searchCached(query: String): List<ProfileEntity>
+
     @Query("SELECT * FROM profiles ORDER BY isFollowed DESC, followedAt DESC")
     fun observeAll(): Flow<List<ProfileEntity>>
 
@@ -70,6 +84,21 @@ interface MediaDao {
 
     @Query("SELECT * FROM media WHERE isSaved = 1 ORDER BY savedAt DESC")
     fun observeSaved(): Flow<List<MediaEntity>>
+
+    @Query("SELECT * FROM media WHERE isLiked = 1 ORDER BY COALESCE(takenAt, 0) DESC")
+    fun observeLiked(): Flow<List<MediaEntity>>
+
+    @Query("SELECT * FROM media WHERE audioTitle = :title ORDER BY COALESCE(takenAt, 0) DESC")
+    fun observeAudio(title: String): Flow<List<MediaEntity>>
+
+    @Query("SELECT * FROM media WHERE caption LIKE '%' || :query || '%' ORDER BY COALESCE(takenAt, 0) DESC LIMIT 30")
+    suspend fun searchCached(query: String): List<MediaEntity>
+
+    @Query("SELECT COUNT(*) FROM media WHERE savedAt >= :since")
+    fun observeSavedSince(since: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM media WHERE downloadedAt >= :since")
+    fun observeDownloadedSince(since: Long): Flow<Int>
 
     @Query("SELECT * FROM media WHERE isDownloaded = 1 ORDER BY downloadedAt DESC")
     fun observeDownloads(): Flow<List<MediaEntity>>

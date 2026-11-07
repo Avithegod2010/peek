@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Restaurant
@@ -71,6 +72,7 @@ fun categoryIcon(category: CreatorCategory): ImageVector = when (category) {
     CreatorCategory.TECH -> Icons.Rounded.Memory
     CreatorCategory.NATURE -> Icons.Rounded.Public
     CreatorCategory.ART -> Icons.Rounded.Palette
+    CreatorCategory.PHOTOGRAPHY -> Icons.Rounded.PhotoCamera
     CreatorCategory.FASHION -> Icons.Rounded.Checkroom
     CreatorCategory.FOOD -> Icons.Rounded.Restaurant
     CreatorCategory.GAMING -> Icons.Rounded.SportsEsports
@@ -102,6 +104,7 @@ private fun categoryBaseTint(category: CreatorCategory): Color = when (category)
     CreatorCategory.TECH -> Color(0xFF3F6EA6)
     CreatorCategory.NATURE -> Color(0xFF3E6837)
     CreatorCategory.ART -> Color(0xFF7A6134)
+    CreatorCategory.PHOTOGRAPHY -> Color(0xFF5A6B7D)
     CreatorCategory.FASHION -> Color(0xFF964061)
     CreatorCategory.FOOD -> Color(0xFF8B4A2F)
     CreatorCategory.GAMING -> Color(0xFF5B4BC4)
@@ -445,6 +448,111 @@ private fun FollowPill(
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
             )
+        }
+    }
+}
+
+@Composable
+fun MiniCreatorCard(
+    creator: PopularCreator,
+    profile: ProfileEntity?,
+    following: Boolean,
+    busy: Boolean,
+    onClick: () -> Unit,
+    onFollow: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tint = categoryTint(creator.category)
+    Surface(
+        onClick = onClick,
+        modifier = modifier.width(142.dp).height(184.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(Modifier.padding(11.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    Avatar(
+                        url = profile?.profilePicUrl,
+                        username = creator.username,
+                        size = 46.dp,
+                        ring = true,
+                    )
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(tint),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(categoryIcon(creator.category), contentDescription = null, tint = Color.White, modifier = Modifier.size(9.dp))
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                if (profile?.isVerified == true) VerifiedBadge(size = 12.dp)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                profile?.fullName?.takeIf { it.isNotBlank() } ?: creator.name,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                "@${creator.username}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                if (profile != null) "${profile.followerCount.compactCount()} followers" else creator.tagline,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (profile != null) tint else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.weight(1f))
+            FollowPill(following = following, busy = busy, tint = tint, onClick = onFollow, compact = true)
+        }
+    }
+}
+
+@Composable
+fun PackCard(
+    pack: com.avi.peek.data.directory.CreatorPack,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.width(196.dp).height(118.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (pack.hiddenGem) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        if (pack.hiddenGem) "HIDDEN GEM" else "PACK",
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (pack.hiddenGem) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Text("${pack.usernames.size}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.weight(1f))
+            Text(pack.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(pack.subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

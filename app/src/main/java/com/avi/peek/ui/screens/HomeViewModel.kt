@@ -30,6 +30,7 @@ class HomeViewModel : ViewModel() {
     val syncState = repo.syncState
 
     val downloadProgress = repo.downloadProgress
+    private val queue = ServiceLocator.downloadQueue
 
     private val _filter = MutableStateFlow(FeedFilter.ALL)
     val filter: StateFlow<FeedFilter> = _filter.asStateFlow()
@@ -80,10 +81,7 @@ class HomeViewModel : ViewModel() {
     }
 
     fun download(code: String) {
-        viewModelScope.launch {
-            runCatching { repo.download(code) }
-                .onFailure { _messages.tryEmit(it.userMessage()) }
-                .onSuccess { _messages.tryEmit("Saved offline") }
-        }
+        queue.enqueue(code)
+        _messages.tryEmit("Added to the download queue")
     }
 }

@@ -30,11 +30,15 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,6 +59,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.avi.peek.data.local.MediaEntity
+import com.avi.peek.data.repo.DownloadStatus
+import com.avi.peek.data.repo.DownloadTask
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.LocalSnackbarHostState
@@ -160,6 +166,8 @@ fun DownloadsScreen(
     onOpenPost: (String) -> Unit,
 ) {
     val downloads by ServiceLocator.repository.downloaded.collectAsStateWithLifecycle(emptyList())
+    val queue by ServiceLocator.downloadQueue.tasks.collectAsStateWithLifecycle()
+    val activeQueue = queue.filter { it.status != DownloadStatus.DONE }
     val snackbar = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
     val haptics = LocalPeekHaptics.current
@@ -179,7 +187,7 @@ fun DownloadsScreen(
             subtitle = "${downloads.size} ${if (downloads.size == 1) "post" else "posts"} · ${totalBytes.fileSize()}",
             onBack = onBack,
         )
-        if (downloads.isEmpty()) {
+        if (activeQueue.isEmpty() && downloads.isEmpty()) {
             EmptyState(
                 title = "Nothing downloaded",
                 message = "Save a post offline and its photos or video will live here, ready without a connection.",
@@ -192,6 +200,33 @@ fun DownloadsScreen(
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (activeQueue.isNotEmpty()) {
+                    item(key = "queue-header") {
+                        Text(
+                            "Download queue",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        )
+                    }
+                    items(activeQueue, key = { "task-${it.code}" }) { task ->
+                        DownloadQueueRow(
+                            task = task,
+                            onPause = { ServiceLocator.downloadQueue.pause(task.code) },
+                            onResume = { ServiceLocator.downloadQueue.resume(task.code) },
+                            onRetry = { ServiceLocator.downloadQueue.retry(task.code) },
+                            onRemove = { ServiceLocator.downloadQueue.remove(task.code) },
+                        )
+                    }
+                    item(key = "queue-divider") {
+                        Text(
+                            "Saved offline",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                        )
+                    }
+                }
                 items(downloads, key = { it.code }) { media ->
                     DownloadRow(
                         media = media,
@@ -208,6 +243,65 @@ fun DownloadsScreen(
                         },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadQueueRow(
+    task: DownloadTask,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onRetry: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                when (task.status) {
+                    DownloadStatus.RUNNING -> CircularProgressIndicator(
+                        progress = { task.fraction.coerceIn(0f, 1f) },
+                        strokeWidth = 2.5.dp,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    DownloadStatus.FAILED -> Icon(Icons.Rounded.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(22.dp))
+                    else -> Icon(Icons.Rounded.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Post ${task.code}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        when (task.status) {
+                            DownloadStatus.QUEUED -> "Queued"
+                            DownloadStatus.RUNNING -> "Downloading · ${(task.fraction * 100).toInt()}%"
+                            DownloadStatus.PAUSED -> "Paused"
+                            DownloadStatus.FAILED -> task.error ?: "Download failed"
+                            DownloadStatus.DONE -> "Done"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (task.status == DownloadStatus.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                when (task.status) {
+                    DownloadStatus.RUNNING -> IconButton(onClick = onPause) { Icon(Icons.Rounded.Pause, contentDescription = "Pause") }
+                    DownloadStatus.PAUSED -> IconButton(onClick = onResume) { Icon(Icons.Rounded.PlayArrow, contentDescription = "Resume") }
+                    DownloadStatus.FAILED -> IconButton(onClick = onRetry) { Icon(Icons.Rounded.Refresh, contentDescription = "Retry") }
+                    else -> Unit
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Rounded.DeleteOutline, contentDescription = "Remove from queue", modifier = Modifier.size(19.dp))
+                }
+            }
+            if (task.status == DownloadStatus.RUNNING) {
+                Spacer(Modifier.height(9.dp))
+                LinearProgressIndicator(progress = { task.fraction.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
             }
         }
     }

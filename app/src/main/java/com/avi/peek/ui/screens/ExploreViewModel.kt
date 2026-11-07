@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -26,6 +27,24 @@ class ExploreViewModel : ViewModel() {
     private val repo = ServiceLocator.repository
 
     val following = repo.following
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val recentlyViewed = repo.recentlyViewed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val suggested: StateFlow<List<PopularCreator>> = repo.following
+        .map { follows ->
+            val followed = follows.map { it.username }.toSet()
+            val categories = follows.mapNotNull { CreatorDirectory.byUsername(it.username)?.category }.toSet()
+            val pool = if (categories.isEmpty()) {
+                CreatorDirectory.trending
+            } else {
+                CreatorDirectory.all.filter { it.category in categories }
+            }
+            pool.filter { it.username !in followed }
+                .distinctBy { it.username }
+                .take(6)
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _category = MutableStateFlow(CreatorCategory.ALL)
@@ -48,12 +67,16 @@ class ExploreViewModel : ViewModel() {
 
     val starter: List<PopularCreator> = CreatorDirectory.starter
     val categories: List<CreatorCategory> = CreatorDirectory.creatorCategories
+    val packs = CreatorDirectory.packs
 
     private val prefetchSemaphore = Semaphore(2)
 
     init {
         prefetch(starter)
         prefetch(CreatorDirectory.categoryCreators(CreatorCategory.ALL).take(8))
+        viewModelScope.launch {
+            suggested.collect { prefetch(it) }
+        }
     }
 
     fun creatorsFor(category: CreatorCategory): List<PopularCreator> {

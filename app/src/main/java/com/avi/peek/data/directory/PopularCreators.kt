@@ -8,6 +8,7 @@ enum class CreatorCategory(val label: String) {
     TECH("Tech"),
     NATURE("Nature & Space"),
     ART("Art & Design"),
+    PHOTOGRAPHY("Photography"),
     FASHION("Fashion & Beauty"),
     FOOD("Food"),
     GAMING("Gaming"),
@@ -164,6 +165,25 @@ object CreatorDirectory {
         PopularCreator("9GAG", "9gag", CreatorCategory.COMEDY, "Memes & fun", listOf("memes", "comedy", "funny")),
         PopularCreator("BuzzFeed", "buzzfeed", CreatorCategory.COMEDY, "Pop culture & fun", listOf("comedy", "quizzes", "fun")),
         PopularCreator("Kevin Hart", "kevinhart4real", CreatorCategory.COMEDY, "Comedian", listOf("comedy", "stand up", "actor")),
+
+        // More sport / F1
+        PopularCreator("Ferrari", "ferrari", CreatorCategory.SPORT, "Formula 1 · Maranello", listOf("f1", "racing", "cars")),
+        PopularCreator("Mercedes-AMG F1", "mercedesamgf1", CreatorCategory.SPORT, "Formula 1 team", listOf("f1", "racing", "mercedes")),
+        PopularCreator("Red Bull Racing", "redbullracing", CreatorCategory.SPORT, "Formula 1 team", listOf("f1", "racing", "red bull")),
+        PopularCreator("Charles Leclerc", "charles_leclerc", CreatorCategory.SPORT, "Formula 1 · Ferrari", listOf("f1", "racing", "ferrari")),
+        PopularCreator("Max Verstappen", "maxverstappen1", CreatorCategory.SPORT, "Formula 1 · Red Bull", listOf("f1", "racing", "max")),
+        PopularCreator("George Russell", "georgerussell63", CreatorCategory.SPORT, "Formula 1 · Mercedes", listOf("f1", "racing", "mercedes")),
+
+        // More architecture
+        PopularCreator("Archilovers", "archilovers", CreatorCategory.ART, "Architecture community", listOf("architecture", "design")),
+        PopularCreator("Design Milk", "designmilk", CreatorCategory.ART, "Modern design", listOf("design", "architecture", "interiors")),
+        PopularCreator("designboom", "designboom", CreatorCategory.ART, "Architecture & design magazine", listOf("architecture", "design", "art")),
+
+        // Photography
+        PopularCreator("World Press Photo", "worldpressphoto", CreatorCategory.PHOTOGRAPHY, "Photojournalism", listOf("photography", "photojournalism", "news")),
+        PopularCreator("Nat Geo Your Shot", "natgeoyourshot", CreatorCategory.PHOTOGRAPHY, "Community photography", listOf("photography", "nature", "travel")),
+        PopularCreator("Canon USA", "canonusa", CreatorCategory.PHOTOGRAPHY, "Cameras & photography", listOf("photography", "cameras", "gear")),
+        PopularCreator("Nikon USA", "nikonusa", CreatorCategory.PHOTOGRAPHY, "Cameras & photography", listOf("photography", "cameras", "gear")),
     )
 
     val starter: List<PopularCreator> = all.filter { it.starter }
@@ -238,4 +258,105 @@ object CreatorDirectory {
     }
 
     val creatorCategories: List<CreatorCategory> = CreatorCategory.entries.filter { it != CreatorCategory.ALL }
+
+    val countries: List<String> by lazy { countryByUsername.values.distinct().sorted() }
+
+    fun countryFor(username: String): String? =
+        countryByUsername[username.lowercase()]
+
+    fun packById(id: String): CreatorPack? = packs.firstOrNull { it.id == id }
+
+    val packs: List<CreatorPack> = listOf(
+        CreatorPack(
+            id = "museums",
+            title = "Museums",
+            subtitle = "Quiet halls, loud ideas",
+            usernames = listOf("museelouvre", "themuseumofmodernart", "tate", "britishmuseum", "metmuseum", "nationalgallery", "vamuseum"),
+        ),
+        CreatorPack(
+            id = "formula1",
+            title = "Formula 1",
+            subtitle = "Paddock to podium",
+            usernames = listOf("f1", "ferrari", "mercedesamgf1", "redbullracing", "charles_leclerc", "maxverstappen1", "georgerussell63", "lewishamilton"),
+        ),
+        CreatorPack(
+            id = "food",
+            title = "Food & cooking",
+            subtitle = "Recipes worth slowing down for",
+            usernames = listOf("gordongram", "jamieoliver", "buzzfeedtasty", "foodnetwork", "bonappetitmag", "nigellalawson", "foodandwine"),
+        ),
+        CreatorPack(
+            id = "architecture",
+            title = "Architecture",
+            subtitle = "Buildings, interiors, details",
+            usernames = listOf("archdaily", "dezeen", "archilovers", "designmilk", "designboom"),
+        ),
+        CreatorPack(
+            id = "photography",
+            title = "Photography",
+            subtitle = "Frames from around the world",
+            usernames = listOf("magnumphotos", "worldpressphoto", "natgeoyourshot", "canonusa", "nikonusa", "natgeo"),
+        ),
+        CreatorPack(
+            id = "hidden-gems",
+            title = "Hidden gems",
+            subtitle = "Smaller public accounts worth knowing",
+            hiddenGem = true,
+            usernames = listOf("vamuseum", "britishmuseum", "nationalgallery", "archilovers", "designmilk", "worldpressphoto", "natgeoyourshot", "nikonusa", "sciencemagazine", "cern", "fastcompany", "lonelyplanet", "cntraveler", "wwf"),
+        ),
+        CreatorPack(
+            id = "starter",
+            title = "Peek starter pack",
+            subtitle = "Eight good first follows",
+            usernames = starter.map { it.username },
+        ),
+    )
+
+    private val countryByUsername: Map<String, String> = buildMap {
+        fun add(country: String, vararg usernames: String) {
+            usernames.forEach { put(it, country) }
+        }
+        add(
+            "United States",
+            "nasa", "nasawebb", "natgeo", "natgeotravel", "netflix", "google", "apple", "microsoft",
+            "openai", "meta", "nvidia", "adobe", "spacex", "taylorswift", "beyonce", "billieeilish",
+            "arianagrande", "oliviarodrigo", "sza", "ladygaga", "postmalone", "brunomars", "therock",
+            "zendaya", "kevinhart4real", "nbcsnl", "jimmyfallon", "marvel", "disney", "warnerbros",
+            "hbo", "primevideo", "paramountplus", "pixar", "nba", "kingjames", "stephencurry30",
+            "serenawilliams", "miketyson", "forbes", "businessinsider", "bloomberg", "cnbc", "wsj",
+            "fastcompany", "9gag", "buzzfeed", "lonelyplanet", "travelandleisure", "themuseumofmodernart",
+            "metmuseum", "archdaily", "archilovers", "designmilk", "magnumphotos", "worldpressphoto",
+            "natgeoyourshot", "canonusa", "nikonusa", "voguemagazine", "sephora", "fentybeauty",
+            "kyliecosmetics", "rarebeauty", "maccosmetics", "charlottetilbury", "nike", "gordongram",
+            "buzzfeedtasty", "foodnetwork", "bonappetitmag", "cntraveler", "discovery",
+        )
+        add("United Kingdom", "f1", "lewishamilton", "davidbeckham", "tate", "britishmuseum", "vamuseum", "nationalgallery", "jamieoliver", "nigellalawson", "dezeen", "charlottetilbury", "dualipa", "nature")
+        add("Portugal", "cristiano")
+        add("Argentina", "leomessi")
+        add("Brazil", "neymarjr")
+        add("India", "virat.kohli")
+        add("Italy", "ferrari", "gucci", "designboom")
+        add("France", "museelouvre")
+        add("Germany", "adidas", "mercedesamgf1")
+        add("Austria", "redbullracing")
+        add("Netherlands", "maxverstappen1")
+        add("Monaco", "charles_leclerc")
+        add("Canada", "theweeknd")
+        add("Barbados", "badgalriri")
+        add("Jamaica", "usainbolt")
+        add("Switzerland", "rogerfederer", "cern")
+        add("Sweden", "spotify")
+        add("South Korea", "samsung")
+        add("Japan", "sony")
+        add("Colombia", "shakira")
+        add("Australia", "canva")
+    }
 }
+
+data class CreatorPack(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val usernames: List<String>,
+    val hiddenGem: Boolean = false,
+)

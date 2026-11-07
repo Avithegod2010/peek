@@ -1,0 +1,14 @@
+<resources>
+    <string name="shortcut_search">Search people</string>
+    <string name="shortcut_search_long">Search people by name</string>
+    <string name="shortcut_saved">Saved posts</string>
+    <string name="shortcut_saved_long">Open saved posts</string>
+    <string name="shortcut_downloads">Downloads</string>
+    <string name="shortcut_downloads_long">Open offline downloads</string>
+    <string name="widget_description">Quick search, saved posts and your circle from Peek.</string>
+    <string name="widget_title">Peek</string>
+    <string name="widget_subtitle">A quieter way to follow</string>
+    <string name="widget_search">Search</string>
+    <string name="widget_saved">Saved</string>
+    <string name="widget_circle">Home</string>
+</resources>

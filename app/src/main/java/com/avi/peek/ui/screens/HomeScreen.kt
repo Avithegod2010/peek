@@ -90,6 +90,7 @@ fun HomeScreen(
     onOpenProfile: (String) -> Unit,
     onOpenDiscover: () -> Unit,
     onOpenSearch: () -> Unit,
+    storyAvatarModifier: (String) -> Modifier = { Modifier },
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -162,6 +163,7 @@ fun HomeScreen(
                         profiles = following,
                         onOpenProfile = onOpenProfile,
                         onAdd = onOpenDiscover,
+                        avatarModifier = storyAvatarModifier,
                     )
                 }
             }
@@ -363,6 +365,7 @@ private fun StoryStrip(
     profiles: List<ProfileEntity>,
     onOpenProfile: (String) -> Unit,
     onAdd: () -> Unit,
+    avatarModifier: (String) -> Modifier,
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 18.dp),
@@ -396,6 +399,7 @@ private fun StoryStrip(
                     url = profile.profilePicUrl,
                     username = profile.username,
                     size = 64.dp,
+                    modifier = avatarModifier(profile.username),
                     ring = true,
                     ringUnread = unread,
                 )

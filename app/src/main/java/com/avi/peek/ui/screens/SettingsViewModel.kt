@@ -62,6 +62,8 @@ class SettingsViewModel : ViewModel() {
     }
     fun setDataSaver(value: Boolean) = viewModelScope.launch { store.setDataSaver(value) }
     fun setHideLikeCounts(value: Boolean) = viewModelScope.launch { store.setHideLikeCounts(value) }
+    fun setAppLock(value: Boolean) = viewModelScope.launch { store.setAppLock(value) }
+    fun setOneHanded(value: Boolean) = viewModelScope.launch { store.setOneHanded(value) }
     fun setAutoplayReels(value: Boolean) = viewModelScope.launch { store.setAutoplayReels(value) }
     fun setMuteVideos(value: Boolean) = viewModelScope.launch { store.setMuteVideos(value) }
 
@@ -123,22 +125,41 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    fun exportBackup(uri: Uri) {
+    fun exportBackup(uri: Uri, passphrase: String?) {
         viewModelScope.launch {
-            runCatching { ServiceLocator.backupManager.exportTo(uri) }
-                .onSuccess { count -> syncMessage("Exported $count follows") }
+            runCatching { ServiceLocator.backupManager.exportTo(uri, passphrase) }
+                .onSuccess { count ->
+                    syncMessage(
+                        if (passphrase.isNullOrBlank()) "Exported $count follows (unencrypted)"
+                        else "Encrypted backup exported · $count follows",
+                    )
+                }
                 .onFailure { syncMessage(it.userMessage()) }
         }
     }
 
-    fun importBackup(uri: Uri) {
+    fun importBackup(uri: Uri, passphrase: String?) {
         viewModelScope.launch {
             syncMessage("Restoring…")
-            runCatching { ServiceLocator.backupManager.importFrom(uri) }
+            runCatching { ServiceLocator.backupManager.importFrom(uri, passphrase) }
                 .onSuccess { summary ->
                     syncMessage("Restored ${summary.followed} follows, ${summary.restoredSaved} bookmarks")
                 }
                 .onFailure { syncMessage(it.userMessage()) }
+        }
+    }
+
+    fun exportArchive(uri: Uri, html: Boolean) {
+        viewModelScope.launch {
+            syncMessage("Writing archive…")
+            runCatching {
+                if (html) ServiceLocator.backupManager.exportHtmlArchive(uri)
+                else ServiceLocator.backupManager.exportJsonArchive(uri)
+            }.onSuccess {
+                syncMessage(if (html) "HTML archive exported" else "JSON archive exported")
+            }.onFailure {
+                syncMessage(it.userMessage())
+            }
         }
     }
 
