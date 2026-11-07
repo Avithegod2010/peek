@@ -56,6 +56,9 @@ interface ProfileDao {
     @Query("UPDATE profiles SET isPinned = :pinned WHERE username = :username")
     suspend fun setPinned(username: String, pinned: Boolean)
 
+    @Query("UPDATE profiles SET hasMorePosts = :hasMore, nextCursor = :cursor WHERE username = :username")
+    suspend fun setPagination(username: String, hasMore: Boolean, cursor: String?)
+
     @Query("DELETE FROM profiles WHERE username = :username")
     suspend fun delete(username: String)
 

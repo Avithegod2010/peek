@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import java.time.LocalDate
@@ -113,21 +114,9 @@ class SsrParser(
             ?: return null
         val username = p.string("username") ?: fallbackUsername
         val timelineConnection = timeline?.obj("polaris_ordered_timeline_connection")
-        val media = ArrayList<ProfileNode>()
-        timelineConnection?.array("edges")?.forEach { edge ->
-            val node = (edge as? JsonObject)?.obj("node") ?: return@forEach
-            val code = node.string("code") ?: return@forEach
-            media += ProfileNode(
-                code = code,
-                pk = node.string("pk") ?: "",
-                mediaType = node.int("media_type") ?: 1,
-                productType = node.string("product_type"),
-                caption = node.obj("caption")?.string("text") ?: node.string("caption"),
-                displayUrl = node.string("display_uri"),
-                accessibilityCaption = node.string("accessibility_caption"),
-                carouselCount = node.int("carousel_media_count") ?: 0,
-            )
-        }
+        val media = timelineConnection?.array("edges")
+            ?.mapNotNull { edge -> (edge as? JsonObject)?.obj("node")?.let(::parseProfileNode) }
+            .orEmpty()
 
         val highlights = p.obj("lox_highlights_connection")?.array("edges")?.mapNotNull { edge ->
             val node = (edge as? JsonObject)?.obj("node") ?: return@mapNotNull null
@@ -175,6 +164,7 @@ class SsrParser(
             isVerified = p.boolean("is_verified") ?: false,
             followerCount = p.long("follower_count") ?: 0L,
             followingCount = p.long("following_count") ?: 0L,
+            postCount = p.long("media_count") ?: 0L,
             bioLinks = links,
             highlights = highlights,
             latestReelMedia = p.long("latest_reel_media"),
@@ -183,6 +173,36 @@ class SsrParser(
             hasNextPage = pageInfo?.boolean("has_next_page") ?: false,
             endCursor = pageInfo?.string("end_cursor"),
             relatedProfiles = relatedProfiles,
+        )
+    }
+
+    private fun parseProfileNode(node: JsonObject): ProfileNode? {
+        val code = node.string("code") ?: return null
+        return ProfileNode(
+            code = code,
+            pk = node.string("pk") ?: "",
+            mediaType = node.int("media_type") ?: 1,
+            productType = node.string("product_type"),
+            caption = node.obj("caption")?.string("text") ?: node.string("caption"),
+            displayUrl = node.string("display_uri"),
+            accessibilityCaption = node.string("accessibility_caption"),
+            carouselCount = node.int("carousel_media_count") ?: 0,
+        )
+    }
+
+    /** Parses the Relay page returned by Instagram's logged-out profile posts query. */
+    fun parseProfilePostsPage(jsonText: String): ProfilePostsPage? {
+        val root = runCatching { json.parseToJsonElement(jsonText).jsonObject }.getOrNull() ?: return null
+        val node = root.obj("data")?.obj("node") ?: return null
+        val connection = node.obj("polaris_ordered_timeline_connection") ?: return null
+        val nodes = connection.array("edges").orEmpty().mapNotNull { edge ->
+            (edge as? JsonObject)?.obj("node")?.let(::parseProfileNode)
+        }
+        val pageInfo = connection.obj("page_info")
+        return ProfilePostsPage(
+            nodes = nodes,
+            hasNextPage = pageInfo?.boolean("has_next_page") ?: false,
+            endCursor = pageInfo?.string("end_cursor"),
         )
     }
 

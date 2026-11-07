@@ -65,6 +65,9 @@ class ProfileViewModel(private val username: String) : ViewModel() {
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
 
+    private val _loadingMore = MutableStateFlow(false)
+    val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
+
     val relatedCreators: List<PopularCreator> = run {
         val category = CreatorDirectory.byUsername(username)?.category
         if (category == null) {
@@ -86,7 +89,10 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         viewModelScope.launch {
             repo.markViewed(username)
             val current = repo.observeProfile(username).first()?.profile
-            if (current == null || System.currentTimeMillis() - current.lastFetchedAt > 15 * 60 * 1000) {
+            if (current == null ||
+                System.currentTimeMillis() - current.lastFetchedAt > 15 * 60 * 1000 ||
+                current.nextCursor == null
+            ) {
                 refresh()
             }
         }
@@ -141,6 +147,22 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         }
     }
 
+    fun loadMore() {
+        if (_loadingMore.value) return
+        val current = data.value?.profile ?: return
+        if (!current.hasMorePosts) return
+        viewModelScope.launch {
+            _loadingMore.value = true
+            try {
+                repo.loadMoreProfilePosts(username)
+            } catch (e: Exception) {
+                _messages.emit(e.userMessage())
+            } finally {
+                _loadingMore.value = false
+            }
+        }
+    }
+
     fun unfollow() {
         viewModelScope.launch {
             repo.unfollow(username)
@@ -190,16 +212,15 @@ class ProfileViewModel(private val username: String) : ViewModel() {
             _messages.tryEmit("Wi-Fi only is on. Connect to Wi-Fi to download a full profile.")
             return
         }
-        ServiceLocator.profileDownloadManager.start(
+        ServiceLocator.profileDownloadManager.startAll(
             username = username,
-            codes = posts.map { it.code },
             saveToGallery = saveToGallery,
         )
         _messages.tryEmit(
             if (saveToGallery) {
-                "Downloading ${posts.size} posts and copying them to your gallery"
+                "Loading the full public profile, then downloading it to your gallery"
             } else {
-                "Downloading ${posts.size} posts for offline use"
+                "Loading the full public profile, then downloading it offline"
             },
         )
     }

@@ -99,6 +99,7 @@ import com.avi.peek.ui.components.ShimmerBox
 import com.avi.peek.ui.components.VerifiedBadge
 import com.avi.peek.ui.components.pressScale
 import com.avi.peek.util.LocalPeekHaptics
+import com.avi.peek.util.compactCount
 import com.avi.peek.util.copyText
 import com.avi.peek.util.instagramWebUrl
 import com.avi.peek.util.openInstagram
@@ -127,6 +128,7 @@ fun ProfileScreen(
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     val downloads by viewModel.downloadProgress.collectAsStateWithLifecycle()
     val bulkDownload by viewModel.bulkDownload.collectAsStateWithLifecycle()
+    val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val context = LocalContext.current
     val haptics = LocalPeekHaptics.current
@@ -140,6 +142,13 @@ fun ProfileScreen(
     }
 
     val profile = data?.profile
+    val lastVisibleIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+    LaunchedEffect(lastVisibleIndex, profile?.hasMorePosts, loadingMore) {
+        val total = gridState.layoutInfo.totalItemsCount
+        if (profile?.hasMorePosts == true && !loadingMore && total > 0 && lastVisibleIndex >= total - 4) {
+            viewModel.loadMore()
+        }
+    }
     val showTitle = gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 260
     val topBarAlpha by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (showTitle) 1f else 0f,
@@ -223,6 +232,16 @@ fun ProfileScreen(
                             )
                         }
                     }
+                    if (profile?.hasMorePosts == true && tab != ProfileTab.SAVED) {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "load-more") {
+                            LoadMoreFooter(
+                                loading = loadingMore,
+                                loaded = data?.media?.size ?: 0,
+                                total = profile.postCount,
+                                onLoadMore = viewModel::loadMore,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -280,15 +299,16 @@ fun ProfileScreen(
     }
 
     if (showDownloadDialog) {
-        val postCount = data?.media?.size ?: 0
+        val loadedCount = data?.media?.size ?: 0
+        val totalPosts = data?.profile?.postCount?.takeIf { it > 0 } ?: loadedCount.toLong()
         AlertDialog(
             onDismissRequest = { showDownloadDialog = false },
             title = { Text("Download @$username") },
             text = {
                 Column {
                     Text(
-                        "Peek can currently see $postCount public ${if (postCount == 1) "post" else "posts"}. " +
-                            "It will save every photo and video from those posts for offline use.",
+                        "Peek will walk every public timeline page it can reach, starting with the " +
+                            "${loadedCount.coerceAtLeast(1)} loaded here, then save every photo and video for offline use.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -313,7 +333,7 @@ fun ProfileScreen(
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "Instagram only exposes the latest public posts to logged-out guests, so this may not include a huge account's full archive. Large downloads can use a lot of storage and data.",
+                        "Peek loads pages one at a time and can still be stopped by Instagram rate limits. A large profile can take several minutes and use a lot of storage and data.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -325,8 +345,8 @@ fun ProfileScreen(
                         viewModel.downloadProfile(alsoGallery)
                         showDownloadDialog = false
                     },
-                    enabled = postCount > 0 && bulkDownload?.running != true,
-                ) { Text("Download") }
+                    enabled = totalPosts > 0 && bulkDownload?.running != true,
+                ) { Text("Download all") }
             },
             dismissButton = {
                 TextButton(onClick = { showDownloadDialog = false }) { Text("Cancel") }
@@ -432,7 +452,7 @@ private fun ProfileHeader(
                 horizontalArrangement = Arrangement.spacedBy(28.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                HeaderStat(media.size.toLong(), "posts")
+                HeaderStat(if (profile.postCount > 0) profile.postCount else media.size.toLong(), "posts")
                 HeaderStat(profile.followerCount, "followers")
                 HeaderStat(profile.followingCount, "following")
             }
@@ -504,7 +524,11 @@ private fun ProfileHeader(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
             ) {
-                if (bulkDownload?.running == true) {
+                if (bulkDownload?.running == true && bulkDownload.preparing) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Loading public posts · ${bulkDownload.prepared}")
+                } else if (bulkDownload?.running == true) {
                     CircularProgressIndicator(
                         progress = {
                             if (bulkDownload.total == 0) 0f
@@ -522,12 +546,16 @@ private fun ProfileHeader(
                         if (media.isEmpty()) {
                             "No public posts to save"
                         } else {
-                            "Download profile · ${media.size} ${if (media.size == 1) "post" else "posts"}"
+                            "Download profile · ${media.size} " + when {
+                                profile.hasMorePosts -> "loaded"
+                                media.size == 1 -> "post"
+                                else -> "posts"
+                            }
                         },
                     )
                 }
             }
-            if (bulkDownload != null && (bulkDownload.running || bulkDownload.finished)) {
+            if (bulkDownload != null && (bulkDownload.running || bulkDownload.finished || bulkDownload.error != null)) {
                 Spacer(Modifier.height(12.dp))
                 Surface(
                     shape = RoundedCornerShape(18.dp),
@@ -535,7 +563,17 @@ private fun ProfileHeader(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(Modifier.padding(14.dp)) {
-                        if (bulkDownload.running) {
+                        if (bulkDownload.running && bulkDownload.preparing) {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().clip(CircleShape),
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Loading every public page · ${bulkDownload.prepared} posts found",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        } else if (bulkDownload.running) {
                             LinearProgressIndicator(
                                 progress = {
                                     if (bulkDownload.total == 0) 0f
@@ -556,6 +594,19 @@ private fun ProfileHeader(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
+                        } else if (bulkDownload.error != null) {
+                            Text(
+                                "Profile download failed",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Text(
+                                bulkDownload.error!!,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            TextButton(onClick = onClearBulk) { Text("Dismiss") }
                         } else {
                             Text(
                                 "Profile download complete",
@@ -676,6 +727,45 @@ private fun ProfileHeader(
         Spacer(Modifier.height(8.dp))
         ProfileTabs(tab, onTab)
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun LoadMoreFooter(
+    loading: Boolean,
+    loaded: Int,
+    total: Long,
+    onLoadMore: () -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (loading) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(9.dp))
+                Text("Loading older posts…", style = MaterialTheme.typography.labelMedium)
+            }
+        } else {
+            OutlinedButton(
+                onClick = onLoadMore,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(7.dp))
+                Text("Load more posts")
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            if (total > 0) "Showing $loaded of ${total.compactCount()}" else "Showing $loaded posts",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

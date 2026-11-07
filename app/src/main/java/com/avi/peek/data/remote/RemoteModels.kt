@@ -50,6 +50,7 @@ data class ScrapedProfile(
     val isVerified: Boolean,
     val followerCount: Long,
     val followingCount: Long,
+    val postCount: Long = 0L,
     val bioLinks: List<BioLink>,
     val highlights: List<Highlight>,
     val latestReelMedia: Long?,
@@ -58,6 +59,12 @@ data class ScrapedProfile(
     val hasNextPage: Boolean,
     val endCursor: String?,
     val relatedProfiles: List<RelatedProfile> = emptyList(),
+)
+
+data class ProfilePostsPage(
+    val nodes: List<ProfileNode>,
+    val hasNextPage: Boolean,
+    val endCursor: String?,
 )
 
 data class RelatedProfile(

@@ -211,6 +211,93 @@ class PeekRepository(
         }
     }
 
+    /** Appends the next page of a profile grid without dropping earlier pages. */
+    suspend fun loadMoreProfilePosts(username: String): ProfilePageResult = withContext(Dispatchers.IO) {
+        val profile = db.profiles().get(username)
+            ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Open the profile first")
+        val after = profile.nextCursor
+        if (after.isNullOrBlank()) return@withContext ProfilePageResult(0, false)
+        val userId = profile.userId ?: profile.pk
+            ?: throw GuestException(GuestErrorKind.PARSE, "This profile has no public user id")
+
+        val page = client.fetchProfilePostsPage(username, userId, after)
+        val existingMedia = db.media().forProfile(username).associateBy { it.code }
+        val now = System.currentTimeMillis()
+        val items = page.nodes.mapIndexedNotNull { index, node ->
+            val old = existingMedia[node.code]
+            MediaEntity(
+                code = node.code,
+                pk = node.pk,
+                username = username,
+                userAvatar = profile.profilePicUrl ?: old?.userAvatar,
+                userFullName = profile.fullName.ifBlank { old?.userFullName.orEmpty() },
+                userVerified = profile.isVerified,
+                mediaType = node.mediaType,
+                productType = node.productType ?: old?.productType,
+                caption = node.caption ?: old?.caption,
+                displayUrl = node.displayUrl ?: old?.displayUrl,
+                videoUrl = old?.videoUrl,
+                likeCount = old?.likeCount,
+                commentCount = old?.commentCount,
+                takenAt = old?.takenAt ?: parserDate(node.accessibilityCaption),
+                fetchedAt = now,
+                detailFetchedAt = old?.detailFetchedAt,
+                carouselCount = maxOf(node.carouselCount, old?.carouselCount ?: 0),
+                childrenJson = old?.childrenJson,
+                width = old?.width,
+                height = old?.height,
+                accessibilityCaption = node.accessibilityCaption ?: old?.accessibilityCaption,
+                locationName = old?.locationName,
+                audioTitle = old?.audioTitle,
+                audioArtist = old?.audioArtist,
+                isLiked = old?.isLiked ?: false,
+                isSaved = old?.isSaved ?: false,
+                savedAt = old?.savedAt,
+                isDownloaded = old?.isDownloaded ?: false,
+                downloadedAt = old?.downloadedAt,
+                localImagePathsJson = old?.localImagePathsJson,
+                localVideoPath = old?.localVideoPath,
+                sortIndex = index,
+            )
+        }
+        db.media().upsertAll(items)
+        db.profiles().setPagination(username, page.hasNextPage, page.endCursor)
+        ProfilePageResult(items.size, page.hasNextPage)
+    }
+
+    suspend fun allProfileMediaCodes(username: String): List<String> = withContext(Dispatchers.IO) {
+        db.media().forProfile(username).map { it.code }
+    }
+
+    suspend fun loadAllProfilePosts(
+        username: String,
+        maxPages: Int = 120,
+        onProgress: (loaded: Int, hasMore: Boolean) -> Unit = { _, _ -> },
+    ): Int = withContext(Dispatchers.IO) {
+        var loaded = db.media().forProfile(username).size
+        var pages = 0
+        var profile = db.profiles().get(username) ?: throw GuestException(GuestErrorKind.NOT_FOUND)
+        if (profile.userId == null && profile.pk == null) {
+            refreshProfile(username)
+            profile = db.profiles().get(username) ?: return@withContext 0
+        }
+        if (profile.nextCursor.isNullOrBlank()) {
+            val refreshed = refreshProfile(username)
+            profile = refreshed.profile
+        }
+        while (pages < maxPages) {
+            val current = db.profiles().get(username) ?: break
+            if (!current.hasMorePosts || current.nextCursor.isNullOrBlank()) break
+            val result = loadMoreProfilePosts(username)
+            if (result.added == 0) break
+            loaded += result.added
+            pages++
+            onProgress(loaded, result.hasMore)
+            delay(260)
+        }
+        loaded
+    }
+
     /**
      * Merges a fresh public profile payload into the local cache. Local-only state
      * (follow, saves, likes, downloads) is never overwritten.
@@ -238,6 +325,9 @@ class PeekRepository(
             isVerified = scraped.isVerified,
             followerCount = scraped.followerCount,
             followingCount = scraped.followingCount,
+            postCount = scraped.postCount,
+            hasMorePosts = scraped.hasNextPage,
+            nextCursor = scraped.endCursor,
             bioLinksJson = json.encodeToString(ListSerializer(com.avi.peek.data.remote.BioLink.serializer()), scraped.bioLinks),
             highlightsJson = json.encodeToString(ListSerializer(com.avi.peek.data.remote.Highlight.serializer()), scraped.highlights),
             hasClips = scraped.hasClips,
@@ -295,7 +385,10 @@ class PeekRepository(
         db.profiles().upsert(profile)
         if (cacheMedia) {
             db.media().upsertAll(items)
-            if (items.isNotEmpty()) {
+            // Only prune when this profile's grid fits in one page. Profiles with
+            // more pages keep their previously loaded history until the account
+            // actually stops returning more posts.
+            if (items.isNotEmpty() && !scraped.hasNextPage) {
                 db.media().pruneProfile(username, items.map { it.code })
             }
         }
@@ -646,4 +739,9 @@ data class ImportSummary(
     val followed: Int,
     val failed: Int,
     val restoredSaved: Int,
+)
+
+data class ProfilePageResult(
+    val added: Int,
+    val hasMore: Boolean,
 )

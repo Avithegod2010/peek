@@ -54,7 +54,8 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - Full profile header with avatar, bio, links, stats and highlights
 - Posts and Reels tabs, plus bookmarks saved from that profile
 - **More like this** — related public creators from the same category, with local follow
-- **Download profile** in one action: every currently visible public post is saved offline, with an option to copy all photos and videos into the device gallery
+- **See every public post** with automatic grid pagination and a “Load more posts” fallback
+- **Download profile** in one action: Peek walks every public timeline page, then saves all posts offline, with an option to copy every photo and video into the device gallery
 - Public/private state is re-checked on refresh and never inferred from an empty grid
 - Local saved state shown on the grid
 - Share, copy, open on Instagram, pin, unfollow or remove a profile
@@ -142,7 +143,7 @@ The repository includes F-Droid metadata in [`fdroid/com.avi.peek.yml`](fdroid/c
 
 ## How the guest reader works
 
-Instagram’s public web pages server-render a small JSON payload inside `<script type="application/json" data-sjs>` tags. Peek requests the public profile page with normal browser hints, extracts that payload, and stores a normalized copy locally. A post page is read the same way when you open a post, which is where like counts, captions and video URLs come from.
+Instagram’s public web pages server-render a small JSON payload inside `<script type="application/json" data-sjs>` tags. Peek requests the public profile page with normal browser hints, extracts that payload, and stores a normalized copy locally. Older profile pages are loaded with the same anonymous Relay query the logged-out web profile uses for “Show more posts”. A post page is read the same way when you open a post, which is where like counts, captions and video URLs come from.
 
 This is deliberately **not** an authenticated scraper:
 
@@ -158,7 +159,8 @@ Following, likes, bookmarks, downloads and search history never leave the device
 
 ## Downloads and fair use
 
-- Only posts exposed on a public profile page can be saved. Instagram does not give logged-out guests an account's full archive, so “Download profile” usually means the latest public grid, not every historical post.
+- Peek now walks Instagram’s logged-out timeline pagination, so you can browse a public profile’s full public grid. Instagram can still stop pagination or rate-limit guests at any time.
+- “Download profile” first loads every public page it can reach, then saves the posts it found. That can take a while and use several GB on large accounts.
 - Mass downloading can trigger temporary rate limits or blocks. Peek keeps downloads to two at a time and shows failures instead of retrying aggressively.
 - Photos and videos belong to their creators. Keep downloads private and do not redistribute them.
 - A full profile can use significant storage and mobile data; the confirmation sheet and the existing Wi-Fi-only setting are there to keep that deliberate.
