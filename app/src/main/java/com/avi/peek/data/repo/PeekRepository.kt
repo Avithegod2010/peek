@@ -53,6 +53,7 @@ class PeekRepository(
     private val network: NetworkMonitor,
     private val downloads: DownloadStore,
     private val gallery: GallerySaver = GallerySaver(context),
+    private val requestLog: RequestLog = RequestLog(context),
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -79,6 +80,18 @@ class PeekRepository(
     val liked: Flow<List<MediaEntity>> = db.media().observeLiked()
     val recentlyViewed: Flow<List<ProfileEntity>> = db.profiles().observeRecentlyViewed()
     val recentSearches = db.searches().observeRecent()
+
+    fun mediaByCodes(codes: List<String>): Flow<List<MediaEntity>> = db.media().observeByCodes(codes)
+    fun mediaForUsernames(usernames: List<String>): Flow<List<MediaEntity>> =
+        db.media().observeForUsernames(usernames)
+
+    suspend fun profileMedia(username: String): List<MediaEntity> = withContext(Dispatchers.IO) {
+        db.media().forProfile(username)
+    }
+
+    suspend fun mediaByCodesOnce(codes: List<String>): List<MediaEntity> = withContext(Dispatchers.IO) {
+        if (codes.isEmpty()) emptyList() else db.media().byCodes(codes)
+    }
 
     val feed: Flow<List<FeedPost>> = combine(
         db.media().observeFeed(),
@@ -130,6 +143,10 @@ class PeekRepository(
         val post = runCatching { client.fetchPost(code) }.getOrNull() ?: return@withContext null
         val username = post.username.takeIf { it.isNotBlank() } ?: return@withContext null
         prefetchDirectoryProfile(username)
+    }
+
+    suspend fun fetchHighlightMedia(highlightId: String): List<MediaChild> = withContext(Dispatchers.IO) {
+        client.fetchHighlightMedia(highlightId)
     }
 
     suspend fun lookup(raw: String): ScrapedProfile {
@@ -203,10 +220,17 @@ class PeekRepository(
     suspend fun refreshProfile(username: String): CacheResult = withContext(Dispatchers.IO) {
         try {
             val scraped = client.fetchProfile(username)
-            cacheProfile(scraped, followed = null, followedAt = null)
+            val result = cacheProfile(scraped, followed = null, followedAt = null)
                 .also { db.profiles().setError(username, null) }
+            requestLog.record("profile @$username", "ok")
+            result
         } catch (e: GuestException) {
             db.profiles().setError(username, e.userMessage())
+            requestLog.record(
+                "profile @$username",
+                e.userMessage(),
+                rateLimited = e.kind == GuestErrorKind.RATE_LIMITED,
+            )
             throw e
         }
     }
@@ -220,7 +244,18 @@ class PeekRepository(
         val userId = profile.userId ?: profile.pk
             ?: throw GuestException(GuestErrorKind.PARSE, "This profile has no public user id")
 
-        val page = client.fetchProfilePostsPage(username, userId, after)
+        val page = try {
+            client.fetchProfilePostsPage(username, userId, after).also {
+                requestLog.record("older posts @$username", "${it.nodes.size} posts")
+            }
+        } catch (e: GuestException) {
+            requestLog.record(
+                "older posts @$username",
+                e.userMessage(),
+                rateLimited = e.kind == GuestErrorKind.RATE_LIMITED,
+            )
+            throw e
+        }
         val existingMedia = db.media().forProfile(username).associateBy { it.code }
         val now = System.currentTimeMillis()
         val items = page.nodes.mapIndexedNotNull { index, node ->
@@ -413,6 +448,7 @@ class PeekRepository(
 
             try {
                 val post = client.fetchPost(code)
+                requestLog.record("post $code", "ok")
                 val now = System.currentTimeMillis()
                 val children = post.children
                 val bestImage = children.firstOrNull()?.imageUrl ?: existing.displayUrl
@@ -450,6 +486,11 @@ class PeekRepository(
                 }
                 updated
             } catch (e: GuestException) {
+                requestLog.record(
+                    "post $code",
+                    e.userMessage(),
+                    rateLimited = e.kind == GuestErrorKind.RATE_LIMITED,
+                )
                 if (existing.displayUrl != null) existing else throw e
             }
         }
@@ -653,10 +694,12 @@ class PeekRepository(
             val imageJson = json.encodeToString(stringListSerializer, imagePaths)
             db.media().setDownloaded(code, true, now, imageJson, videoPath)
             _downloadProgress.update { it - code }
+            requestLog.record("download $code", "ok")
             db.media().get(code)
         } catch (e: Exception) {
             dir.deleteRecursively()
             _downloadProgress.update { it - code }
+            requestLog.record("download $code", e.userMessage() ?: "failed")
             throw e
         }
     }
@@ -666,7 +709,8 @@ class PeekRepository(
         if (gallery.needsLegacyPermission()) throw GallerySaver.PermissionRequired()
         val media = download(code)
             ?: throw IllegalStateException("That post could not be downloaded")
-        gallery.save(media)
+        val writeSidecar = settings.settings.first().gallerySidecars
+        gallery.save(media, writeSidecar)
     }
 
     suspend fun deleteDownload(code: String) {
@@ -676,6 +720,45 @@ class PeekRepository(
 
     suspend fun deleteCachedMedia() {
         db.media().clearCached()
+    }
+
+    suspend fun profileStorage(username: String): ProfileStorage = withContext(Dispatchers.IO) {
+        val media = db.media().forProfile(username)
+        var downloadBytes = 0L
+        media.filter { it.isDownloaded }.forEach { item ->
+            item.localImages().forEach { path -> downloadBytes += File(path).length() }
+            item.localVideoPath?.let { path -> downloadBytes += File(path).length() }
+        }
+        ProfileStorage(
+            cachedCount = media.size,
+            downloadedCount = media.count { it.isDownloaded },
+            savedCount = media.count { it.isSaved },
+            likedCount = media.count { it.isLiked },
+            keptCount = media.count { it.isSaved || it.isDownloaded || it.isLiked },
+            downloadBytes = downloadBytes,
+            newestAt = media.mapNotNull { it.takenAt }.maxOrNull(),
+            oldestAt = media.mapNotNull { it.takenAt }.minOrNull(),
+        )
+    }
+
+    suspend fun clearCachedPosts(username: String) = withContext(Dispatchers.IO) {
+        db.media().deleteCachedKeepingLiked(username)
+    }
+
+    suspend fun deleteDownloadsForProfile(username: String) = withContext(Dispatchers.IO) {
+        db.media().forProfile(username).filter { it.isDownloaded }.forEach { item ->
+            downloads.deleteFor(item.code)
+            db.media().clearDownload(item.code)
+        }
+    }
+
+    /** Keeps saved, downloaded, liked and the newest [keepNewest] cached posts. */
+    suspend fun trimProfileCache(username: String, keepNewest: Int) = withContext(Dispatchers.IO) {
+        val media = db.media().forProfile(username)
+        media.forEachIndexed { index, item ->
+            val keep = item.isSaved || item.isDownloaded || item.isLiked || index < keepNewest
+            if (!keep) db.media().delete(item.code)
+        }
     }
 
     suspend fun removeProfile(username: String, deleteRow: Boolean = false) {
@@ -744,4 +827,15 @@ data class ImportSummary(
 data class ProfilePageResult(
     val added: Int,
     val hasMore: Boolean,
+)
+
+data class ProfileStorage(
+    val cachedCount: Int,
+    val downloadedCount: Int,
+    val savedCount: Int,
+    val likedCount: Int,
+    val keptCount: Int,
+    val downloadBytes: Long,
+    val newestAt: Long?,
+    val oldestAt: Long?,
 )

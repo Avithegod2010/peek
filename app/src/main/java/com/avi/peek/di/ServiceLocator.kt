@@ -3,6 +3,7 @@ package com.avi.peek.di
 import android.content.Context
 import coil.ImageLoader
 import coil.disk.DiskCache
+import com.avi.peek.data.local.LibraryStore
 import com.avi.peek.data.local.PeekDatabase
 import com.avi.peek.data.local.SearchStore
 import com.avi.peek.data.local.SettingsStore
@@ -13,6 +14,7 @@ import com.avi.peek.data.repo.DownloadQueue
 import com.avi.peek.data.repo.DownloadStore
 import com.avi.peek.data.repo.PeekRepository
 import com.avi.peek.data.repo.ProfileDownloadManager
+import com.avi.peek.data.repo.RequestLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,6 +38,8 @@ object ServiceLocator {
 
     val searchStore: SearchStore by lazy { SearchStore(appContext) }
 
+    val libraryStore: LibraryStore by lazy { LibraryStore(appContext) }
+
     val network: NetworkMonitor by lazy { NetworkMonitor(appContext) }
 
     val okHttp by lazy { GuestInstagramClient.defaultClient() }
@@ -58,16 +62,21 @@ object ServiceLocator {
             settings = settings,
             network = network,
             downloads = downloads,
+            requestLog = requestLog,
         )
     }
 
-    val downloadQueue: DownloadQueue by lazy { DownloadQueue(repository, appScope) }
+    val downloadQueue: DownloadQueue by lazy {
+        DownloadQueue(repository, appScope, settings, network, appContext)
+    }
 
     val profileDownloadManager: ProfileDownloadManager by lazy {
         ProfileDownloadManager(repository, downloadQueue, appScope)
     }
 
     val backupManager: BackupManager by lazy { BackupManager(appContext, repository) }
+
+    val requestLog: RequestLog by lazy { RequestLog(appContext) }
 
     val imageLoader: ImageLoader by lazy {
         ImageLoader.Builder(appContext)

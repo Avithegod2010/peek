@@ -26,11 +26,14 @@ import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Button
@@ -65,6 +68,9 @@ fun LibraryScreen(
     onOpenDownloads: () -> Unit,
     onOpenLiked: () -> Unit,
     onOpenRecap: () -> Unit,
+    onOpenCollections: () -> Unit,
+    onOpenCircles: () -> Unit,
+    onOpenRateLimits: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPost: (String) -> Unit,
     onOpenDiscover: () -> Unit,
@@ -225,8 +231,11 @@ fun LibraryScreen(
                     LibraryRow(Icons.Rounded.People, "Manage following", "$followingCount local ${if (followingCount == 1) "profile" else "profiles"}", onOpenFollowing)
                     LibraryRow(Icons.Rounded.Bookmarks, "Saved posts", "$savedCount bookmarked", onOpenSaved)
                     LibraryRow(Icons.Rounded.Favorite, "Liked posts", "Your local liked feed", onOpenLiked)
+                    LibraryRow(Icons.Rounded.CollectionsBookmark, "Collections", "Private folders of saved posts", onOpenCollections)
+                    LibraryRow(Icons.Rounded.Groups, "Private circles", "Local groups and close friends", onOpenCircles)
                     LibraryRow(Icons.Rounded.Download, "Offline posts", "$downloadCount downloaded", onOpenDownloads)
                     LibraryRow(Icons.Rounded.Insights, "Weekly recap", "A private look at your week", onOpenRecap)
+                    LibraryRow(Icons.Rounded.Speed, "Rate-limit dashboard", "Requests, pauses and recent outcomes", onOpenRateLimits)
                     LibraryRow(Icons.Rounded.DarkMode, "Appearance & feel", "Material You, palette, haptics", onOpenSettings)
                     LibraryRow(Icons.Rounded.Sync, "Sync & notifications", "Refresh, background sync", onOpenSettings)
                     LibraryRow(Icons.Rounded.Backup, "Backup & settings", "Export follows and saves", onOpenSettings)

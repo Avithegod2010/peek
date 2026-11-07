@@ -1,5 +1,10 @@
 package com.avi.peek.data.repo
 
+import android.content.Context
+import android.os.BatteryManager
+import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.data.local.SettingsStore
+import com.avi.peek.util.NetworkMonitor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -23,14 +28,25 @@ data class DownloadTask(
 class DownloadQueue(
     private val repository: PeekRepository,
     private val scope: CoroutineScope,
+    private val settings: SettingsStore,
+    private val network: NetworkMonitor,
+    private val context: Context,
 ) {
     private val _tasks = MutableStateFlow<List<DownloadTask>>(emptyList())
     val tasks: StateFlow<List<DownloadTask>> = _tasks.asStateFlow()
+
+    private val _pausedAll = MutableStateFlow(false)
+    val pausedAll: StateFlow<Boolean> = _pausedAll.asStateFlow()
+
+    private var latestSettings = PeekSettings()
 
     private val jobs = mutableMapOf<String, Job>()
     private val semaphore = Semaphore(2)
 
     init {
+        scope.launch {
+            settings.settings.collect { latestSettings = it }
+        }
         scope.launch {
             repository.downloadProgress.collect { progress ->
                 _tasks.update { list ->
@@ -47,19 +63,52 @@ class DownloadQueue(
         }
     }
 
-    fun enqueue(code: String) {
+    fun blockReason(): String? {
+        if (_pausedAll.value) return "Downloads are paused"
+        if (latestSettings.wifiOnlySync && !network.wifi.value) return "Wi-Fi only is on"
+        if (latestSettings.downloadChargingOnly && !isCharging()) return "Waiting for a charger"
+        return null
+    }
+
+    fun enqueue(code: String): String? {
+        blockReason()?.let { return it }
         val existing = _tasks.value.firstOrNull { it.code == code }
         if (existing != null && existing.status in setOf(
                 DownloadStatus.QUEUED,
                 DownloadStatus.RUNNING,
             )
         ) {
-            return
+            return null
         }
         _tasks.update { current ->
             current.filterNot { it.code == code } + DownloadTask(code, DownloadStatus.QUEUED)
         }
         start(code)
+        return null
+    }
+
+    fun pauseAll() {
+        _pausedAll.value = true
+        jobs.keys.toList().forEach { code -> jobs[code]?.cancel() }
+        jobs.clear()
+        _tasks.update { list ->
+            list.map {
+                if (it.status == DownloadStatus.RUNNING || it.status == DownloadStatus.QUEUED) {
+                    it.copy(status = DownloadStatus.PAUSED)
+                } else it
+            }
+        }
+    }
+
+    fun resumeAll() {
+        _pausedAll.value = false
+        val paused = _tasks.value.filter { it.status == DownloadStatus.PAUSED }.map { it.code }
+        paused.forEach { code -> resume(code) }
+    }
+
+    private fun isCharging(): Boolean {
+        val manager = context.getSystemService(BatteryManager::class.java) ?: return false
+        return manager.isCharging
     }
 
     fun pause(code: String) {

@@ -40,6 +40,9 @@ data class PeekSettings(
     val hideLikeCounts: Boolean = false,
     val appLock: Boolean = false,
     val oneHanded: Boolean = false,
+    val downloadChargingOnly: Boolean = false,
+    val downloadQueuePerProfile: Int = 0,
+    val gallerySidecars: Boolean = false,
     val lastFullSync: Long = 0L,
 )
 
@@ -66,6 +69,9 @@ class SettingsStore(private val context: Context) {
         val HIDE_LIKES = booleanPreferencesKey("hide_likes")
         val APP_LOCK = booleanPreferencesKey("app_lock")
         val ONE_HANDED = booleanPreferencesKey("one_handed")
+        val DOWNLOAD_CHARGING = booleanPreferencesKey("download_charging")
+        val DOWNLOAD_QUEUE_LIMIT = intPreferencesKey("download_queue_limit")
+        val GALLERY_SIDECARS = booleanPreferencesKey("gallery_sidecars")
         val LAST_SYNC = stringPreferencesKey("last_full_sync")
     }
 
@@ -93,6 +99,9 @@ class SettingsStore(private val context: Context) {
                 hideLikeCounts = prefs[Keys.HIDE_LIKES] ?: false,
                 appLock = prefs[Keys.APP_LOCK] ?: false,
                 oneHanded = prefs[Keys.ONE_HANDED] ?: false,
+                downloadChargingOnly = prefs[Keys.DOWNLOAD_CHARGING] ?: false,
+                downloadQueuePerProfile = (prefs[Keys.DOWNLOAD_QUEUE_LIMIT] ?: 0).coerceIn(0, 500),
+                gallerySidecars = prefs[Keys.GALLERY_SIDECARS] ?: false,
                 lastFullSync = prefs[Keys.LAST_SYNC]?.toLongOrNull() ?: 0L,
             )
         }
@@ -117,6 +126,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setHideLikeCounts(value: Boolean) = edit { it[Keys.HIDE_LIKES] = value }
     suspend fun setAppLock(value: Boolean) = edit { it[Keys.APP_LOCK] = value }
     suspend fun setOneHanded(value: Boolean) = edit { it[Keys.ONE_HANDED] = value }
+    suspend fun setDownloadChargingOnly(value: Boolean) = edit { it[Keys.DOWNLOAD_CHARGING] = value }
+    suspend fun setDownloadQueuePerProfile(value: Int) =
+        edit { it[Keys.DOWNLOAD_QUEUE_LIMIT] = value.coerceIn(0, 500) }
+    suspend fun setGallerySidecars(value: Boolean) = edit { it[Keys.GALLERY_SIDECARS] = value }
     suspend fun setLastFullSync(value: Long) = edit { it[Keys.LAST_SYNC] = value.toString() }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {

@@ -1,5 +1,11 @@
 package com.avi.peek.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,8 +38,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Download
@@ -42,9 +52,13 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.PersonRemove
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -58,10 +72,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,17 +93,20 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.ProfileEntity
 import com.avi.peek.data.local.ProfileWithMedia
 import com.avi.peek.data.repo.ProfileDownloadState
+import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.AnimatedNumber
 import com.avi.peek.ui.components.Avatar
@@ -113,6 +134,9 @@ fun ProfileScreen(
     onBack: () -> Unit,
     onOpenPost: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
+    onOpenStorage: (String) -> Unit,
+    onOpenAudio: (String) -> Unit = {},
+    onOpenHighlight: (String, String, String?) -> Unit = { _, _, _ -> },
     headerAvatarModifier: Modifier = Modifier,
     viewModel: ProfileViewModel = viewModel(
         key = "profile_$username",
@@ -129,16 +153,104 @@ fun ProfileScreen(
     val downloads by viewModel.downloadProgress.collectAsStateWithLifecycle()
     val bulkDownload by viewModel.bulkDownload.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
+    val query by viewModel.query.collectAsStateWithLifecycle()
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val newSinceVisit by viewModel.newSinceVisit.collectAsStateWithLifecycle()
+    val visitBaseline by viewModel.visitBaseline.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val context = LocalContext.current
     val haptics = LocalPeekHaptics.current
     val gridState = rememberLazyGridState()
+    val wideLayout = LocalConfiguration.current.screenWidthDp >= 840
+    var selectedPost by remember { mutableStateOf<String?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
     var showDownloadDialog by remember { mutableStateOf(false) }
+    var showProfileFilters by remember { mutableStateOf(false) }
     var alsoGallery by remember { mutableStateOf(true) }
+    var selectedCodes by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showCollectionPicker by remember { mutableStateOf(false) }
+    var showArchiveChoice by remember { mutableStateOf(false) }
+    var showProfileArchiveChoice by remember { mutableStateOf(false) }
+    var pendingSelection by remember { mutableStateOf<List<String>>(emptyList()) }
+    var newCollectionName by remember { mutableStateOf("") }
+    var lastArchiveAt by remember { mutableStateOf(0L) }
+    var archiveOnlyNew by remember { mutableStateOf(true) }
+    val collections by ServiceLocator.libraryStore.collections.collectAsStateWithLifecycle(emptyList())
+
+    val galleryPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val pending = pendingSelection
+        pendingSelection = emptyList()
+        if (granted && pending.isNotEmpty()) {
+            viewModel.saveCodesToGallery(pending)
+        } else if (!granted) {
+            viewModel.postMessage("Allow storage access to save to the gallery")
+        }
+    }
+    val htmlArchiveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html"),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.exportSelection(uri, pendingSelection, html = true)
+            selectedCodes = emptySet()
+        }
+        pendingSelection = emptyList()
+    }
+    val jsonArchiveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.exportSelection(uri, pendingSelection, html = false)
+            selectedCodes = emptySet()
+        }
+        pendingSelection = emptyList()
+    }
+    val profileHtmlArchiveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html"),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.exportProfileArchive(
+                uri = uri,
+                html = true,
+                since = if (archiveOnlyNew) lastArchiveAt else 0L,
+            )
+        }
+    }
+    val profileJsonArchiveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.exportProfileArchive(
+                uri = uri,
+                html = false,
+                since = if (archiveOnlyNew) lastArchiveAt else 0L,
+            )
+        }
+    }
+
+    fun saveSelectionToGallery() {
+        val codes = selectedCodes.toList()
+        if (codes.isEmpty()) return
+        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            pendingSelection = codes
+            galleryPermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            viewModel.saveCodesToGallery(codes)
+            selectedCodes = emptySet()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
+    }
+    LaunchedEffect(username) {
+        lastArchiveAt = ServiceLocator.libraryStore.lastArchiveAt(username)
     }
 
     val profile = data?.profile
@@ -163,7 +275,9 @@ fun ProfileScreen(
             PullToRefreshBox(
                 isRefreshing = refreshing,
                 onRefresh = { viewModel.refresh(); haptics.tap() },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize(
+                    if (wideLayout && selectedPost != null) 0.54f else 1f,
+                ),
             ) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
@@ -200,6 +314,19 @@ fun ProfileScreen(
                             bulkDownload = bulkDownload,
                             onDownloadProfile = { showDownloadDialog = true },
                             onClearBulk = viewModel::clearBulkDownload,
+                            onOpenHighlight = onOpenHighlight,
+                        )
+                    }
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "profile-tools") {
+                        ProfileTools(
+                            query = query,
+                            onQuery = viewModel::setQuery,
+                            filters = filters,
+                            newCount = newSinceVisit,
+                            onOpenFilters = { showProfileFilters = true },
+                            onShowNew = { viewModel.setFilters(filters.copy(onlyNew = true)) },
+                            onMarkSeen = viewModel::markSeen,
+                            onClearFilters = viewModel::clearFilters,
                         )
                     }
                     if (visibleMedia.isEmpty()) {
@@ -228,7 +355,24 @@ fun ProfileScreen(
                             MediaGridItem(
                                 media = media,
                                 modifier = Modifier,
-                                onClick = { onOpenPost(media.code) },
+                                selected = selectedCodes.contains(media.code),
+                                onClick = {
+                                    if (selectedCodes.isNotEmpty()) {
+                                        selectedCodes = if (selectedCodes.contains(media.code)) {
+                                            selectedCodes - media.code
+                                        } else {
+                                            selectedCodes + media.code
+                                        }
+                                    } else if (wideLayout) {
+                                        selectedPost = media.code
+                                    } else {
+                                        onOpenPost(media.code)
+                                    }
+                                },
+                                onLongClick = {
+                                    selectedPost = null
+                                    selectedCodes = selectedCodes + media.code
+                                },
                             )
                         }
                     }
@@ -293,9 +437,60 @@ fun ProfileScreen(
                     onPin = viewModel::togglePinned,
                     onUnfollow = viewModel::unfollow,
                     onRemove = viewModel::removeProfile,
+                    onStorage = { onOpenStorage(username) },
+                    onArchive = { showProfileArchiveChoice = true },
                 )
             }
         }
+        if (selectedCodes.isNotEmpty()) {
+            SelectionTopBar(
+                count = selectedCodes.size,
+                onClose = { selectedCodes = emptySet() },
+                onSelectAll = { selectedCodes = visibleMedia.map { it.code }.toSet() },
+            )
+            SelectionActionBar(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                onDownload = {
+                    viewModel.downloadCodes(selectedCodes.toList())
+                    selectedCodes = emptySet()
+                },
+                onGallery = { saveSelectionToGallery() },
+                onCollection = { showCollectionPicker = true },
+                onArchive = { showArchiveChoice = true },
+            )
+        }
+        if (wideLayout && selectedPost != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.46f)
+                    .align(Alignment.CenterEnd),
+                shape = RoundedCornerShape(topStart = 26.dp, bottomStart = 26.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
+                shadowElevation = 20.dp,
+            ) {
+                PostScreen(
+                    code = selectedPost!!,
+                    onBack = { selectedPost = null },
+                    onOpenProfile = onOpenProfile,
+                    onOpenAudio = onOpenAudio,
+                    embedded = true,
+                )
+            }
+        }
+    }
+
+    if (showProfileFilters) {
+        ProfileFilterSheet(
+            filters = filters,
+            newAvailable = visitBaseline > 0L,
+            onDismiss = { showProfileFilters = false },
+            onApply = {
+                viewModel.setFilters(it)
+                showProfileFilters = false
+            },
+        )
     }
 
     if (showDownloadDialog) {
@@ -337,6 +532,13 @@ fun ProfileScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Spacer(Modifier.height(4.dp))
+                    TextButton(
+                        onClick = {
+                            viewModel.downloadNewPosts(alsoGallery)
+                            showDownloadDialog = false
+                        },
+                    ) { Text("Download only new posts") }
                 }
             },
             confirmButton = {
@@ -350,6 +552,150 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDownloadDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (showCollectionPicker) {
+        AlertDialog(
+            onDismissRequest = { showCollectionPicker = false },
+            title = { Text("Add to collection") },
+            text = {
+                Column {
+                    if (collections.isEmpty()) {
+                        Text(
+                            "No collections yet. Name one below.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        collections.forEach { collection ->
+                            Surface(
+                                onClick = {
+                                    viewModel.addSelectionToCollection(collection.id, selectedCodes.toList())
+                                    selectedCodes = emptySet()
+                                    showCollectionPicker = false
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                            ) {
+                                Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.CollectionsBookmark, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(collection.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                    Text("${collection.codes.size}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newCollectionName,
+                        onValueChange = { newCollectionName = it },
+                        label = { Text("New collection") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = newCollectionName.isNotBlank(),
+                    onClick = {
+                        viewModel.createCollectionWithSelection(newCollectionName, selectedCodes.toList())
+                        newCollectionName = ""
+                        selectedCodes = emptySet()
+                        showCollectionPicker = false
+                    },
+                ) { Text("Create & add") }
+            },
+            dismissButton = { TextButton(onClick = { showCollectionPicker = false }) { Text("Cancel") } },
+        )
+    }
+
+    if (showArchiveChoice) {
+        AlertDialog(
+            onDismissRequest = { showArchiveChoice = false },
+            title = { Text("Export ${selectedCodes.size} selected posts") },
+            text = {
+                Column {
+                    Text(
+                        "A private offline archive. HTML embeds locally downloaded images; JSON keeps metadata and links.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            pendingSelection = selectedCodes.toList()
+                            showArchiveChoice = false
+                            htmlArchiveLauncher.launch("peek-selection.html")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                    ) { Text("Export HTML") }
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            pendingSelection = selectedCodes.toList()
+                            showArchiveChoice = false
+                            jsonArchiveLauncher.launch("peek-selection.json")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                    ) { Text("Export JSON") }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showArchiveChoice = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (showProfileArchiveChoice) {
+        AlertDialog(
+            onDismissRequest = { showProfileArchiveChoice = false },
+            title = { Text("Export @$username") },
+            text = {
+                Column {
+                    Text(
+                        "A private archive of this profile's cached posts. HTML embeds locally downloaded images; JSON keeps captions, dates and links.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (lastArchiveAt > 0L) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = archiveOnlyNew,
+                                onCheckedChange = { archiveOnlyNew = it },
+                            )
+                            Text("Only posts added since the last export", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            showProfileArchiveChoice = false
+                            profileHtmlArchiveLauncher.launch("peek-$username.html")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                    ) { Text("Export HTML") }
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            showProfileArchiveChoice = false
+                            profileJsonArchiveLauncher.launch("peek-$username.json")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                    ) { Text("Export JSON") }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showProfileArchiveChoice = false }) { Text("Cancel") }
             },
         )
     }
@@ -374,6 +720,7 @@ private fun ProfileHeader(
     bulkDownload: ProfileDownloadState?,
     onDownloadProfile: () -> Unit,
     onClearBulk: () -> Unit,
+    onOpenHighlight: (String, String, String?) -> Unit,
 ) {
     val profile = value.profile
     val media = value.media
@@ -672,7 +1019,7 @@ private fun ProfileHeader(
                             .pressScale(remember { androidx.compose.foundation.interaction.MutableInteractionSource() })
                             .clickable {
                                 haptics.tap()
-                                context.openInstagram("stories/highlights/${highlight.id}/")
+                                onOpenHighlight(highlight.id, highlight.title, highlight.coverUrl)
                             }
                             .padding(vertical = 4.dp),
                     ) {
@@ -727,6 +1074,260 @@ private fun ProfileHeader(
         Spacer(Modifier.height(8.dp))
         ProfileTabs(tab, onTab)
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun SelectionTopBar(
+    count: Int,
+    onClose: () -> Unit,
+    onSelectAll: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
+            .statusBarsPadding()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onClose) {
+            Icon(Icons.Rounded.Close, contentDescription = "Clear selection")
+        }
+        Text("$count selected", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.weight(1f))
+        TextButton(onClick = onSelectAll) { Text("Select all") }
+    }
+}
+
+@Composable
+private fun SelectionActionBar(
+    modifier: Modifier = Modifier,
+    onDownload: () -> Unit,
+    onGallery: () -> Unit,
+    onCollection: () -> Unit,
+    onArchive: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 4.dp,
+        shadowElevation = 14.dp,
+    ) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            SelectionAction(Icons.Rounded.Download, "Offline", onDownload, Modifier.weight(1f))
+            SelectionAction(Icons.Rounded.PhotoLibrary, "Gallery", onGallery, Modifier.weight(1f))
+            SelectionAction(Icons.Rounded.CollectionsBookmark, "Collect", onCollection, Modifier.weight(1f))
+            SelectionAction(Icons.Rounded.Archive, "Archive", onArchive, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun SelectionAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(2.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ProfileTools(
+    query: String,
+    onQuery: (String) -> Unit,
+    filters: ProfileFilters,
+    newCount: Int,
+    onOpenFilters: () -> Unit,
+    onShowNew: () -> Unit,
+    onMarkSeen: () -> Unit,
+    onClearFilters: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQuery,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Search this profile") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Box {
+                Surface(
+                    onClick = onOpenFilters,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Icon(
+                        Icons.Rounded.Tune,
+                        contentDescription = "Profile filters",
+                        tint = if (filters.activeCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(13.dp).size(21.dp),
+                    )
+                }
+                if (filters.activeCount > 0) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .size(15.dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            filters.activeCount.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+        if (newCount > 0) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                Text(
+                    "$newCount new since your last visit",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onShowNew) { Text("Show") }
+                TextButton(onClick = onMarkSeen) { Text("Mark seen") }
+            }
+        }
+        if (filters.activeCount > 0) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                if (filters.type != ProfileMediaType.ALL) ProfileFilterBadge(filters.type.label)
+                if (filters.date != ProfileDateRange.ANY) ProfileFilterBadge(filters.date.label)
+                if (filters.sort != ProfileSort.NEWEST) ProfileFilterBadge(filters.sort.label)
+                if (filters.onlyNew) ProfileFilterBadge("New only")
+                TextButton(onClick = onClearFilters) { Text("Clear") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileFilterBadge(label: String) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+        )
+    }
+}
+
+@Composable
+private fun ProfileFilterSheet(
+    filters: ProfileFilters,
+    newAvailable: Boolean,
+    onDismiss: () -> Unit,
+    onApply: (ProfileFilters) -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var draft by remember(filters) { mutableStateOf(filters) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 26.dp),
+        ) {
+            Text("Filter this profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(14.dp))
+
+            Text("Media", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ProfileMediaType.entries.forEach { type ->
+                    ProfileFilterPill(type.label, draft.type == type) { draft = draft.copy(type = type) }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+
+            Text("Date", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ProfileDateRange.entries.forEach { range ->
+                    ProfileFilterPill(range.label, draft.date == range) { draft = draft.copy(date = range) }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+
+            Text("Sort", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ProfileSort.entries.forEach { sort ->
+                    ProfileFilterPill(sort.label, draft.sort == sort) { draft = draft.copy(sort = sort) }
+                }
+            }
+            if (newAvailable) {
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Only new since last visit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Uses your local visit mark", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = draft.onlyNew, onCheckedChange = { draft = draft.copy(onlyNew = it) })
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = { onApply(ProfileFilters()) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                ) { Text("Reset") }
+                Button(
+                    onClick = { onApply(draft) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                ) { Text("Apply") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileFilterPill(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        )
     }
 }
 
@@ -823,12 +1424,24 @@ private fun ProfileMenu(
     onPin: () -> Unit,
     onUnfollow: () -> Unit,
     onRemove: () -> Unit,
+    onStorage: () -> Unit,
+    onArchive: () -> Unit,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
             text = { Text("Refresh profile") },
             leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
             onClick = { onDismiss(); onRefresh() },
+        )
+        DropdownMenuItem(
+            text = { Text("Profile storage") },
+            leadingIcon = { Icon(Icons.Rounded.Storage, contentDescription = null) },
+            onClick = { onDismiss(); onStorage() },
+        )
+        DropdownMenuItem(
+            text = { Text("Export profile archive") },
+            leadingIcon = { Icon(Icons.Rounded.Archive, contentDescription = null) },
+            onClick = { onDismiss(); onArchive() },
         )
         DropdownMenuItem(
             text = { Text("Share") },

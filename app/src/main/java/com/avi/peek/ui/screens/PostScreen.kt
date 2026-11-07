@@ -121,6 +121,7 @@ fun PostScreen(
     onBack: () -> Unit,
     onOpenProfile: (String) -> Unit,
     onOpenAudio: (String) -> Unit,
+    embedded: Boolean = false,
     viewModel: PostViewModel = viewModel(
         key = "post_$code",
         factory = SimpleViewModelFactory { PostViewModel(code) },
@@ -161,8 +162,10 @@ fun PostScreen(
         }
     }
 
-    BackHandler(onBack = onBack)
-    DarkSystemBars()
+    if (!embedded) {
+        BackHandler(onBack = onBack)
+        DarkSystemBars()
+    }
 
     LaunchedEffect(settings.muteVideos) { muted = settings.muteVideos }
     LaunchedEffect(Unit) { viewModel.messages.collect { snackbar.showSnackbar(it) } }

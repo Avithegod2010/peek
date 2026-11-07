@@ -206,6 +206,27 @@ class SsrParser(
         )
     }
 
+    /** Best-effort read of a public highlight page. Guest pages often omit items. */
+    fun parseHighlightMedia(html: String): List<MediaChild> {
+        val roots = parseScripts(html)
+        if (roots.isEmpty()) return emptyList()
+        val candidates = ArrayList<JsonObject>()
+        forEachObject(roots) { obj ->
+            if (
+                obj["media_type"] != null &&
+                (obj["image_versions2"] != null || obj["video_versions"] != null) &&
+                (obj["pk"] != null || obj["id"] != null)
+            ) {
+                candidates += obj
+            }
+            false
+        }
+        return candidates
+            .distinctBy { it.string("pk") ?: it.string("id") }
+            .take(40)
+            .mapIndexedNotNull { index, node -> parseChild(node, index) }
+    }
+
     fun parsePost(html: String, code: String): ScrapedPost? {
         val roots = parseScripts(html)
         if (roots.isEmpty()) return null

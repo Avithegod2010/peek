@@ -12,6 +12,8 @@ import androidx.core.content.ContextCompat
 import com.avi.peek.data.local.MediaEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.File
 
 /**
@@ -37,7 +39,7 @@ class GallerySaver(private val context: Context) {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
             ) != PackageManager.PERMISSION_GRANTED
 
-    suspend fun save(media: MediaEntity): Summary = withContext(Dispatchers.IO) {
+    suspend fun save(media: MediaEntity, writeSidecar: Boolean = false): Summary = withContext(Dispatchers.IO) {
         if (needsLegacyPermission()) throw PermissionRequired()
         var images = 0
         var videos = 0
@@ -62,7 +64,46 @@ class GallerySaver(private val context: Context) {
         if (images == 0 && videos == 0) {
             throw IllegalStateException("No downloaded media was available to copy")
         }
+        if (writeSidecar) {
+            runCatching { writeSidecar(media) }
+        }
         Summary(images, videos)
+    }
+
+    private fun writeSidecar(media: MediaEntity) {
+        val metadata = buildJsonObject {
+            put("app", "Peek")
+            put("username", media.username)
+            put("code", media.code)
+            put("caption", media.caption ?: "")
+            put("takenAt", media.takenAt ?: 0L)
+            put("mediaType", media.mediaType)
+            put("productType", media.productType ?: "")
+            put("source", "https://www.instagram.com/p/${media.code}/")
+            put("savedAt", System.currentTimeMillis())
+        }.toString()
+        val name = "peek_${safe(media.code)}.json"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = context.contentResolver
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/Peek/${safe(media.username)}")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
+            resolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(metadata) }
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+        } else {
+            @Suppress("DEPRECATION")
+            val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val directory = File(File(base, "Peek"), safe(media.username))
+            if (directory.exists() || directory.mkdirs()) {
+                File(directory, name).writeText(metadata)
+            }
+        }
     }
 
     private fun copyToGallery(

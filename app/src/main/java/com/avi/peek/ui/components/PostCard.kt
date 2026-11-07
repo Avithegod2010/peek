@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Collections
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DownloadDone
@@ -419,6 +422,8 @@ fun MediaGridItem(
     media: MediaEntity,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    selected: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val haptics = LocalPeekHaptics.current
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -426,15 +431,27 @@ fun MediaGridItem(
         modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(14.dp))
+            .then(
+                if (selected) Modifier.border(
+                    2.dp,
+                    MaterialTheme.colorScheme.primary,
+                    RoundedCornerShape(14.dp),
+                ) else Modifier,
+            )
             .pressScale(interaction, 0.94f)
             .semantics { contentDescription = "Open post by ${media.username}" }
-            .clickable(
+            .combinedClickable(
                 interactionSource = interaction,
                 indication = null,
-            ) {
-                haptics.tap()
-                onClick()
-            },
+                onClick = {
+                    haptics.tap()
+                    onClick()
+                },
+                onLongClick = {
+                    haptics.confirm()
+                    onLongClick?.invoke()
+                },
+            ),
     ) {
         PeekImage(
             url = media.displayUrl,
@@ -504,6 +521,28 @@ fun MediaGridItem(
                         .size(15.dp)
                         .background(Color.Black.copy(alpha = 0.35f), CircleShape)
                         .padding(2.dp),
+                )
+            }
+        }
+        if (selected) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.Center)
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(19.dp),
                 )
             }
         }

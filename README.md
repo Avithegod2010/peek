@@ -55,7 +55,15 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - Posts and Reels tabs, plus bookmarks saved from that profile
 - **More like this** — related public creators from the same category, with local follow
 - **See every public post** with automatic grid pagination and a “Load more posts” fallback
+- **Search this profile** by caption, date or place, with media/date/sort filters
+- **New since your last visit** count, “Show” filter and a local seen mark
+- **Long-press to select** posts and save them offline, copy them to the gallery, archive them or add them to a collection
 - **Download profile** in one action: Peek walks every public timeline page, then saves all posts offline, with an option to copy every photo and video into the device gallery
+- **Download only new posts** without re-walking pages you already have
+- **Profile storage** screen: see per-profile size and clear cache, delete downloads or trim to the newest 60/120 posts
+- **Two-pane profile** on tablets: grid on the left, post detail on the right
+- **Private circles / close friends** and combined local timelines
+- **Read-only highlights** with the public cover and any media Instagram exposes
 - Public/private state is re-checked on refresh and never inferred from an empty grid
 - Local saved state shown on the grid
 - Share, copy, open on Instagram, pin, unfollow or remove a profile
@@ -75,12 +83,18 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 ### Library
 - **Saved** posts grid with filters
 - **Liked** local feed and a **Weekly recap** with saved/downloaded/viewed counts
+- **Collections** — private folders of saved posts with a cover and per-collection grid
+- **Private circles** — local groups, close-friends labels and a combined cached timeline
+- **Rate-limit dashboard** — recent profile/page/post outcomes, rate-limit count, pause-all downloads and background-sync control
 - **Offline** downloads manager with file sizes and a **download queue** that can pause, resume, retry and remove carousel downloads
+- **Download scheduler** settings: Wi-Fi only, charge-only, and a maximum newest-post count per profile
+- **Per-profile storage manager** with cache clearing, download deletion and cache trimming
 - **Passphrase-encrypted backups** (AES-256-GCM + PBKDF2), with legacy JSON restore
-- **HTML and JSON archive export** of cached, saved and liked posts
-- Settings for theme, palette, haptics, motion, sync depth, Wi-Fi only, notifications and storage
+- **HTML and JSON archive export** of cached, saved and liked posts, plus per-profile and selected-post archives with incremental “only new since last export”
+- **Gallery albums** under `Pictures/Peek/<username>` and `Movies/Peek/<username>`, with optional JSON caption/date sidecars
+- Settings for theme, palette, haptics, motion, sync depth, Wi-Fi only, charge-only downloads, notifications and storage
 - Biometric / device-lock app lock and a one-handed Home search action
-- Adaptive navigation rail on tablets and foldables, bottom bar on phones
+- Adaptive navigation rail on tablets and foldables, bottom bar on phones, and a two-pane profile on wide screens
 
 ### Under the hood
 - Guest-access parsing of Instagram's server-rendered public pages
@@ -122,6 +136,10 @@ A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are 
 | Themed pack | Explore packs |
 | --- | --- |
 | <img src="docs/screenshots/pack.png" width="330" alt="Museums pack" /> | <img src="docs/screenshots/explore.png" width="330" alt="Explore packs" /> |
+
+| Read-only highlight | Profile storage |
+| --- | --- |
+| <img src="docs/screenshots/highlight.png" width="330" alt="Highlight viewer" /> | <img src="docs/screenshots/storage.png" width="330" alt="Profile storage" /> |
 
 ## Build
 

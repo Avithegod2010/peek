@@ -57,13 +57,33 @@ class ProfileDownloadManager(
                 )
         }
         jobs[username] = scope.launch {
-            runDownloads(username, clean, saveToGallery)
+            val max = repository.currentSettings().downloadQueuePerProfile
+            val limited = if (max > 0) clean.take(max) else clean
+            _states.update { current ->
+                val state = current[username] ?: return@update current
+                current + (username to state.copy(total = limited.size))
+            }
+            runDownloads(username, limited, saveToGallery)
         }
     }
 
     /** Loads every public page first, then downloads all of it. */
     fun startAll(username: String, saveToGallery: Boolean) {
         if (jobs[username]?.isActive == true) return
+        val blocked = queue.blockReason()
+        if (blocked != null) {
+            _states.update { current ->
+                current + (
+                    username to ProfileDownloadState(
+                        username = username,
+                        total = 0,
+                        running = false,
+                        error = blocked,
+                    )
+                    )
+            }
+            return
+        }
         _states.update {
             it + (
                 username to ProfileDownloadState(
@@ -101,13 +121,15 @@ class ProfileDownloadManager(
                 return@launch
             }
 
-            val codes = repository.allProfileMediaCodes(username)
+            val allCodes = repository.allProfileMediaCodes(username)
+            val max = repository.currentSettings().downloadQueuePerProfile
+            val codes = if (max > 0) allCodes.take(max) else allCodes
             _states.update { current ->
                 val state = current[username] ?: return@update current
                 current + (
                     username to state.copy(
                         total = codes.size,
-                        prepared = maxOf(loaded, codes.size),
+                        prepared = maxOf(loaded, allCodes.size),
                         preparing = false,
                     )
                     )
@@ -121,6 +143,21 @@ class ProfileDownloadManager(
         codes: List<String>,
         saveToGallery: Boolean,
     ) {
+        val blocked = queue.blockReason()
+        if (blocked != null) {
+            _states.update { current ->
+                val state = current[username] ?: return@update current
+                current + (
+                    username to state.copy(
+                        running = false,
+                        preparing = false,
+                        error = blocked,
+                    )
+                    )
+            }
+            jobs.remove(username)
+            return
+        }
         if (codes.isEmpty()) {
             _states.update { current ->
                 val state = current[username] ?: return@update current

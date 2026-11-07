@@ -28,6 +28,42 @@ import kotlinx.coroutines.sync.withPermit
 
 enum class ProfileTab { POSTS, REELS, SAVED }
 
+enum class ProfileMediaType(val label: String) {
+    ALL("All"),
+    PHOTOS("Photos"),
+    VIDEOS("Videos"),
+    REELS("Reels"),
+    CAROUSELS("Carousels"),
+}
+
+enum class ProfileDateRange(val label: String) {
+    ANY("Any time"),
+    WEEK("Last 7 days"),
+    MONTH("Last 30 days"),
+    YEAR("Last year"),
+}
+
+enum class ProfileSort(val label: String) {
+    NEWEST("Newest"),
+    OLDEST("Oldest"),
+    MOST_LIKED("Most liked"),
+}
+
+data class ProfileFilters(
+    val type: ProfileMediaType = ProfileMediaType.ALL,
+    val date: ProfileDateRange = ProfileDateRange.ANY,
+    val sort: ProfileSort = ProfileSort.NEWEST,
+    val onlyNew: Boolean = false,
+) {
+    val activeCount: Int
+        get() = listOf(
+            type != ProfileMediaType.ALL,
+            date != ProfileDateRange.ANY,
+            sort != ProfileSort.NEWEST,
+            onlyNew,
+        ).count { it }
+}
+
 class ProfileViewModel(private val username: String) : ViewModel() {
     private val repo = ServiceLocator.repository
 
@@ -50,13 +86,81 @@ class ProfileViewModel(private val username: String) : ViewModel() {
     private val _tab = MutableStateFlow(ProfileTab.POSTS)
     val tab: StateFlow<ProfileTab> = _tab.asStateFlow()
 
-    val visibleMedia: StateFlow<List<MediaEntity>> = combine(data, _tab) { value, tab ->
-        val media = value?.media.orEmpty()
-        when (tab) {
-            ProfileTab.POSTS -> media.filter { !it.isReel }
-            ProfileTab.REELS -> media.filter { it.isReel }
-            ProfileTab.SAVED -> media.filter { it.isSaved }
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+
+    private val _filters = MutableStateFlow(ProfileFilters())
+    val filters: StateFlow<ProfileFilters> = _filters.asStateFlow()
+
+    private val _visitBaseline = MutableStateFlow(0L)
+    val visitBaseline: StateFlow<Long> = _visitBaseline.asStateFlow()
+
+    val newSinceVisit: StateFlow<Int> = combine(data, _visitBaseline) { value, baseline ->
+        if (baseline <= 0L) 0
+        else value?.media?.count { (it.takenAt ?: 0L) > baseline } ?: 0
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    val visibleMedia: StateFlow<List<MediaEntity>> = combine(
+        data,
+        _tab,
+        _query,
+        _filters,
+        _visitBaseline,
+    ) { value, tab, rawQuery, filters, baseline ->
+        val now = System.currentTimeMillis()
+        val all = value?.media.orEmpty()
+        var media = when (filters.type) {
+            ProfileMediaType.REELS -> all.filter { it.isReel }
+            ProfileMediaType.PHOTOS -> all.filter { !it.isVideo && !it.isCarousel }
+            ProfileMediaType.VIDEOS -> all.filter { it.isVideo }
+            ProfileMediaType.CAROUSELS -> all.filter { it.isCarousel }
+            ProfileMediaType.ALL -> when (tab) {
+                ProfileTab.POSTS -> all.filter { !it.isReel }
+                ProfileTab.REELS -> all.filter { it.isReel }
+                ProfileTab.SAVED -> all.filter { it.isSaved }
+            }
         }
+        val query = rawQuery.trim()
+        if (query.isNotEmpty()) {
+            media = media.filter { item ->
+                val haystack = buildString {
+                    append(item.caption.orEmpty()).append(' ')
+                    append(item.locationName.orEmpty()).append(' ')
+                    append(item.audioTitle.orEmpty()).append(' ')
+                    append(item.audioArtist.orEmpty()).append(' ')
+                    append(item.accessibilityCaption.orEmpty()).append(' ')
+                    item.takenAt?.let { seconds ->
+                        append(java.time.Instant.ofEpochSecond(seconds).toString()).append(' ')
+                    }
+                }.lowercase()
+                query.lowercase().split(Regex("\\s+")).all { haystack.contains(it) }
+            }
+        }
+        if (filters.onlyNew && baseline > 0L) {
+            media = media.filter { (it.takenAt ?: 0L) > baseline }
+        }
+        media = when (filters.type) {
+            ProfileMediaType.ALL -> media
+            ProfileMediaType.PHOTOS -> media.filter { !it.isVideo && !it.isCarousel }
+            ProfileMediaType.VIDEOS -> media.filter { it.isVideo }
+            ProfileMediaType.REELS -> media.filter { it.isReel }
+            ProfileMediaType.CAROUSELS -> media.filter { it.isCarousel }
+        }
+        val cutoff = when (filters.date) {
+            ProfileDateRange.ANY -> null
+            ProfileDateRange.WEEK -> (now / 1000L) - 7L * 24 * 60 * 60
+            ProfileDateRange.MONTH -> (now / 1000L) - 30L * 24 * 60 * 60
+            ProfileDateRange.YEAR -> (now / 1000L) - 365L * 24 * 60 * 60
+        }
+        if (cutoff != null) {
+            media = media.filter { (it.takenAt ?: 0L) >= cutoff }
+        }
+        media = when (filters.sort) {
+            ProfileSort.NEWEST -> media.sortedByDescending { it.takenAt ?: 0L }
+            ProfileSort.OLDEST -> media.sortedBy { it.takenAt ?: Long.MAX_VALUE }
+            ProfileSort.MOST_LIKED -> media.sortedByDescending { it.likeCount ?: 0L }
+        }
+        media
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
@@ -87,6 +191,9 @@ class ProfileViewModel(private val username: String) : ViewModel() {
 
     init {
         viewModelScope.launch {
+            val previousVisit = ServiceLocator.libraryStore.lastVisit(username) / 1000L
+            _visitBaseline.value = previousVisit
+            ServiceLocator.libraryStore.markVisited(username, System.currentTimeMillis())
             repo.markViewed(username)
             val current = repo.observeProfile(username).first()?.profile
             if (current == null ||
@@ -147,6 +254,25 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         }
     }
 
+    fun setQuery(value: String) {
+        _query.value = value.take(80)
+    }
+
+    fun setFilters(filters: ProfileFilters) {
+        _filters.value = filters
+    }
+
+    fun clearFilters() {
+        _query.value = ""
+        _filters.value = ProfileFilters()
+    }
+
+    fun markSeen() {
+        val now = System.currentTimeMillis()
+        _visitBaseline.value = now / 1000L
+        viewModelScope.launch { ServiceLocator.libraryStore.markVisited(username, now) }
+    }
+
     fun loadMore() {
         if (_loadingMore.value) return
         val current = data.value?.profile ?: return
@@ -198,8 +324,8 @@ class ProfileViewModel(private val username: String) : ViewModel() {
     }
 
     fun download(code: String) {
-        queue.enqueue(code)
-        _messages.tryEmit("Added to the download queue")
+        val blocked = queue.enqueue(code)
+        _messages.tryEmit(blocked ?: "Added to the download queue")
     }
 
     fun downloadProfile(saveToGallery: Boolean) {
@@ -226,6 +352,98 @@ class ProfileViewModel(private val username: String) : ViewModel() {
     }
 
     fun clearBulkDownload() = ServiceLocator.profileDownloadManager.clear(username)
+
+    /** Refresh the first page, then queue only posts that are not already offline. */
+    fun downloadNewPosts(saveToGallery: Boolean) {
+        viewModelScope.launch {
+            _messages.emit("Checking for new posts…")
+            runCatching {
+                repo.refreshProfile(username)
+                val newPosts = repo.profileMedia(username).filter { !it.isDownloaded }
+                if (newPosts.isEmpty()) {
+                    _messages.emit("No new posts to download")
+                    return@runCatching
+                }
+                ServiceLocator.profileDownloadManager.start(
+                    username = username,
+                    codes = newPosts.map { it.code },
+                    saveToGallery = saveToGallery,
+                )
+                _messages.emit("Queued ${newPosts.size} new ${if (newPosts.size == 1) "post" else "posts"}")
+            }.onFailure { _messages.emit(it.userMessage()) }
+        }
+    }
+
+    fun downloadCodes(codes: List<String>) {
+        if (codes.isEmpty()) return
+        viewModelScope.launch {
+            var blocked: String? = null
+            codes.forEach { code ->
+                val reason = queue.enqueue(code)
+                if (reason != null) blocked = reason
+            }
+            _messages.emit(
+                blocked ?: "Queued ${codes.size} ${if (codes.size == 1) "post" else "posts"}",
+            )
+        }
+    }
+
+    fun saveCodesToGallery(codes: List<String>) {
+        if (codes.isEmpty()) return
+        viewModelScope.launch {
+            _messages.emit("Preparing ${codes.size} gallery ${if (codes.size == 1) "copy" else "copies"}…")
+            var files = 0
+            var failed = 0
+            codes.forEach { code ->
+                runCatching { repo.saveToGallery(code) }
+                    .onSuccess { files += it.total }
+                    .onFailure { failed++ }
+            }
+            _messages.emit(
+                if (failed == 0) "Saved $files ${if (files == 1) "file" else "files"} to the gallery"
+                else "Saved $files files · $failed posts failed",
+            )
+        }
+    }
+
+    fun exportSelection(uri: android.net.Uri, codes: List<String>, html: Boolean) {
+        viewModelScope.launch {
+            _messages.emit("Writing archive…")
+            runCatching { ServiceLocator.backupManager.exportMediaArchive(uri, codes, html) }
+                .onSuccess { _messages.emit(if (html) "HTML archive exported" else "JSON archive exported") }
+                .onFailure { _messages.emit(it.userMessage()) }
+        }
+    }
+
+    fun exportProfileArchive(uri: android.net.Uri, html: Boolean, since: Long) {
+        viewModelScope.launch {
+            _messages.emit("Writing profile archive…")
+            runCatching {
+                ServiceLocator.backupManager.exportProfileArchive(uri, username, html, since)
+                ServiceLocator.libraryStore.markArchive(username, System.currentTimeMillis())
+            }.onSuccess {
+                _messages.emit(if (html) "HTML archive exported" else "JSON archive exported")
+            }.onFailure { _messages.emit(it.userMessage()) }
+        }
+    }
+
+    fun addSelectionToCollection(id: String, codes: List<String>) {
+        viewModelScope.launch {
+            ServiceLocator.libraryStore.addToCollection(id, codes)
+            _messages.emit("Added ${codes.size} ${if (codes.size == 1) "post" else "posts"} to the collection")
+        }
+    }
+
+    fun createCollectionWithSelection(name: String, codes: List<String>) {
+        viewModelScope.launch {
+            ServiceLocator.libraryStore.createCollection(name, codes)
+            _messages.emit("Collection created")
+        }
+    }
+
+    fun clearSelection() {
+        // Selection is intentionally screen state; this hook documents the action.
+    }
 
     fun follow() {
         viewModelScope.launch {

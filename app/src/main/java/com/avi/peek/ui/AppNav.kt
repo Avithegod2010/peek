@@ -95,14 +95,21 @@ import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.LocalReduceMotion
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.screens.AudioScreen
+import com.avi.peek.ui.screens.CircleFeedScreen
+import com.avi.peek.ui.screens.CirclesScreen
+import com.avi.peek.ui.screens.CollectionDetailScreen
+import com.avi.peek.ui.screens.CollectionsScreen
 import com.avi.peek.ui.screens.ExploreScreen
 import com.avi.peek.ui.screens.DownloadsScreen
+import com.avi.peek.ui.screens.HighlightScreen
 import com.avi.peek.ui.screens.FollowingScreen
 import com.avi.peek.ui.screens.HomeScreen
 import com.avi.peek.ui.screens.LibraryScreen
 import com.avi.peek.ui.screens.OnboardingScreen
 import com.avi.peek.ui.screens.PostScreen
 import com.avi.peek.ui.screens.ProfileScreen
+import com.avi.peek.ui.screens.ProfileStorageScreen
+import com.avi.peek.ui.screens.RateLimitScreen
 import com.avi.peek.ui.screens.ReelsScreen
 import com.avi.peek.ui.screens.LikedScreen
 import com.avi.peek.ui.screens.PackScreen
@@ -368,6 +375,9 @@ private fun MainScaffold(
                     onOpenDownloads = { navController.navigate("downloads") },
                     onOpenLiked = { navController.navigate("liked") },
                     onOpenRecap = { navController.navigate("recap") },
+                    onOpenCollections = { navController.navigate("collections") },
+                    onOpenCircles = { navController.navigate("circles") },
+                    onOpenRateLimits = { navController.navigate("ratelimit") },
                     onOpenSettings = { navController.navigate("settings") },
                     onOpenPost = { openPost(it) },
                     onOpenDiscover = { navigateTab("discover") },
@@ -381,6 +391,13 @@ private fun MainScaffold(
                     onBack = { navController.popBackStack() },
                     onOpenPost = { openPost(it) },
                     onOpenProfile = { openProfile(it) },
+                    onOpenStorage = { navController.navigate("storage/$it") },
+                    onOpenAudio = { title -> navController.navigate("audio?title=${Uri.encode(title)}") },
+                    onOpenHighlight = { id, title, cover ->
+                        navController.navigate(
+                            "highlight/$id?title=${Uri.encode(title)}&cover=${Uri.encode(cover.orEmpty())}",
+                        )
+                    },
                     headerAvatarModifier = with(sharedScope) {
                         Modifier.sharedElement(
                             rememberSharedContentState(key = "avatar_$username"),
@@ -432,6 +449,57 @@ private fun MainScaffold(
                     onBack = { navController.popBackStack() },
                     onOpenProfile = { openProfile(it) },
                 )
+            }
+            composable(
+                route = "highlight/{id}?title={title}&cover={cover}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("title") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("cover") { type = NavType.StringType; defaultValue = "" },
+                ),
+            ) { entry ->
+                HighlightScreen(
+                    highlightId = entry.arguments?.getString("id").orEmpty(),
+                    title = entry.arguments?.getString("title").orEmpty(),
+                    coverUrl = entry.arguments?.getString("cover")?.takeIf { it.isNotBlank() },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable("collections") {
+                CollectionsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenCollection = { navController.navigate("collection/$it") },
+                )
+            }
+            composable("collection/{id}") { entry ->
+                CollectionDetailScreen(
+                    collectionId = entry.arguments?.getString("id").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onOpenPost = { openPost(it) },
+                )
+            }
+            composable("circles") {
+                CirclesScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenCircle = { navController.navigate("circle/$it") },
+                    onOpenDiscover = { navigateTab("discover") },
+                )
+            }
+            composable("circle/{id}") { entry ->
+                CircleFeedScreen(
+                    circleId = entry.arguments?.getString("id").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onOpenPost = { openPost(it) },
+                )
+            }
+            composable("storage/{username}") { entry ->
+                ProfileStorageScreen(
+                    username = entry.arguments?.getString("username").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable("ratelimit") {
+                RateLimitScreen(onBack = { navController.popBackStack() })
             }
             composable("settings") {
                 SettingsScreen(onBack = { navController.popBackStack() })

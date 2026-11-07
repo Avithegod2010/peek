@@ -28,11 +28,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.DataSaverOn
 import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
@@ -244,6 +246,33 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setWifiOnly(it) },
                     )
                     SettingsSwitch(
+                        icon = Icons.Rounded.BatteryChargingFull,
+                        title = "Charge only for downloads",
+                        subtitle = "Hold the download queue until the phone is charging",
+                        checked = settings.downloadChargingOnly,
+                        onCheckedChange = { viewModel.setDownloadChargingOnly(it) },
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Download,
+                        title = "Max posts per profile download",
+                        subtitle = if (settings.downloadQueuePerProfile == 0) {
+                            "No limit · whole profile"
+                        } else {
+                            "Newest ${settings.downloadQueuePerProfile} posts"
+                        },
+                        onClick = {
+                            val next = when (settings.downloadQueuePerProfile) {
+                                0 -> 10
+                                10 -> 25
+                                25 -> 50
+                                50 -> 100
+                                100 -> 250
+                                else -> 0
+                            }
+                            viewModel.setDownloadQueuePerProfile(next)
+                        },
+                    )
+                    SettingsSwitch(
                         icon = Icons.Rounded.Sync,
                         title = "Background sync",
                         subtitle = "Peek checks your circle periodically",
@@ -328,6 +357,13 @@ fun SettingsScreen(
                         subtitle = "Require a biometric or screen lock next time Peek opens",
                         checked = settings.appLock,
                         onCheckedChange = { viewModel.setAppLock(it) },
+                    )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Description,
+                        title = "Caption sidecars in the gallery",
+                        subtitle = "Write a small JSON caption/date file with each gallery save",
+                        checked = settings.gallerySidecars,
+                        onCheckedChange = { viewModel.setGallerySidecars(it) },
                     )
                     SettingsInfoRow(
                         icon = Icons.Rounded.Storage,

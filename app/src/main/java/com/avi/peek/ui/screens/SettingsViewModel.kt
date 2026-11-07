@@ -64,6 +64,9 @@ class SettingsViewModel : ViewModel() {
     fun setHideLikeCounts(value: Boolean) = viewModelScope.launch { store.setHideLikeCounts(value) }
     fun setAppLock(value: Boolean) = viewModelScope.launch { store.setAppLock(value) }
     fun setOneHanded(value: Boolean) = viewModelScope.launch { store.setOneHanded(value) }
+    fun setDownloadChargingOnly(value: Boolean) = viewModelScope.launch { store.setDownloadChargingOnly(value) }
+    fun setDownloadQueuePerProfile(value: Int) = viewModelScope.launch { store.setDownloadQueuePerProfile(value) }
+    fun setGallerySidecars(value: Boolean) = viewModelScope.launch { store.setGallerySidecars(value) }
     fun setAutoplayReels(value: Boolean) = viewModelScope.launch { store.setAutoplayReels(value) }
     fun setMuteVideos(value: Boolean) = viewModelScope.launch { store.setMuteVideos(value) }
 

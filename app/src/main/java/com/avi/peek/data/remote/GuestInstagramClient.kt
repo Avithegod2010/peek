@@ -134,6 +134,19 @@ class GuestInstagramClient(
         parsed
     }
 
+    suspend fun fetchHighlightMedia(highlightId: String): List<MediaChild> = withContext(Dispatchers.IO) {
+        val url = "https://www.instagram.com/stories/highlights/$highlightId/"
+        val html = getHtml(url, isDocument = true, referer = "https://www.instagram.com/")
+        val items = parser.parseHighlightMedia(html)
+        if (items.isEmpty()) {
+            throw GuestException(
+                GuestErrorKind.PARSE,
+                "Instagram doesn't expose this highlight's items to logged-out guests",
+            )
+        }
+        items
+    }
+
     suspend fun download(
         url: String,
         destination: File,

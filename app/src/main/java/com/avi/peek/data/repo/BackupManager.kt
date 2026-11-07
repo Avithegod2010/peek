@@ -92,8 +92,30 @@ class BackupManager(
     }
 
     /** A metadata-only archive that can be re-imported or read by other tools. */
-    suspend fun exportJsonArchive(uri: Uri) {
-        val archive = buildArchive()
+    suspend fun exportJsonArchive(uri: Uri) = writeJsonArchive(uri, buildArchive())
+
+    suspend fun exportProfileArchive(
+        uri: Uri,
+        username: String,
+        html: Boolean,
+        since: Long = 0L,
+    ) {
+        val media = repository.profileMedia(username)
+            .filter { since <= 0L || (it.downloadedAt ?: it.fetchedAt) > since }
+        val following = repository.following.first().map { it.username }
+        val archive = archiveFrom(media, following)
+        if (html) writeHtmlArchive(uri, archive) else writeJsonArchive(uri, archive)
+    }
+
+    suspend fun exportMediaArchive(uri: Uri, codes: List<String>, html: Boolean) {
+        val media = repository.mediaByCodesOnce(codes)
+        val ordered = codes.mapNotNull { code -> media.firstOrNull { it.code == code } }
+        val following = repository.following.first().map { it.username }
+        val archive = archiveFrom(ordered, following)
+        if (html) writeHtmlArchive(uri, archive) else writeJsonArchive(uri, archive)
+    }
+
+    private fun writeJsonArchive(uri: Uri, archive: ArchiveData) {
         val text = json.encodeToString(ArchiveData.serializer(), archive)
         context.contentResolver.openOutputStream(uri)?.use {
             it.write(text.toByteArray(Charsets.UTF_8))
@@ -101,8 +123,9 @@ class BackupManager(
     }
 
     /** A readable, self-contained page. Cached images are embedded when present. */
-    suspend fun exportHtmlArchive(uri: Uri) = withContext(Dispatchers.IO) {
-        val archive = buildArchive()
+    suspend fun exportHtmlArchive(uri: Uri) = writeHtmlArchive(uri, buildArchive())
+
+    private suspend fun writeHtmlArchive(uri: Uri, archive: ArchiveData) = withContext(Dispatchers.IO) {
         val following = archive.following.joinToString("") { handle ->
             "<li><a href=\"https://www.instagram.com/${escape(handle)}/\">@${escape(handle)}</a></li>"
         }
@@ -190,24 +213,28 @@ class BackupManager(
         val downloaded = repository.downloaded.first()
         val byCode = LinkedHashMap<String, MediaEntity>()
         (saved + liked + downloaded).forEach { entity -> byCode.putIfAbsent(entity.code, entity) }
-        val posts = byCode.values.map { media ->
+        return archiveFrom(byCode.values.toList(), follows)
+    }
+
+    private fun archiveFrom(media: List<MediaEntity>, following: List<String>): ArchiveData {
+        val posts = media.map { item ->
             ArchivePost(
-                code = media.code,
-                username = media.username,
-                caption = media.caption,
-                takenAt = media.takenAt,
-                mediaType = media.mediaType,
-                saved = media.isSaved,
-                liked = media.isLiked,
-                downloaded = media.isDownloaded,
+                code = item.code,
+                username = item.username,
+                caption = item.caption,
+                takenAt = item.takenAt,
+                mediaType = item.mediaType,
+                saved = item.isSaved,
+                liked = item.isLiked,
+                downloaded = item.isDownloaded,
                 localFiles = buildList {
-                    addAll(media.localImages())
-                    media.localVideoPath?.let { add(it) }
+                    addAll(item.localImages())
+                    item.localVideoPath?.let { add(it) }
                 },
-                source = media.displayUrl,
+                source = item.displayUrl,
             )
         }
-        return ArchiveData(following = follows, posts = posts)
+        return ArchiveData(following = following, posts = posts)
     }
 
     private fun embedImage(path: String): String? = runCatching {

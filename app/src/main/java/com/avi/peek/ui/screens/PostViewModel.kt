@@ -63,8 +63,8 @@ class PostViewModel(private val code: String) : ViewModel() {
     }
 
     fun download() {
-        queue.enqueue(code)
-        _messages.tryEmit("Added to the download queue · Library → Downloads")
+        val blocked = queue.enqueue(code)
+        _messages.tryEmit(blocked ?: "Added to the download queue · Library → Downloads")
     }
 
     fun saveToGallery() {

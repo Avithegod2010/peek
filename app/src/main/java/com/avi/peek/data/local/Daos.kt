@@ -85,6 +85,12 @@ interface MediaDao {
     @Query("SELECT * FROM media WHERE username = :username ORDER BY COALESCE(takenAt, 0) DESC, sortIndex ASC")
     suspend fun forProfile(username: String): List<MediaEntity>
 
+    @Query("SELECT * FROM media WHERE code IN (:codes)")
+    fun observeByCodes(codes: List<String>): Flow<List<MediaEntity>>
+
+    @Query("SELECT * FROM media WHERE username IN (:usernames) ORDER BY COALESCE(takenAt, 0) DESC")
+    fun observeForUsernames(usernames: List<String>): Flow<List<MediaEntity>>
+
     @Query("SELECT * FROM media WHERE isSaved = 1 ORDER BY savedAt DESC")
     fun observeSaved(): Flow<List<MediaEntity>>
 
@@ -147,6 +153,9 @@ interface MediaDao {
 
     @Query("DELETE FROM media WHERE username = :username AND isSaved = 0 AND isDownloaded = 0")
     suspend fun deleteCachedForProfile(username: String)
+
+    @Query("DELETE FROM media WHERE username = :username AND isSaved = 0 AND isDownloaded = 0 AND isLiked = 0")
+    suspend fun deleteCachedKeepingLiked(username: String)
 
     @Query("DELETE FROM media WHERE username = :username AND code NOT IN (:keepCodes) AND isSaved = 0 AND isDownloaded = 0 AND isLiked = 0")
     suspend fun pruneProfile(username: String, keepCodes: List<String>)

@@ -53,7 +53,7 @@ class ReelsViewModel : ViewModel() {
     }
 
     fun download(code: String) {
-        queue.enqueue(code)
-        _messages.tryEmit("Reel added to the download queue")
+        val blocked = queue.enqueue(code)
+        _messages.tryEmit(blocked ?: "Reel added to the download queue")
     }
 }
