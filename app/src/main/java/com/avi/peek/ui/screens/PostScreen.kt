@@ -1,6 +1,12 @@
 package com.avi.peek.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -43,6 +49,7 @@ import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Share
@@ -131,6 +138,28 @@ fun PostScreen(
     var showComments by remember { mutableStateOf(false) }
     val dragOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val galleryPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            viewModel.saveToGallery()
+        } else {
+            viewModel.encouragingMessage("Allow storage access to save pictures to your gallery")
+        }
+    }
+
+    fun saveToGallery() {
+        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            galleryPermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            viewModel.saveToGallery()
+        }
+    }
 
     BackHandler(onBack = onBack)
     DarkSystemBars()
@@ -430,6 +459,13 @@ fun PostScreen(
                                 )
                                 else -> Icon(Icons.Rounded.Download, contentDescription = "Save offline")
                             }
+                        }
+                        IconButton(onClick = { saveToGallery() }) {
+                            Icon(
+                                Icons.Rounded.PhotoLibrary,
+                                contentDescription = "Save to gallery",
+                                modifier = Modifier.size(24.dp),
+                            )
                         }
                         IconButton(onClick = { viewModel.toggleSave(); haptics.toggle() }) {
                             Icon(

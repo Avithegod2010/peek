@@ -12,6 +12,7 @@ import com.avi.peek.data.repo.BackupManager
 import com.avi.peek.data.repo.DownloadQueue
 import com.avi.peek.data.repo.DownloadStore
 import com.avi.peek.data.repo.PeekRepository
+import com.avi.peek.data.repo.ProfileDownloadManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,6 +62,10 @@ object ServiceLocator {
     }
 
     val downloadQueue: DownloadQueue by lazy { DownloadQueue(repository, appScope) }
+
+    val profileDownloadManager: ProfileDownloadManager by lazy {
+        ProfileDownloadManager(repository, downloadQueue, appScope)
+    }
 
     val backupManager: BackupManager by lazy { BackupManager(appContext, repository) }
 

@@ -54,6 +54,8 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - Full profile header with avatar, bio, links, stats and highlights
 - Posts and Reels tabs, plus bookmarks saved from that profile
 - **More like this** — related public creators from the same category, with local follow
+- **Download profile** in one action: every currently visible public post is saved offline, with an option to copy all photos and videos into the device gallery
+- Public/private state is re-checked on refresh and never inferred from an empty grid
 - Local saved state shown on the grid
 - Share, copy, open on Instagram, pin, unfollow or remove a profile
 - Shared-element avatar transition from your Home circle into the profile header
@@ -66,6 +68,7 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Audio pages** for every cached reel: tap the audio line to see other posts using it
 - Reels tab with a vertically snapping player and action rail
 - Double-tap like, read-only comments sheet, share, bookmark, download
+- **Save to gallery** from a post or from the Offline library; photos go to `Pictures/Peek/<username>`, videos to `Movies/Peek/<username>`
 - Caption, date, location, like count, comment count and audio
 
 ### Library
@@ -152,6 +155,13 @@ This is deliberately **not** an authenticated scraper:
 ## Privacy
 
 Following, likes, bookmarks, downloads and search history never leave the device. Peek has no analytics, no crash reporting and no server. Network requests go only to `instagram.com` / Instagram's CDN to read public pages.
+
+## Downloads and fair use
+
+- Only posts exposed on a public profile page can be saved. Instagram does not give logged-out guests an account's full archive, so “Download profile” usually means the latest public grid, not every historical post.
+- Mass downloading can trigger temporary rate limits or blocks. Peek keeps downloads to two at a time and shows failures instead of retrying aggressively.
+- Photos and videos belong to their creators. Keep downloads private and do not redistribute them.
+- A full profile can use significant storage and mobile data; the confirmation sheet and the existing Wi-Fi-only setting are there to keep that deliberate.
 
 ## Project layout
 

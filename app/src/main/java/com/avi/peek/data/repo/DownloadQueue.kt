@@ -52,7 +52,6 @@ class DownloadQueue(
         if (existing != null && existing.status in setOf(
                 DownloadStatus.QUEUED,
                 DownloadStatus.RUNNING,
-                DownloadStatus.PAUSED,
             )
         ) {
             return

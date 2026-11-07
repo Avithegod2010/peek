@@ -1,5 +1,10 @@
 package com.avi.peek.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +36,7 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Card
@@ -57,6 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.repo.DownloadStatus
@@ -172,6 +179,45 @@ fun DownloadsScreen(
     val scope = rememberCoroutineScope()
     val haptics = LocalPeekHaptics.current
     val context = LocalContext.current
+    var pendingGallery by remember { mutableStateOf<MediaEntity?>(null) }
+
+    fun saveToGallery(media: MediaEntity) {
+        scope.launch {
+            runCatching { ServiceLocator.repository.saveToGallery(media.code) }
+                .onSuccess { summary ->
+                    snackbar.showSnackbar(
+                        "Saved ${summary.total} ${if (summary.total == 1) "file" else "files"} to Pictures/Peek",
+                    )
+                }
+                .onFailure { snackbar.showSnackbar(it.message ?: "Couldn't save to gallery") }
+        }
+    }
+
+    val galleryPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val media = pendingGallery
+        pendingGallery = null
+        if (granted && media != null) {
+            saveToGallery(media)
+        } else if (!granted) {
+            scope.launch { snackbar.showSnackbar("Allow storage access to save to your gallery") }
+        }
+    }
+
+    fun requestGallery(media: MediaEntity) {
+        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            pendingGallery = media
+            galleryPermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            saveToGallery(media)
+        }
+    }
 
     val totalBytes = remember(downloads) {
         downloads.sumOf { media ->
@@ -241,6 +287,7 @@ fun DownloadsScreen(
                         onOpenInstagram = {
                             context.openInstagram("p/${media.code}/")
                         },
+                        onSaveToGallery = { requestGallery(media) },
                     )
                 }
             }
@@ -313,6 +360,7 @@ private fun DownloadRow(
     onOpen: () -> Unit,
     onDelete: () -> Unit,
     onOpenInstagram: () -> Unit,
+    onSaveToGallery: () -> Unit,
 ) {
     val bytes = remember(media.code, media.localImagePathsJson, media.localVideoPath) {
         media.localImages().sumOf { File(it).length() } + (media.localVideoPath?.let { File(it).length() } ?: 0L)
@@ -362,6 +410,13 @@ private fun DownloadRow(
                     "${if (media.isVideo) "Video" else "Photo"} · ${bytes.fileSize()} · ${(media.downloadedAt ?: System.currentTimeMillis()).fullDate()}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                )
+            }
+            IconButton(onClick = onSaveToGallery) {
+                Icon(
+                    Icons.Rounded.PhotoLibrary,
+                    contentDescription = "Save to gallery",
+                    modifier = Modifier.size(20.dp),
                 )
             }
             IconButton(onClick = onOpenInstagram) {

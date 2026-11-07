@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
@@ -44,18 +45,23 @@ import androidx.compose.material.icons.rounded.PersonRemove
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,6 +85,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.ProfileEntity
 import com.avi.peek.data.local.ProfileWithMedia
+import com.avi.peek.data.repo.ProfileDownloadState
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.AnimatedNumber
 import com.avi.peek.ui.components.Avatar
@@ -119,11 +126,14 @@ fun ProfileScreen(
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     val downloads by viewModel.downloadProgress.collectAsStateWithLifecycle()
+    val bulkDownload by viewModel.bulkDownload.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val context = LocalContext.current
     val haptics = LocalPeekHaptics.current
     val gridState = rememberLazyGridState()
     var menuOpen by remember { mutableStateOf(false) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    var alsoGallery by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -178,11 +188,14 @@ fun ProfileScreen(
                             onOpenRelated = onOpenProfile,
                             onFollowRelated = viewModel::followRelated,
                             headerAvatarModifier = headerAvatarModifier,
+                            bulkDownload = bulkDownload,
+                            onDownloadProfile = { showDownloadDialog = true },
+                            onClearBulk = viewModel::clearBulkDownload,
                         )
                     }
                     if (visibleMedia.isEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-                            val private = data!!.profile.isPrivate
+                            val private = data!!.profile.isPrivate && data!!.media.isEmpty()
                             EmptyState(
                                 title = when {
                                     private -> "This account is private"
@@ -191,13 +204,13 @@ fun ProfileScreen(
                                     else -> "No posts cached"
                                 },
                                 message = when {
-                                    private -> "Peek can follow it locally, but Instagram doesn't show private posts to guests."
+                                    private -> "Peek can follow it locally, but Instagram doesn't show private posts to guests. If this account is actually public, refresh to re-check."
                                     tab == ProfileTab.SAVED -> "Tap the bookmark on any post to keep it here."
                                     else -> "Pull to refresh and Peek will cache the latest public posts."
                                 },
                                 icon = if (private) Icons.Rounded.Lock else Icons.Rounded.Refresh,
-                                actionLabel = if (private) null else "Refresh",
-                                onAction = if (private) null else viewModel::refresh,
+                                actionLabel = "Refresh",
+                                onAction = viewModel::refresh,
                                 modifier = Modifier.padding(vertical = 30.dp),
                             )
                         }
@@ -265,6 +278,61 @@ fun ProfileScreen(
             }
         }
     }
+
+    if (showDownloadDialog) {
+        val postCount = data?.media?.size ?: 0
+        AlertDialog(
+            onDismissRequest = { showDownloadDialog = false },
+            title = { Text("Download @$username") },
+            text = {
+                Column {
+                    Text(
+                        "Peek can currently see $postCount public ${if (postCount == 1) "post" else "posts"}. " +
+                            "It will save every photo and video from those posts for offline use.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { alsoGallery = !alsoGallery }
+                            .padding(vertical = 2.dp),
+                    ) {
+                        Checkbox(checked = alsoGallery, onCheckedChange = { alsoGallery = it })
+                        Spacer(Modifier.width(4.dp))
+                        Column {
+                            Text("Also copy to gallery", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Pictures/Peek and Movies/Peek",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Instagram only exposes the latest public posts to logged-out guests, so this may not include a huge account's full archive. Large downloads can use a lot of storage and data.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.downloadProfile(alsoGallery)
+                        showDownloadDialog = false
+                    },
+                    enabled = postCount > 0 && bulkDownload?.running != true,
+                ) { Text("Download") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDownloadDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
 }
 
 @Composable
@@ -283,6 +351,9 @@ private fun ProfileHeader(
     onOpenRelated: (String) -> Unit,
     onFollowRelated: (com.avi.peek.data.directory.PopularCreator) -> Unit,
     headerAvatarModifier: Modifier,
+    bulkDownload: ProfileDownloadState?,
+    onDownloadProfile: () -> Unit,
+    onClearBulk: () -> Unit,
 ) {
     val profile = value.profile
     val media = value.media
@@ -426,7 +497,91 @@ private fun ProfileHeader(
                     Icon(Icons.Rounded.MoreVert, contentDescription = "More", modifier = Modifier.size(18.dp))
                 }
             }
-            if (profile.isPrivate) {
+            Spacer(Modifier.height(9.dp))
+            OutlinedButton(
+                onClick = onDownloadProfile,
+                enabled = media.isNotEmpty() && !profile.isPrivate && bulkDownload?.running != true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                if (bulkDownload?.running == true) {
+                    CircularProgressIndicator(
+                        progress = {
+                            if (bulkDownload.total == 0) 0f
+                            else (bulkDownload.downloaded + bulkDownload.failed).toFloat() / bulkDownload.total
+                        },
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text("Downloading ${bulkDownload.downloaded + bulkDownload.failed}/${bulkDownload.total}")
+                } else {
+                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        if (media.isEmpty()) {
+                            "No public posts to save"
+                        } else {
+                            "Download profile · ${media.size} ${if (media.size == 1) "post" else "posts"}"
+                        },
+                    )
+                }
+            }
+            if (bulkDownload != null && (bulkDownload.running || bulkDownload.finished)) {
+                Spacer(Modifier.height(12.dp))
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(14.dp)) {
+                        if (bulkDownload.running) {
+                            LinearProgressIndicator(
+                                progress = {
+                                    if (bulkDownload.total == 0) 0f
+                                    else (bulkDownload.downloaded + bulkDownload.failed).toFloat() / bulkDownload.total
+                                },
+                                modifier = Modifier.fillMaxWidth().clip(CircleShape),
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Downloading profile · ${bulkDownload.downloaded + bulkDownload.failed}/${bulkDownload.total}",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            if (bulkDownload.saveToGallery) {
+                                Text(
+                                    "Gallery copies: ${bulkDownload.galleryFiles} files so far",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            Text(
+                                "Profile download complete",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "${bulkDownload.downloaded} posts saved offline" +
+                                    if (bulkDownload.failed > 0) " · ${bulkDownload.failed} failed" else "",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (bulkDownload.failed > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (bulkDownload.saveToGallery) {
+                                Text(
+                                    "${bulkDownload.galleryFiles} files copied to your gallery" +
+                                        if (bulkDownload.galleryFailures > 0) " · ${bulkDownload.galleryFailures} gallery errors" else "",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            TextButton(onClick = onClearBulk) { Text("Dismiss") }
+                        }
+                    }
+                }
+            }
+            if (profile.isPrivate && media.isEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 Row(
                     Modifier

@@ -82,14 +82,16 @@ class SsrParser(
         val roots = parseScripts(html)
         if (roots.isEmpty()) return null
 
-        var profile: JsonObject? = null
+        val candidates = ArrayList<JsonObject>()
         var timeline: JsonObject? = null
         var related: JsonObject? = null
 
         forEachObject(roots) { obj ->
             obj["xig_user_by_username"]?.let { node ->
                 if (node is JsonObject) {
-                    if (profile == null && node["biography"] != null) profile = node
+                    if (node["biography"] != null || node["username"] != null) {
+                        candidates += node
+                    }
                     if (timeline == null && node["polaris_ordered_timeline_connection"] != null) {
                         timeline = node
                     }
@@ -99,7 +101,16 @@ class SsrParser(
             false
         }
 
-        val p = profile ?: return null
+        val requested = fallbackUsername.trim().removePrefix("@").lowercase()
+        // Prefer the canonical user node for the requested handle. Instagram can
+        // include secondary/placeholder user nodes; picking one blindly used to
+        // surface a stale `is_private` flag for public accounts.
+        val p = candidates.firstOrNull {
+            it.string("username")?.equals(requested, ignoreCase = true) == true && it["biography"] != null
+        } ?: candidates.firstOrNull {
+            it.string("username")?.equals(requested, ignoreCase = true) == true
+        } ?: candidates.firstOrNull { it["biography"] != null }
+            ?: return null
         val username = p.string("username") ?: fallbackUsername
         val timelineConnection = timeline?.obj("polaris_ordered_timeline_connection")
         val media = ArrayList<ProfileNode>()
@@ -158,7 +169,9 @@ class SsrParser(
             fullName = p.string("full_name").orEmpty(),
             biography = p.string("biography").orEmpty(),
             profilePicUrl = p.string("profile_pic_url"),
-            isPrivate = p.boolean("is_private") ?: false,
+            // Public posts in the payload prove the account is readable; never
+            // label it private when Instagram actually returned its media.
+            isPrivate = (p.boolean("is_private") ?: false) && media.isEmpty(),
             isVerified = p.boolean("is_verified") ?: false,
             followerCount = p.long("follower_count") ?: 0L,
             followingCount = p.long("following_count") ?: 0L,

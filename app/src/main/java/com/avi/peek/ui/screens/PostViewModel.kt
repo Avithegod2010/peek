@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.data.repo.DownloadProgress
+import com.avi.peek.data.repo.GallerySaver
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.util.userMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -64,6 +65,33 @@ class PostViewModel(private val code: String) : ViewModel() {
     fun download() {
         queue.enqueue(code)
         _messages.tryEmit("Added to the download queue · Library → Downloads")
+    }
+
+    fun saveToGallery() {
+        viewModelScope.launch {
+            _messages.emit("Preparing the gallery copy…")
+            runCatching { repo.saveToGallery(code) }
+                .onSuccess { saved ->
+                    val where = "Pictures/Peek"
+                    _messages.emit(
+                        when {
+                            saved.images > 0 && saved.videos > 0 ->
+                                "Saved ${saved.images} photos and ${saved.videos} video to $where"
+                            saved.videos > 0 -> "Saved video to $where"
+                            else -> "Saved ${saved.images} ${if (saved.images == 1) "photo" else "photos"} to $where"
+                        },
+                    )
+                }
+                .onFailure { error ->
+                    _messages.emit(
+                        if (error is GallerySaver.PermissionRequired) {
+                            "Allow storage access to save pictures to your gallery"
+                        } else {
+                            error.userMessage()
+                        },
+                    )
+                }
+        }
     }
 
     fun encouragingMessage(text: String) {

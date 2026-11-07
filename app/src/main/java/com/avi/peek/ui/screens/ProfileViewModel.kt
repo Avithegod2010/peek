@@ -7,6 +7,7 @@ import com.avi.peek.data.directory.PopularCreator
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.ProfileWithMedia
 import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.data.repo.ProfileDownloadState
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.util.userMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
@@ -40,6 +42,10 @@ class ProfileViewModel(private val username: String) : ViewModel() {
 
     val downloadProgress = repo.downloadProgress
     private val queue = ServiceLocator.downloadQueue
+
+    val bulkDownload: StateFlow<ProfileDownloadState?> = ServiceLocator.profileDownloadManager.states
+        .map { it[username] }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _tab = MutableStateFlow(ProfileTab.POSTS)
     val tab: StateFlow<ProfileTab> = _tab.asStateFlow()
@@ -173,6 +179,32 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         queue.enqueue(code)
         _messages.tryEmit("Added to the download queue")
     }
+
+    fun downloadProfile(saveToGallery: Boolean) {
+        val posts = data.value?.media.orEmpty()
+        if (posts.isEmpty()) {
+            _messages.tryEmit("No public posts are loaded yet. Refresh, then try again.")
+            return
+        }
+        if (settings.value.wifiOnlySync && !ServiceLocator.network.wifi.value) {
+            _messages.tryEmit("Wi-Fi only is on. Connect to Wi-Fi to download a full profile.")
+            return
+        }
+        ServiceLocator.profileDownloadManager.start(
+            username = username,
+            codes = posts.map { it.code },
+            saveToGallery = saveToGallery,
+        )
+        _messages.tryEmit(
+            if (saveToGallery) {
+                "Downloading ${posts.size} posts and copying them to your gallery"
+            } else {
+                "Downloading ${posts.size} posts for offline use"
+            },
+        )
+    }
+
+    fun clearBulkDownload() = ServiceLocator.profileDownloadManager.clear(username)
 
     fun follow() {
         viewModelScope.launch {

@@ -52,6 +52,7 @@ class PeekRepository(
     private val settings: SettingsStore,
     private val network: NetworkMonitor,
     private val downloads: DownloadStore,
+    private val gallery: GallerySaver = GallerySaver(context),
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -233,7 +234,7 @@ class PeekRepository(
             fullName = scraped.fullName,
             biography = scraped.biography,
             profilePicUrl = scraped.profilePicUrl ?: existingProfile?.profilePicUrl,
-            isPrivate = scraped.isPrivate,
+            isPrivate = scraped.isPrivate && scraped.media.isEmpty(),
             isVerified = scraped.isVerified,
             followerCount = scraped.followerCount,
             followingCount = scraped.followingCount,
@@ -565,6 +566,14 @@ class PeekRepository(
             _downloadProgress.update { it - code }
             throw e
         }
+    }
+
+    /** Downloads every slide first, then copies the files into Pictures/Peek. */
+    suspend fun saveToGallery(code: String): GallerySaver.Summary = withContext(Dispatchers.IO) {
+        if (gallery.needsLegacyPermission()) throw GallerySaver.PermissionRequired()
+        val media = download(code)
+            ?: throw IllegalStateException("That post could not be downloaded")
+        gallery.save(media)
     }
 
     suspend fun deleteDownload(code: String) {
