@@ -42,7 +42,7 @@ The picker is now a wrapping FlowRow with colour swatches and names, and every p
 
 - Settings → Instagram account screen with signed-out state and warnings
 - Instagram's web login page loads inside the in-app WebView
-- A real private account (`@private_test`) shows the lock badge, disabled download button and the “This account is private” empty state
+- A real private account shows the lock badge, disabled download button and the “This account is private” empty state
 - Thirteen palette pills, Ocean and Aurora in dark mode, Aurora in light mode
 - Final APK builds and installs
 
