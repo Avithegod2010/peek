@@ -142,7 +142,7 @@ fun LibraryScreen(
                             }
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                "No account. No cloud.",
+                                "No Peek account. No cloud.",
                                 color = Color.White,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,

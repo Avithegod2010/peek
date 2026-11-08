@@ -446,7 +446,7 @@ fun AddPeopleHint(modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            "Local follows only. No account, no password, no noise.",
+            "Local follows by default. Optional Instagram sign-in, no Peek account, no noise.",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

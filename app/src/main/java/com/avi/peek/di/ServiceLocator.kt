@@ -6,9 +6,11 @@ import coil.disk.DiskCache
 import com.avi.peek.data.local.LibraryStore
 import com.avi.peek.data.local.PeekDatabase
 import com.avi.peek.data.local.SearchStore
+import com.avi.peek.data.local.SessionStore
 import com.avi.peek.data.local.SettingsStore
 import com.avi.peek.data.remote.GlobalSearchClient
 import com.avi.peek.data.remote.GuestInstagramClient
+import com.avi.peek.data.repo.AccountManager
 import com.avi.peek.data.repo.BackupManager
 import com.avi.peek.data.repo.DownloadQueue
 import com.avi.peek.data.repo.DownloadStore
@@ -40,11 +42,15 @@ object ServiceLocator {
 
     val libraryStore: LibraryStore by lazy { LibraryStore(appContext) }
 
+    val sessionStore: SessionStore by lazy { SessionStore(appContext) }
+
     val network: NetworkMonitor by lazy { NetworkMonitor(appContext) }
 
     val okHttp by lazy { GuestInstagramClient.defaultClient() }
 
     val client: GuestInstagramClient by lazy { GuestInstagramClient(okHttp) }
+
+    val accountManager: AccountManager by lazy { AccountManager(sessionStore, client) }
 
     val globalSearch: GlobalSearchClient by lazy { GlobalSearchClient(okHttp) }
 
@@ -63,6 +69,7 @@ object ServiceLocator {
             network = network,
             downloads = downloads,
             requestLog = requestLog,
+            accountManager = accountManager,
         )
     }
 

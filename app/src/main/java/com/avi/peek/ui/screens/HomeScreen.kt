@@ -195,7 +195,7 @@ fun HomeScreen(
                     if (following.isEmpty()) {
                         EmptyState(
                             title = "Your circle is empty",
-                            message = "Add any public Instagram profile. Peek follows them locally — no login, no algorithm.",
+                            message = "Add any public Instagram profile. Peek follows them locally — public browsing needs no login and there is no algorithm.",
                             icon = Icons.Rounded.Visibility,
                             actionLabel = "Find people",
                             onAction = onOpenDiscover,

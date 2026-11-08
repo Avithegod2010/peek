@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.avi.peek.data.directory.CreatorDirectory
 import com.avi.peek.data.directory.PopularCreator
+import com.avi.peek.data.local.AccountState
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.ProfileWithMedia
 import com.avi.peek.data.local.PeekSettings
@@ -75,6 +76,9 @@ class ProfileViewModel(private val username: String) : ViewModel() {
 
     val following = repo.following
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val account: StateFlow<AccountState> = ServiceLocator.accountManager.state
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountState())
 
     val downloadProgress = repo.downloadProgress
     private val queue = ServiceLocator.downloadQueue
@@ -331,7 +335,7 @@ class ProfileViewModel(private val username: String) : ViewModel() {
     fun downloadProfile(saveToGallery: Boolean) {
         val posts = data.value?.media.orEmpty()
         if (posts.isEmpty()) {
-            _messages.tryEmit("No public posts are loaded yet. Refresh, then try again.")
+            _messages.tryEmit("No posts are loaded yet. Refresh, then try again.")
             return
         }
         if (settings.value.wifiOnlySync && !ServiceLocator.network.wifi.value) {
@@ -344,9 +348,9 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         )
         _messages.tryEmit(
             if (saveToGallery) {
-                "Loading the full public profile, then downloading it to your gallery"
+                "Loading the full profile, then downloading it to your gallery"
             } else {
-                "Loading the full public profile, then downloading it offline"
+                "Loading the full profile, then downloading it offline"
             },
         )
     }

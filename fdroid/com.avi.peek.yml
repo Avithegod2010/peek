@@ -14,13 +14,13 @@ RepoType: git
 Repo: https://github.com/Avithegod2010/peek.git
 
 Builds:
-  - versionName: 1.3.0
-    versionCode: 6
-    commit: v1.3.0
+  - versionName: 1.4.0
+    versionCode: 7
+    commit: v1.4.0
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.3.0
-CurrentVersionCode: 6
+CurrentVersion: 1.4.0
+CurrentVersionCode: 7

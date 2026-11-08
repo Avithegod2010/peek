@@ -94,6 +94,7 @@ import com.avi.peek.data.repo.SyncEvent
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.LocalReduceMotion
 import com.avi.peek.ui.components.LocalSnackbarHostState
+import com.avi.peek.ui.screens.AccountScreen
 import com.avi.peek.ui.screens.AudioScreen
 import com.avi.peek.ui.screens.CircleFeedScreen
 import com.avi.peek.ui.screens.CirclesScreen
@@ -392,6 +393,7 @@ private fun MainScaffold(
                     onOpenPost = { openPost(it) },
                     onOpenProfile = { openProfile(it) },
                     onOpenStorage = { navController.navigate("storage/$it") },
+                    onOpenAccount = { navController.navigate("account") },
                     onOpenAudio = { title -> navController.navigate("audio?title=${Uri.encode(title)}") },
                     onOpenHighlight = { id, title, cover ->
                         navController.navigate(
@@ -502,7 +504,13 @@ private fun MainScaffold(
                 RateLimitScreen(onBack = { navController.popBackStack() })
             }
             composable("settings") {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenAccount = { navController.navigate("account") },
+                )
+            }
+            composable("account") {
+                AccountScreen(onBack = { navController.popBackStack() })
             }
             composable("saved") {
                 SavedScreen(

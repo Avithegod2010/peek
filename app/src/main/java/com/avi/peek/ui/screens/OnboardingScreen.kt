@@ -188,7 +188,7 @@ fun OnboardingScreen(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Follow public accounts quietly. No login, no feed algorithm, no reels rabbit hole. Just the people you chose.",
+                "Follow public accounts quietly. No feed algorithm, no reels rabbit hole, no Peek account. Optional Instagram sign-in exists only if you want private accounts you follow.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -196,7 +196,7 @@ fun OnboardingScreen(
 
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FeatureChip(Icons.Rounded.Lock, "No login")
+                FeatureChip(Icons.Rounded.Lock, "Optional login")
                 FeatureChip(Icons.Rounded.CloudOff, "Offline")
                 FeatureChip(Icons.Rounded.AutoAwesome, "Local")
             }

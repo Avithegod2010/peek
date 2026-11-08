@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
         var ready = false
         splash.setKeepOnScreenCondition { !ready }
         lifecycleScope.launch {
+            runCatching { ServiceLocator.accountManager.ensureRestored() }
             ServiceLocator.settings.settings.first()
             ready = true
             if (BuildConfig.DEBUG) {

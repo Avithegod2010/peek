@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.BatteryChargingFull
@@ -87,9 +89,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.BuildConfig
+import com.avi.peek.data.local.AccountState
 import com.avi.peek.data.local.PaletteStyle
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.data.local.ThemeMode
+import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.LocalPeekHaptics
@@ -101,9 +105,12 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onOpenAccount: () -> Unit,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val account by ServiceLocator.accountManager.state
+        .collectAsStateWithLifecycle(initialValue = AccountState())
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val sync by viewModel.syncState.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
@@ -342,6 +349,31 @@ fun SettingsScreen(
                 }
             }
 
+            item(key = "account") {
+                SettingsSection("Instagram account", Icons.Rounded.AccountCircle) {
+                    SettingsClickRow(
+                        icon = Icons.Rounded.AccountCircle,
+                        title = if (account.signedIn) {
+                            account.username?.let { "@$it" } ?: "Instagram connected"
+                        } else {
+                            "Sign in (optional)"
+                        },
+                        subtitle = if (account.signedIn) {
+                            "Session stored encrypted on this device · tap to manage"
+                        } else {
+                            "View private accounts you follow · public browsing stays available"
+                        },
+                        onClick = onOpenAccount,
+                    )
+                    Text(
+                        "Peek never stores your Instagram password and never sends your session anywhere.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+            }
+
             item(key = "privacy") {
                 SettingsSection("Privacy & storage", Icons.Rounded.Lock) {
                     SettingsSwitch(
@@ -433,7 +465,7 @@ fun SettingsScreen(
                         onClick = { context.openUrl("https://github.com/Avithegod2010/peek") },
                     )
                     Text(
-                        "Peek is unofficial and not affiliated with Instagram or Meta. Only public pages are read. Posts, photos and videos belong to their owners. There is no account, no posting, no tracking.",
+                        "Peek is unofficial and not affiliated with Instagram or Meta. Public pages are read by default; optional signed-in mode reuses your own session for private accounts you follow. There is no Peek account, no posting and no tracking. Posts, photos and videos belong to their owners.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -694,25 +726,64 @@ private fun PalettePicker(current: PaletteStyle, onSelect: (PaletteStyle) -> Uni
         PaletteStyle.FOREST to Color(0xFF3E6837),
         PaletteStyle.SUNSET to Color(0xFF8B4A2F),
         PaletteStyle.ROSE to Color(0xFF8B4657),
+        PaletteStyle.MINT to Color(0xFF006B5B),
+        PaletteStyle.COFFEE to Color(0xFF6F4E37),
+        PaletteStyle.SAKURA to Color(0xFF9C4059),
+        PaletteStyle.CITRUS to Color(0xFF7A5900),
+        PaletteStyle.INDIGO to Color(0xFF3F51B5),
+        PaletteStyle.SLATE to Color(0xFF4A5C6A),
+        PaletteStyle.SAND to Color(0xFF7A5B2E),
+        PaletteStyle.AURORA to Color(0xFF7B3FA0),
     )
-    Row(
+    FlowRow(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
-        colors.forEach { (style, color) ->
-            Box(
-                Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(color)
-                    .then(
-                        if (style == current) Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                        else Modifier,
+        PaletteStyle.entries.forEach { style ->
+            val selected = style == current
+            Surface(
+                onClick = { onSelect(style) },
+                shape = CircleShape,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+                contentColor = if (selected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                border = if (selected) {
+                    androidx.compose.foundation.BorderStroke(
+                        1.5.dp,
+                        MaterialTheme.colorScheme.primary,
                     )
-                    .clickable { onSelect(style) },
-            )
+                } else {
+                    null
+                },
+            ) {
+                Row(
+                    Modifier.padding(start = 8.dp, end = 11.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(colors[style] ?: MaterialTheme.colorScheme.primary),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        style.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    )
+                }
+            }
         }
     }
 }

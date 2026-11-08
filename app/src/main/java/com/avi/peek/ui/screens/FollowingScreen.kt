@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PersonRemove
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
@@ -164,6 +165,15 @@ fun FollowingScreen(
                                     if (profile.isVerified) {
                                         Spacer(Modifier.width(4.dp))
                                         VerifiedBadge(size = 13.dp)
+                                    }
+                                    if (profile.isPrivate) {
+                                        Spacer(Modifier.width(4.dp))
+                                        Icon(
+                                            Icons.Rounded.Lock,
+                                            contentDescription = "Private account",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(12.dp),
+                                        )
                                     }
                                     if (profile.isPinned) {
                                         Spacer(Modifier.width(5.dp))

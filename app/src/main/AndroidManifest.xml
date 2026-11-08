@@ -66,6 +66,13 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <activity
+            android:name=".ui.auth.InstagramLoginActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|uiMode|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.Peek"
+            android:windowSoftInputMode="adjustResize" />
+
         <receiver
             android:name=".widget.PeekWidgetProvider"
             android:exported="true">

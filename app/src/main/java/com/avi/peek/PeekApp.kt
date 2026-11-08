@@ -23,6 +23,7 @@ class PeekApp : Application(), Configuration.Provider, ImageLoaderFactory {
         ServiceLocator.init(this)
         PeekNotifications.createChannel(this)
         appScope.launch {
+            runCatching { ServiceLocator.accountManager.ensureRestored() }
             val settings = ServiceLocator.settings.settings.first()
             if (settings.backgroundSync) {
                 SyncScheduler.schedule(this@PeekApp, settings.backgroundIntervalHours, settings.wifiOnlySync)

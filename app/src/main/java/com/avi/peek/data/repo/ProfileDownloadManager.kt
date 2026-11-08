@@ -67,7 +67,7 @@ class ProfileDownloadManager(
         }
     }
 
-    /** Loads every public page first, then downloads all of it. */
+    /** Loads every reachable page first, then downloads all of it. */
     fun startAll(username: String, saveToGallery: Boolean) {
         if (jobs[username]?.isActive == true) return
         val blocked = queue.blockReason()

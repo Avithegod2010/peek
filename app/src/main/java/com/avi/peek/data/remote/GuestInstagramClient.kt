@@ -11,6 +11,7 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.FormBody
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -34,7 +35,20 @@ class GuestInstagramClient(
         lsdToken = lsdRegex.find(html)?.groupValues?.getOrNull(1)
         val parsed = parser.parseProfile(html, username)
             ?: throw classifyEmpty(html, username)
-        parsed
+        if (hasSession() && parsed.media.isEmpty() && !parsed.userId.isNullOrBlank()) {
+            val page = fetchAuthenticatedUserFeed(parsed.userId, null, 12)
+            if (page != null && page.nodes.isNotEmpty()) {
+                parsed.copy(
+                    media = page.nodes,
+                    hasNextPage = page.hasNextPage,
+                    endCursor = page.endCursor,
+                )
+            } else {
+                parsed
+            }
+        } else {
+            parsed
+        }
     }
 
     /**
@@ -47,6 +61,9 @@ class GuestInstagramClient(
         after: String?,
         first: Int = 12,
     ): ProfilePostsPage = withContext(Dispatchers.IO) {
+        if (hasSession() && userId.isNotBlank()) {
+            fetchAuthenticatedUserFeed(userId, after, first)?.let { return@withContext it }
+        }
         val lsd = lsdToken ?: run {
             fetchProfile(username)
             lsdToken
@@ -126,12 +143,127 @@ class GuestInstagramClient(
         }
     }
 
-    suspend fun fetchPost(code: String): ScrapedPost = withContext(Dispatchers.IO) {
+    suspend fun fetchPost(code: String, pk: String? = null): ScrapedPost = withContext(Dispatchers.IO) {
         val url = "https://www.instagram.com/p/$code/"
-        val html = getHtml(url, isDocument = true, referer = "https://www.instagram.com/")
-        val parsed = parser.parsePost(html, code)
-            ?: throw classifyEmpty(html, code)
-        parsed
+        try {
+            val html = getHtml(url, isDocument = true, referer = "https://www.instagram.com/")
+            parser.parsePost(html, code)
+                ?: throw classifyEmpty(html, code)
+        } catch (e: GuestException) {
+            if (hasSession() && !pk.isNullOrBlank()) {
+                fetchMediaInfo(pk)?.let { return@withContext it }
+            }
+            throw e
+        }
+    }
+
+    /** Reads the signed-in viewer so Settings can show which account is connected. */
+    suspend fun resolveViewer(): ViewerIdentity? = withContext(Dispatchers.IO) {
+        val html = runCatching {
+            getHtml("https://www.instagram.com/", isDocument = true)
+        }.getOrNull() ?: return@withContext null
+        val block = Regex("\"viewer\"\\s*:\\s*\\{[\\s\\S]{0,2500}?\\}")
+            .find(html)
+            ?.value
+            .orEmpty()
+        val username = Regex("\"username\"\\s*:\\s*\"([^\"]+)\"")
+            .find(block)
+            ?.groupValues
+            ?.getOrNull(1)
+        val userId = Regex("\"pk\"\\s*:\\s*\"?(\\d+)\"?")
+            .find(block)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?: sessionUserId()
+        if (username == null && userId == null) return@withContext null
+        ViewerIdentity(username = username, userId = userId)
+    }
+
+    fun hasSession(): Boolean = !cookieJar.value("sessionid").isNullOrBlank()
+
+    fun sessionUserId(): String? = cookieJar.value("ds_user_id")
+
+    fun restoreSession(cookies: List<Pair<String, String>>) {
+        cookieJar.restore(cookies)
+        lsdToken = null
+    }
+
+    fun clearSession() {
+        cookieJar.clear()
+        lsdToken = null
+    }
+
+    private fun fetchAuthenticatedUserFeed(
+        userId: String,
+        after: String?,
+        first: Int,
+    ): ProfilePostsPage? {
+        val url = "https://www.instagram.com/api/v1/feed/user/$userId/"
+            .toHttpUrl()
+            .newBuilder()
+            .addQueryParameter("count", first.toString())
+            .apply { if (!after.isNullOrBlank()) addQueryParameter("max_id", after) }
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "*/*")
+            .header("Accept-Language", "en-US,en;q=0.9")
+            .header("X-IG-App-ID", APP_ID)
+            .header("X-ASBD-ID", "359341")
+            .header("X-IG-WWW-Claim", "0")
+            .header("X-CSRFToken", cookieJar.value("csrftoken").orEmpty())
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Referer", "https://www.instagram.com/")
+            .get()
+            .build()
+        return try {
+            okHttp.newCall(request).execute().use { response ->
+                if (response.code == 429) {
+                    throw GuestException(
+                        GuestErrorKind.RATE_LIMITED,
+                        "Instagram is rate limiting profile pages. Try again in a few minutes.",
+                    )
+                }
+                if (response.code != 200) return null
+                parser.parseUserFeed(response.body?.string().orEmpty())
+            }
+        } catch (e: GuestException) {
+            throw e
+        } catch (e: IOException) {
+            null
+        }
+    }
+
+    private fun fetchMediaInfo(pk: String): ScrapedPost? {
+        val request = Request.Builder()
+            .url("https://www.instagram.com/api/v1/media/$pk/info/")
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "*/*")
+            .header("X-IG-App-ID", APP_ID)
+            .header("X-ASBD-ID", "359341")
+            .header("X-IG-WWW-Claim", "0")
+            .header("X-CSRFToken", cookieJar.value("csrftoken").orEmpty())
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Referer", "https://www.instagram.com/")
+            .get()
+            .build()
+        return try {
+            okHttp.newCall(request).execute().use { response ->
+                if (response.code == 429) {
+                    throw GuestException(
+                        GuestErrorKind.RATE_LIMITED,
+                        "Instagram is rate limiting requests. Try again in a few minutes.",
+                    )
+                }
+                if (response.code != 200) return null
+                parser.parseApiPost(response.body?.string().orEmpty())
+            }
+        } catch (e: GuestException) {
+            throw e
+        } catch (e: IOException) {
+            null
+        }
     }
 
     suspend fun fetchHighlightMedia(highlightId: String): List<MediaChild> = withContext(Dispatchers.IO) {
@@ -320,5 +452,30 @@ internal class PeekCookieJar : CookieJar {
 
     fun value(name: String): String? = store.values.firstNotNullOfOrNull { hostCookies ->
         synchronized(hostCookies) { hostCookies.firstOrNull { it.name == name }?.value }
+    }
+
+    fun restore(cookies: List<Pair<String, String>>) {
+        if (cookies.isEmpty()) return
+        val hostCookies = store.getOrPut("www.instagram.com") { mutableListOf() }
+        synchronized(hostCookies) {
+            cookies.forEach { (name, value) ->
+                if (name.isBlank() || value.isBlank()) return@forEach
+                val cookie = Cookie.Builder()
+                    .name(name)
+                    .value(value)
+                    .domain("instagram.com")
+                    .path("/")
+                    .secure()
+                    .httpOnly()
+                    .expiresAt(Long.MAX_VALUE)
+                    .build()
+                val index = hostCookies.indexOfFirst { it.name == name }
+                if (index >= 0) hostCookies[index] = cookie else hostCookies += cookie
+            }
+        }
+    }
+
+    fun clear() {
+        store.clear()
     }
 }

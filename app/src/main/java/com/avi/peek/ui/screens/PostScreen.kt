@@ -588,7 +588,7 @@ fun PostScreen(
                     if ((value.commentCount ?: 0L) > 0L) {
                         "${value.commentCount!!.compactCount()} comments on this post. Instagram's public page only exposes the count, not the comment text, so Peek can't show a read-only thread here."
                     } else {
-                        "Instagram's guest page does not expose comment text. Peek never logs in, so there is no thread to read here."
+                        "Instagram's public page does not expose comment text. Peek does not load comment threads, and guest mode never logs in; optional signed-in mode only reads profile pages."
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

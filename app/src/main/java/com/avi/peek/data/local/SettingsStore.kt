@@ -17,7 +17,21 @@ private val Context.peekSettings: DataStore<Preferences> by preferencesDataStore
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
-enum class PaletteStyle { LAVENDER, OCEAN, FOREST, SUNSET, ROSE }
+enum class PaletteStyle(val label: String) {
+    LAVENDER("Lavender"),
+    OCEAN("Ocean"),
+    FOREST("Forest"),
+    SUNSET("Sunset"),
+    ROSE("Rose"),
+    MINT("Mint"),
+    COFFEE("Coffee"),
+    SAKURA("Sakura"),
+    CITRUS("Citrus"),
+    INDIGO("Indigo"),
+    SLATE("Slate"),
+    SAND("Sand"),
+    AURORA("Aurora"),
+}
 
 data class PeekSettings(
     val onboarded: Boolean = false,

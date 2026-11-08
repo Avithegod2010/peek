@@ -2,9 +2,9 @@
 
 **Instagram, without Instagram.**
 
-Peek is a quiet, offline-first viewer for **public** Instagram profiles. Add a username or paste a link, follow that account **locally**, and see their posts and reels in a calm Material You interface. There is no Instagram login, no likes sent to Instagram, no algorithm and no feed suggestions.
+Peek is a quiet, offline-first viewer for **public** Instagram profiles. Add a username or paste a link, follow that account **locally**, and see their posts and reels in a calm Material You interface. Public browsing needs no account. If you want to see private accounts you already follow, you can optionally connect your own Instagram web session in Settings. There are no likes sent to Instagram, no algorithm and no feed suggestions.
 
-> Peek is an unofficial client. It is not affiliated with Instagram or Meta. Only public pages are read. All media belongs to its respective owners.
+> Peek is an unofficial client. It is not affiliated with Instagram or Meta. Public pages are read by default; the optional signed-in mode reuses only your own Instagram session. All media belongs to its respective owners.
 
 ## Why
 
@@ -12,9 +12,9 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 
 - Follow accounts **locally** — nothing is sent to Instagram
 - Works **offline** with cached posts, bookmarks and downloads
-- **Material You** dynamic colour, AMOLED black, five fallback palettes
+- **Material You** dynamic colour, AMOLED black, thirteen fallback palettes
 - Thoughtful **haptics** and spring animations
-- No account, no password, no tracking, no ads
+- No Peek account, no tracking, no ads; an **optional** Instagram sign-in only for private accounts you follow
 
 ## Features
 
@@ -65,6 +65,8 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Private circles / close friends** and combined local timelines
 - **Read-only highlights** with the public cover and any media Instagram exposes
 - Public/private state is re-checked on refresh and never inferred from an empty grid
+- **Clear private-account state** — “This account is private” with a sign-in action, or an explanation that the signed-in session does not follow that account
+- **Optional Instagram sign-in** in Settings for private accounts you already follow; passwords are never stored, only session cookies encrypted with the Android Keystore
 - Local saved state shown on the grid
 - Share, copy, open on Instagram, pin, unfollow or remove a profile
 - Shared-element avatar transition from your Home circle into the profile header
@@ -141,6 +143,10 @@ A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are 
 | --- | --- |
 | <img src="docs/screenshots/highlight.png" width="330" alt="Highlight viewer" /> | <img src="docs/screenshots/storage.png" width="330" alt="Profile storage" /> |
 
+| Optional Instagram account | Thirteen palettes |
+| --- | --- |
+| <img src="docs/screenshots/account.png" width="330" alt="Optional Instagram account" /> | <img src="docs/screenshots/themes.png" width="330" alt="Palette picker" /> |
+
 ## Build
 
 Requirements: Android Studio or a JDK 17 + Android SDK 36 setup.
@@ -163,17 +169,23 @@ The repository includes F-Droid metadata in [`fdroid/com.avi.peek.yml`](fdroid/c
 
 Instagram’s public web pages server-render a small JSON payload inside `<script type="application/json" data-sjs>` tags. Peek requests the public profile page with normal browser hints, extracts that payload, and stores a normalized copy locally. Older profile pages are loaded with the same anonymous Relay query the logged-out web profile uses for “Show more posts”. A post page is read the same way when you open a post, which is where like counts, captions and video URLs come from.
 
-This is deliberately **not** an authenticated scraper:
+Public browsing is deliberately **not** authenticated:
 
-- No login, cookies or credentials
-- No private accounts
+- No login, cookies or credentials are required by default
+- No private accounts are readable unless you choose to connect a session that follows them
 - No posting, liking or commenting on Instagram
 - Instagram can change the page shape or rate-limit guests at any time; Peek shows a clear message instead of failing silently
 - The app is designed to remain useful with cached content when the network is unavailable
 
+### Optional signed-in mode
+
+Settings → Instagram account opens Instagram's own web login inside Peek. Peek never reads the password fields and never injects scripts into the page. When Instagram finishes signing in, the WebView's session cookies are encrypted with an Android Keystore AES-GCM key and saved in a separate local DataStore. On later launches the cookies are restored into Peek's HTTP client.
+
+This mode is additive. It is used only to request private profiles your own session already follows, and it can be removed at any time with **Sign out**, which clears both the saved cookies and the WebView session. Instagram may still challenge or block web sign-in, and automated access can conflict with Instagram's terms. Peek does not promise that any particular private account will be readable.
+
 ## Privacy
 
-Following, likes, bookmarks, downloads and search history never leave the device. Peek has no analytics, no crash reporting and no server. Network requests go only to `instagram.com` / Instagram's CDN to read public pages.
+Following, likes, bookmarks, downloads and search history never leave the device. Peek has no analytics, no crash reporting and no server. Network requests go only to `instagram.com` / Instagram's CDN. If you use the optional signed-in mode, your Instagram session cookies are encrypted locally with the Android Keystore and are never sent anywhere except Instagram itself.
 
 ## Downloads and fair use
 

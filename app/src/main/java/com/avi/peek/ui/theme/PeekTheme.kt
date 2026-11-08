@@ -78,6 +78,70 @@ private fun PaletteStyle.colors(): PaletteColors = when (this) {
         darkContainer = Color(0xFF6D3444),
         onDarkContainer = Color(0xFFFFD9E0),
     )
+    PaletteStyle.MINT -> PaletteColors(
+        light = Color(0xFF006B5B),
+        lightContainer = Color(0xFFA7F2E3),
+        onLightContainer = Color(0xFF00201B),
+        dark = Color(0xFF89D6C8),
+        darkContainer = Color(0xFF005045),
+        onDarkContainer = Color(0xFFA7F2E3),
+    )
+    PaletteStyle.COFFEE -> PaletteColors(
+        light = Color(0xFF6F4E37),
+        lightContainer = Color(0xFFFFDCC2),
+        onLightContainer = Color(0xFF2A170A),
+        dark = Color(0xFFE0C0A6),
+        darkContainer = Color(0xFF573E2D),
+        onDarkContainer = Color(0xFFFFDCC2),
+    )
+    PaletteStyle.SAKURA -> PaletteColors(
+        light = Color(0xFF9C4059),
+        lightContainer = Color(0xFFFFD9E2),
+        onLightContainer = Color(0xFF3E0016),
+        dark = Color(0xFFFFB1C6),
+        darkContainer = Color(0xFF7B2942),
+        onDarkContainer = Color(0xFFFFD9E2),
+    )
+    PaletteStyle.CITRUS -> PaletteColors(
+        light = Color(0xFF7A5900),
+        lightContainer = Color(0xFFFFE08A),
+        onLightContainer = Color(0xFF261A00),
+        dark = Color(0xFFE9C349),
+        darkContainer = Color(0xFF5C4300),
+        onDarkContainer = Color(0xFFFFE08A),
+    )
+    PaletteStyle.INDIGO -> PaletteColors(
+        light = Color(0xFF3F51B5),
+        lightContainer = Color(0xFFDFE0FF),
+        onLightContainer = Color(0xFF00105C),
+        dark = Color(0xFFBBC3FF),
+        darkContainer = Color(0xFF283593),
+        onDarkContainer = Color(0xFFDFE0FF),
+    )
+    PaletteStyle.SLATE -> PaletteColors(
+        light = Color(0xFF4A5C6A),
+        lightContainer = Color(0xFFD6E6F5),
+        onLightContainer = Color(0xFF071E2B),
+        dark = Color(0xFFB4C9D9),
+        darkContainer = Color(0xFF334552),
+        onDarkContainer = Color(0xFFD6E6F5),
+    )
+    PaletteStyle.SAND -> PaletteColors(
+        light = Color(0xFF7A5B2E),
+        lightContainer = Color(0xFFF6E0B8),
+        onLightContainer = Color(0xFF2B1D00),
+        dark = Color(0xFFE3C38F),
+        darkContainer = Color(0xFF5E4419),
+        onDarkContainer = Color(0xFFF6E0B8),
+    )
+    PaletteStyle.AURORA -> PaletteColors(
+        light = Color(0xFF7B3FA0),
+        lightContainer = Color(0xFFF2D9FF),
+        onLightContainer = Color(0xFF2E004B),
+        dark = Color(0xFFDDB8FF),
+        darkContainer = Color(0xFF5A2A78),
+        onDarkContainer = Color(0xFFF2D9FF),
+    )
 }
 
 private val LightBackground = Color(0xFFFBF8FF)

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AssistChip
@@ -338,7 +339,7 @@ fun SearchScreen(
                             Icon(Icons.Rounded.Public, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                "Name search uses public web results to discover a profile, then reads the public profile directly. No login is used. Saved aliases keep a name → @username link on this device.",
+                                "Name search uses public web results to discover a profile, then reads the profile directly. Public search needs no login; if you connect an Instagram session in Settings, only that session is used. Saved aliases keep a name → @username link on this device.",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -564,7 +565,18 @@ private fun SearchResultCard(
                             VerifiedBadge(size = 14.dp)
                         }
                     }
-                    Text("@${item.username}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("@${item.username}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        if (profile?.isPrivate == true) {
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                Icons.Rounded.Lock,
+                                contentDescription = "Private account",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(11.dp),
+                            )
+                        }
+                    }
                     if (profile != null) {
                         Spacer(Modifier.height(3.dp))
                         if (profile.followerCount > 0) {

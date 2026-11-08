@@ -1,6 +1,7 @@
 package com.avi.peek.ui.screens
 
 import android.net.Uri
+import android.webkit.CookieManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.avi.peek.data.local.PaletteStyle
@@ -121,6 +122,11 @@ class SettingsViewModel : ViewModel() {
     fun clearEverything() {
         viewModelScope.launch {
             runCatching { ServiceLocator.imageLoader.diskCache?.clear() }
+            runCatching { ServiceLocator.accountManager.disconnect() }
+            runCatching {
+                CookieManager.getInstance().removeAllCookies(null)
+                CookieManager.getInstance().flush()
+            }
             repo.clearEverything()
             store.setLastFullSync(0L)
             store.setOnboarded(false)

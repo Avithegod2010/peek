@@ -135,6 +135,7 @@ fun ProfileScreen(
     onOpenPost: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
     onOpenStorage: (String) -> Unit,
+    onOpenAccount: () -> Unit = {},
     onOpenAudio: (String) -> Unit = {},
     onOpenHighlight: (String, String, String?) -> Unit = { _, _, _ -> },
     headerAvatarModifier: Modifier = Modifier,
@@ -157,6 +158,7 @@ fun ProfileScreen(
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val newSinceVisit by viewModel.newSinceVisit.collectAsStateWithLifecycle()
     val visitBaseline by viewModel.visitBaseline.collectAsStateWithLifecycle()
+    val account by viewModel.account.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val context = LocalContext.current
     val haptics = LocalPeekHaptics.current
@@ -315,6 +317,7 @@ fun ProfileScreen(
                             onDownloadProfile = { showDownloadDialog = true },
                             onClearBulk = viewModel::clearBulkDownload,
                             onOpenHighlight = onOpenHighlight,
+                            signedIn = account.signedIn,
                         )
                     }
                     item(span = { GridItemSpan(maxLineSpan) }, key = "profile-tools") {
@@ -340,13 +343,24 @@ fun ProfileScreen(
                                     else -> "No posts cached"
                                 },
                                 message = when {
-                                    private -> "Peek can follow it locally, but Instagram doesn't show private posts to guests. If this account is actually public, refresh to re-check."
+                                    private && !account.signedIn ->
+                                        "Private accounts only show their posts to signed-in followers. Sign in to Instagram in Peek, then refresh. Public browsing still works without an account."
+                                    private && account.signedIn ->
+                                        "Peek is signed in, but Instagram only reveals this account's posts to sessions that follow it. Follow @$username on Instagram, then refresh."
                                     tab == ProfileTab.SAVED -> "Tap the bookmark on any post to keep it here."
                                     else -> "Pull to refresh and Peek will cache the latest public posts."
                                 },
                                 icon = if (private) Icons.Rounded.Lock else Icons.Rounded.Refresh,
-                                actionLabel = "Refresh",
-                                onAction = viewModel::refresh,
+                                actionLabel = if (private && !account.signedIn) {
+                                    "Sign in to Instagram"
+                                } else {
+                                    "Refresh"
+                                },
+                                onAction = if (private && !account.signedIn) {
+                                    onOpenAccount
+                                } else {
+                                    viewModel::refresh
+                                },
                                 modifier = Modifier.padding(vertical = 30.dp),
                             )
                         }
@@ -502,7 +516,7 @@ fun ProfileScreen(
             text = {
                 Column {
                     Text(
-                        "Peek will walk every public timeline page it can reach, starting with the " +
+                        "Peek will walk every timeline page it can reach, starting with the " +
                             "${loadedCount.coerceAtLeast(1)} loaded here, then save every photo and video for offline use.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -721,6 +735,7 @@ private fun ProfileHeader(
     onDownloadProfile: () -> Unit,
     onClearBulk: () -> Unit,
     onOpenHighlight: (String, String, String?) -> Unit,
+    signedIn: Boolean,
 ) {
     val profile = value.profile
     val media = value.media
@@ -867,14 +882,14 @@ private fun ProfileHeader(
             Spacer(Modifier.height(9.dp))
             OutlinedButton(
                 onClick = onDownloadProfile,
-                enabled = media.isNotEmpty() && !profile.isPrivate && bulkDownload?.running != true,
+                enabled = media.isNotEmpty() && bulkDownload?.running != true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
             ) {
                 if (bulkDownload?.running == true && bulkDownload.preparing) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(7.dp))
-                    Text("Loading public posts · ${bulkDownload.prepared}")
+                    Text("Loading posts · ${bulkDownload.prepared}")
                 } else if (bulkDownload?.running == true) {
                     CircularProgressIndicator(
                         progress = {
@@ -891,7 +906,7 @@ private fun ProfileHeader(
                     Spacer(Modifier.width(7.dp))
                     Text(
                         if (media.isEmpty()) {
-                            "No public posts to save"
+                            "No posts to save yet"
                         } else {
                             "Download profile · ${media.size} " + when {
                                 profile.hasMorePosts -> "loaded"
@@ -916,7 +931,7 @@ private fun ProfileHeader(
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Loading every public page · ${bulkDownload.prepared} posts found",
+                                "Loading every reachable page · ${bulkDownload.prepared} posts found",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -979,7 +994,7 @@ private fun ProfileHeader(
                     }
                 }
             }
-            if (profile.isPrivate && media.isEmpty()) {
+            if (profile.isPrivate) {
                 Spacer(Modifier.height(12.dp))
                 Row(
                     Modifier
@@ -990,7 +1005,14 @@ private fun ProfileHeader(
                 ) {
                     Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Private account · content isn't public", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        when {
+                            media.isNotEmpty() -> "Private account · visible to your session"
+                            signedIn -> "Private account · not visible to this session"
+                            else -> "Private account · sign in to view"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
             }
             if (profile.lastFetchedAt > 0) {

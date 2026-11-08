@@ -158,9 +158,9 @@ class SsrParser(
             fullName = p.string("full_name").orEmpty(),
             biography = p.string("biography").orEmpty(),
             profilePicUrl = p.string("profile_pic_url"),
-            // Public posts in the payload prove the account is readable; never
-            // label it private when Instagram actually returned its media.
-            isPrivate = (p.boolean("is_private") ?: false) && media.isEmpty(),
+            // Keep Instagram's real privacy flag. The UI decides whether the
+            // account is locked by combining this with whether media arrived.
+            isPrivate = p.boolean("is_private") ?: false,
             isVerified = p.boolean("is_verified") ?: false,
             followerCount = p.long("follower_count") ?: 0L,
             followingCount = p.long("following_count") ?: 0L,
@@ -227,6 +227,29 @@ class SsrParser(
             .mapIndexedNotNull { index, node -> parseChild(node, index) }
     }
 
+    /** Parses the authenticated web feed endpoint used for signed-in profiles. */
+    fun parseUserFeed(jsonText: String): ProfilePostsPage? {
+        val root = runCatching { json.parseToJsonElement(jsonText).jsonObject }.getOrNull() ?: return null
+        val items = root.array("items") ?: return null
+        val nodes = items.mapNotNull { element ->
+            (element as? JsonObject)?.let(::parseApiProfileNode)
+        }
+        val next = root.string("next_max_id")?.takeIf { it.isNotBlank() }
+        val more = root.boolean("more_available") ?: (next != null)
+        return ProfilePostsPage(
+            nodes = nodes,
+            hasNextPage = more && next != null,
+            endCursor = next,
+        )
+    }
+
+    /** Parses one authenticated media-info response into the same shape as SSR posts. */
+    fun parseApiPost(jsonText: String): ScrapedPost? {
+        val root = runCatching { json.parseToJsonElement(jsonText).jsonObject }.getOrNull() ?: return null
+        val item = root.array("items")?.firstOrNull() as? JsonObject ?: return null
+        return scrapedPostFromMedia(item, item.string("code").orEmpty())
+    }
+
     fun parsePost(html: String, code: String): ScrapedPost? {
         val roots = parseScripts(html)
         if (roots.isEmpty()) return null
@@ -245,7 +268,34 @@ class SsrParser(
         val media = candidates.firstOrNull { it["taken_at"] != null }
             ?: candidates.firstOrNull()
             ?: return null
+        return scrapedPostFromMedia(media, code)
+    }
 
+    private fun parseApiProfileNode(node: JsonObject): ProfileNode? {
+        val code = node.string("code") ?: return null
+        val images = node.obj("image_versions2")?.array("candidates")
+            ?.mapNotNull { it as? JsonObject }
+            ?.mapNotNull { candidate ->
+                val url = candidate.string("url") ?: return@mapNotNull null
+                Triple(url, candidate.int("width") ?: 0, candidate.int("height") ?: 0)
+            }
+            ?.sortedByDescending { it.second }
+            .orEmpty()
+        return ProfileNode(
+            code = code,
+            pk = node.string("pk") ?: "",
+            mediaType = node.int("media_type") ?: 1,
+            productType = node.string("product_type"),
+            caption = node.obj("caption")?.string("text") ?: node.string("caption"),
+            displayUrl = images.firstOrNull()?.first,
+            accessibilityCaption = node.string("accessibility_caption"),
+            carouselCount = node.int("carousel_media_count")
+                ?: node.array("carousel_media")?.size
+                ?: 0,
+        )
+    }
+
+    private fun scrapedPostFromMedia(media: JsonObject, fallbackCode: String): ScrapedPost? {
         val carousel = media.array("carousel_media")
         val children = if (carousel != null) {
             carousel.mapIndexedNotNull { index, element ->
@@ -267,7 +317,7 @@ class SsrParser(
             ?: musicInfo?.string("display_artist")
 
         return ScrapedPost(
-            code = media.string("code") ?: code,
+            code = media.string("code") ?: fallbackCode,
             pk = media.string("pk"),
             username = user?.string("username").orEmpty(),
             userPk = user?.string("pk"),

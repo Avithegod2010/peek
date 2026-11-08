@@ -54,6 +54,7 @@ class PeekRepository(
     private val downloads: DownloadStore,
     private val gallery: GallerySaver = GallerySaver(context),
     private val requestLog: RequestLog = RequestLog(context),
+    private val accountManager: AccountManager,
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -146,18 +147,21 @@ class PeekRepository(
     }
 
     suspend fun fetchHighlightMedia(highlightId: String): List<MediaChild> = withContext(Dispatchers.IO) {
+        accountManager.ensureRestored()
         client.fetchHighlightMedia(highlightId)
     }
 
     suspend fun lookup(raw: String): ScrapedProfile {
         val username = GuestInstagramClient.normalizeUsername(raw)
             ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
+        accountManager.ensureRestored()
         return client.fetchProfile(username)
     }
 
     suspend fun follow(rawOrUsername: String): CacheResult {
         val username = GuestInstagramClient.normalizeUsername(rawOrUsername)
             ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
+        accountManager.ensureRestored()
         val scraped = client.fetchProfile(username)
         return cacheAndFollow(scraped)
     }
@@ -218,6 +222,7 @@ class PeekRepository(
     }
 
     suspend fun refreshProfile(username: String): CacheResult = withContext(Dispatchers.IO) {
+        accountManager.ensureRestored()
         try {
             val scraped = client.fetchProfile(username)
             val result = cacheProfile(scraped, followed = null, followedAt = null)
@@ -237,6 +242,7 @@ class PeekRepository(
 
     /** Appends the next page of a profile grid without dropping earlier pages. */
     suspend fun loadMoreProfilePosts(username: String): ProfilePageResult = withContext(Dispatchers.IO) {
+        accountManager.ensureRestored()
         val profile = db.profiles().get(username)
             ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Open the profile first")
         val after = profile.nextCursor
@@ -334,7 +340,7 @@ class PeekRepository(
     }
 
     /**
-     * Merges a fresh public profile payload into the local cache. Local-only state
+     * Merges a fresh profile payload into the local cache. Local-only state
      * (follow, saves, likes, downloads) is never overwritten.
      */
     private suspend fun cacheProfile(
@@ -356,7 +362,7 @@ class PeekRepository(
             fullName = scraped.fullName,
             biography = scraped.biography,
             profilePicUrl = scraped.profilePicUrl ?: existingProfile?.profilePicUrl,
-            isPrivate = scraped.isPrivate && scraped.media.isEmpty(),
+            isPrivate = scraped.isPrivate,
             isVerified = scraped.isVerified,
             followerCount = scraped.followerCount,
             followingCount = scraped.followingCount,
@@ -446,8 +452,9 @@ class PeekRepository(
             val fresh = fetchedAt > 0 && System.currentTimeMillis() - fetchedAt < 8 * 60 * 60 * 1000
             if (fresh && !force) return@withContext existing
 
+            accountManager.ensureRestored()
             try {
-                val post = client.fetchPost(code)
+                val post = client.fetchPost(code, existing.pk)
                 requestLog.record("post $code", "ok")
                 val now = System.currentTimeMillis()
                 val children = post.children

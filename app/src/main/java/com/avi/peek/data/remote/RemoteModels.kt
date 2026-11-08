@@ -74,6 +74,11 @@ data class RelatedProfile(
     val isVerified: Boolean,
 )
 
+data class ViewerIdentity(
+    val username: String?,
+    val userId: String?,
+)
+
 data class ScrapedPost(
     val code: String,
     val pk: String?,
