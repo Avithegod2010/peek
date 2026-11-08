@@ -173,6 +173,7 @@ class PeekRepository(
      * The profile (and its first page of media) is cached so opening it later is instant.
      */
     suspend fun prefetchDirectoryProfile(raw: String): ProfileEntity? = withContext(Dispatchers.IO) {
+        accountManager.ensureRestored()
         val username = GuestInstagramClient.normalizeUsername(raw) ?: return@withContext null
         val cached = db.profiles().get(username)
         if (cached != null && cached.pk != null &&
@@ -503,6 +504,7 @@ class PeekRepository(
         }
 
     suspend fun syncAll(force: Boolean = false): SyncReport? = withContext(Dispatchers.IO) {
+        accountManager.ensureRestored()
         if (!network.online.value) {
             _syncEvents.tryEmit(SyncEvent.NoConnection)
             return@withContext null
