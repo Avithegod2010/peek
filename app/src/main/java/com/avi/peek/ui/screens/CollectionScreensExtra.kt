@@ -59,6 +59,7 @@ import com.avi.peek.ui.components.PeekImage
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.LocalPeekHaptics
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 @Composable
@@ -152,7 +153,12 @@ private fun CollectionRow(
 ) {
     val coverFlow = remember(collection.coverCode) {
         val code = collection.coverCode
-        if (code.isNullOrBlank()) flowOf<MediaEntity?>(null) else ServiceLocator.repository.observeMedia(code)
+        if (code.isNullOrBlank()) {
+            flowOf<MediaEntity?>(null)
+        } else {
+            ServiceLocator.repository.mediaByCodes(listOf(code))
+                .map { it.firstOrNull() }
+        }
     }
     val cover by coverFlow.collectAsStateWithLifecycle(null)
     Card(

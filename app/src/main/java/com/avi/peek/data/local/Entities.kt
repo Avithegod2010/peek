@@ -63,6 +63,7 @@ data class MediaEntity(
     val userAvatar: String? = null,
     val userFullName: String = "",
     val userVerified: Boolean = false,
+    val isPrivate: Boolean = false,
     val mediaType: Int = 1,
     val productType: String? = null,
     val caption: String? = null,

@@ -70,6 +70,11 @@ class DownloadQueue(
         return null
     }
 
+    suspend fun enqueueChecked(code: String): String? {
+        repository.privateDownloadBlock(code)?.let { return it }
+        return enqueue(code)
+    }
+
     fun enqueue(code: String): String? {
         blockReason()?.let { return it }
         val existing = _tasks.value.firstOrNull { it.code == code }

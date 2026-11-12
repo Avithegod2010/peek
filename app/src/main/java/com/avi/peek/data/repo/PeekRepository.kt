@@ -8,10 +8,14 @@ import com.avi.peek.data.local.ProfileWithMedia
 import com.avi.peek.data.local.SettingsStore
 import com.avi.peek.data.remote.GuestErrorKind
 import com.avi.peek.data.remote.GuestException
+import com.avi.peek.data.remote.CommentPage
 import com.avi.peek.data.remote.GuestInstagramClient
 import com.avi.peek.data.remote.MediaChild
+import com.avi.peek.data.remote.ScrapedComment
+import com.avi.peek.data.remote.ScrapedPost
 import com.avi.peek.data.remote.ScrapedProfile
 import com.avi.peek.util.NetworkMonitor
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -23,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -55,12 +60,38 @@ class PeekRepository(
     private val gallery: GallerySaver = GallerySaver(context),
     private val requestLog: RequestLog = RequestLog(context),
     private val accountManager: AccountManager,
+    private val requestBudget: RequestBudget,
+    private val vault: VaultStore,
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
     private val childSerializer = ListSerializer(MediaChild.serializer())
     private val stringListSerializer = ListSerializer(String.serializer())
     private val syncMutex = Mutex()
+
+    private suspend fun <T> budgeted(
+        background: Boolean = false,
+        block: suspend () -> T,
+    ): T {
+        requestBudget.acquire(background)
+        return try {
+            block().also {
+                requestBudget.recordSuccess()
+                accountManager.markSuccess()
+            }
+        } catch (e: GuestException) {
+            if (e.kind == GuestErrorKind.RATE_LIMITED) {
+                requestBudget.recordRateLimit(e.userMessage())
+            }
+            if (e.kind == GuestErrorKind.LOGIN_REQUIRED || e.kind == GuestErrorKind.BLOCKED) {
+                accountManager.markExpired(e.userMessage())
+                if (e.kind == GuestErrorKind.LOGIN_REQUIRED) {
+                    requestBudget.recordChallenge(e.userMessage())
+                }
+            }
+            throw e
+        }
+    }
 
     private val _syncState = MutableStateFlow(SyncState())
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
@@ -71,20 +102,36 @@ class PeekRepository(
     private val _downloadProgress = MutableStateFlow<Map<String, DownloadProgress>>(emptyMap())
     val downloadProgress: StateFlow<Map<String, DownloadProgress>> = _downloadProgress.asStateFlow()
 
+    private val privateVisible: Flow<Boolean> = combine(
+        settings.settings.map { !it.privateContentHidden }.distinctUntilChanged(),
+        PrivateAccess.revealed,
+    ) { notHidden, revealed -> notHidden || revealed }.distinctUntilChanged()
+
+    private fun Flow<List<MediaEntity>>.visibleOnly(): Flow<List<MediaEntity>> =
+        combine(this, privateVisible) { items, visible ->
+            if (visible) items else items.filterNot { it.isPrivate }
+        }
+
     val following: Flow<List<ProfileEntity>> = db.profiles().observeFollowing()
     val followingCount: Flow<Int> = db.profiles().observeFollowingCount()
     val savedCount: Flow<Int> = db.media().observeSavedCount()
     val downloadCount: Flow<Int> = db.media().observeDownloadCount()
     val mediaCount: Flow<Int> = db.media().observeMediaCount()
-    val saved: Flow<List<MediaEntity>> = db.media().observeSaved()
-    val downloaded: Flow<List<MediaEntity>> = db.media().observeDownloads()
-    val liked: Flow<List<MediaEntity>> = db.media().observeLiked()
+    val saved: Flow<List<MediaEntity>> = db.media().observeSaved().visibleOnly()
+    val downloaded: Flow<List<MediaEntity>> = db.media().observeDownloads().visibleOnly()
+    val liked: Flow<List<MediaEntity>> = db.media().observeLiked().visibleOnly()
+    val privateFeed: Flow<List<MediaEntity>> = combine(
+        db.media().observePrivateFeed(),
+        privateVisible,
+    ) { items, visible -> if (visible) items else emptyList() }
     val recentlyViewed: Flow<List<ProfileEntity>> = db.profiles().observeRecentlyViewed()
     val recentSearches = db.searches().observeRecent()
 
-    fun mediaByCodes(codes: List<String>): Flow<List<MediaEntity>> = db.media().observeByCodes(codes)
+    fun mediaByCodes(codes: List<String>): Flow<List<MediaEntity>> =
+        db.media().observeByCodes(codes).visibleOnly()
+
     fun mediaForUsernames(usernames: List<String>): Flow<List<MediaEntity>> =
-        db.media().observeForUsernames(usernames)
+        db.media().observeForUsernames(usernames).visibleOnly()
 
     suspend fun profileMedia(username: String): List<MediaEntity> = withContext(Dispatchers.IO) {
         db.media().forProfile(username)
@@ -95,7 +142,7 @@ class PeekRepository(
     }
 
     val feed: Flow<List<FeedPost>> = combine(
-        db.media().observeFeed(),
+        db.media().observeFeed().visibleOnly(),
         db.profiles().observeFollowing(),
     ) { media, profiles ->
         val byName = profiles.associateBy { it.username }
@@ -113,7 +160,8 @@ class PeekRepository(
 
     fun observeMedia(code: String): Flow<MediaEntity?> = db.media().observe(code)
 
-    fun observeAudio(title: String): Flow<List<MediaEntity>> = db.media().observeAudio(title)
+    fun observeAudio(title: String): Flow<List<MediaEntity>> =
+        db.media().observeAudio(title).visibleOnly()
 
     fun savedSince(since: Long): Flow<Int> = db.media().observeSavedSince(since)
     fun downloadedSince(since: Long): Flow<Int> = db.media().observeDownloadedSince(since)
@@ -124,7 +172,9 @@ class PeekRepository(
     }
 
     suspend fun searchCachedMedia(query: String): List<MediaEntity> = withContext(Dispatchers.IO) {
-        if (query.isBlank()) emptyList() else db.media().searchCached(query.trim())
+        if (query.isBlank()) return@withContext emptyList()
+        val visible = privateVisible.first()
+        db.media().searchCached(query.trim()).filter { visible || !it.isPrivate }
     }
 
     fun extractPostShortcode(raw: String): String? {
@@ -141,28 +191,39 @@ class PeekRepository(
     /** Resolves a public post/reel URL (or shortcode) to its author profile. */
     suspend fun resolvePostAuthor(raw: String): ProfileEntity? = withContext(Dispatchers.IO) {
         val code = extractPostShortcode(raw) ?: return@withContext null
-        val post = runCatching { client.fetchPost(code) }.getOrNull() ?: return@withContext null
+        val post = runCatching { budgeted { client.fetchPost(code) } }.getOrNull()
+            ?: return@withContext null
         val username = post.username.takeIf { it.isNotBlank() } ?: return@withContext null
         prefetchDirectoryProfile(username)
     }
 
     suspend fun fetchHighlightMedia(highlightId: String): List<MediaChild> = withContext(Dispatchers.IO) {
         accountManager.ensureRestored()
-        client.fetchHighlightMedia(highlightId)
+        budgeted { client.fetchHighlightMedia(highlightId) }
     }
+
+    suspend fun loadComments(code: String, after: String? = null): CommentPage =
+        withContext(Dispatchers.IO) {
+            accountManager.ensureRestored()
+            val media = db.media().get(code)
+                ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Open the post first")
+            val pk = media.pk ?: loadMediaDetail(code)?.pk
+                ?: throw GuestException(GuestErrorKind.PARSE, "This post has no comments id")
+            budgeted { client.fetchComments(pk, after) }
+        }
 
     suspend fun lookup(raw: String): ScrapedProfile {
         val username = GuestInstagramClient.normalizeUsername(raw)
             ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
         accountManager.ensureRestored()
-        return client.fetchProfile(username)
+        return budgeted { client.fetchProfile(username) }
     }
 
     suspend fun follow(rawOrUsername: String): CacheResult {
         val username = GuestInstagramClient.normalizeUsername(rawOrUsername)
             ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
         accountManager.ensureRestored()
-        val scraped = client.fetchProfile(username)
+        val scraped = budgeted { client.fetchProfile(username) }
         return cacheAndFollow(scraped)
     }
 
@@ -182,7 +243,7 @@ class PeekRepository(
             return@withContext cached
         }
         runCatching {
-            val scraped = client.fetchProfile(username)
+            val scraped = budgeted { client.fetchProfile(username) }
             cacheProfile(scraped, followed = null, followedAt = null, source = "catalog").profile
         }.onFailure {
             cached?.let { old -> db.profiles().setError(username, it.userMessage()) }
@@ -225,7 +286,7 @@ class PeekRepository(
     suspend fun refreshProfile(username: String): CacheResult = withContext(Dispatchers.IO) {
         accountManager.ensureRestored()
         try {
-            val scraped = client.fetchProfile(username)
+            val scraped = budgeted { client.fetchProfile(username) }
             val result = cacheProfile(scraped, followed = null, followedAt = null)
                 .also { db.profiles().setError(username, null) }
             requestLog.record("profile @$username", "ok")
@@ -252,7 +313,7 @@ class PeekRepository(
             ?: throw GuestException(GuestErrorKind.PARSE, "This profile has no public user id")
 
         val page = try {
-            client.fetchProfilePostsPage(username, userId, after).also {
+            budgeted { client.fetchProfilePostsPage(username, userId, after) }.also {
                 requestLog.record("older posts @$username", "${it.nodes.size} posts")
             }
         } catch (e: GuestException) {
@@ -274,6 +335,7 @@ class PeekRepository(
                 userAvatar = profile.profilePicUrl ?: old?.userAvatar,
                 userFullName = profile.fullName.ifBlank { old?.userFullName.orEmpty() },
                 userVerified = profile.isVerified,
+                isPrivate = profile.isPrivate,
                 mediaType = node.mediaType,
                 productType = node.productType ?: old?.productType,
                 caption = node.caption ?: old?.caption,
@@ -393,6 +455,7 @@ class PeekRepository(
                 userAvatar = scraped.profilePicUrl ?: old?.userAvatar,
                 userFullName = scraped.fullName.ifBlank { old?.userFullName.orEmpty() },
                 userVerified = scraped.isVerified,
+                isPrivate = scraped.isPrivate,
                 mediaType = node.mediaType,
                 productType = node.productType ?: old?.productType,
                 caption = node.caption ?: old?.caption,
@@ -425,6 +488,7 @@ class PeekRepository(
         }
 
         db.profiles().upsert(profile)
+        db.media().setPrivateForProfile(username, scraped.isPrivate)
         if (cacheMedia) {
             db.media().upsertAll(items)
             // Only prune when this profile's grid fits in one page. Profiles with
@@ -455,7 +519,7 @@ class PeekRepository(
 
             accountManager.ensureRestored()
             try {
-                val post = client.fetchPost(code, existing.pk)
+                val post = budgeted { client.fetchPost(code, existing.pk) }
                 requestLog.record("post $code", "ok")
                 val now = System.currentTimeMillis()
                 val children = post.children
@@ -514,6 +578,14 @@ class PeekRepository(
             _syncEvents.tryEmit(SyncEvent.Failed("Wi-Fi only is on. Connect to Wi-Fi to refresh."))
             return@withContext null
         }
+        if (currentSettings.quietHoursEnabled &&
+            requestBudget.inQuietHours(currentSettings.quietStartHour, currentSettings.quietEndHour)
+        ) {
+            _syncEvents.tryEmit(
+                SyncEvent.Failed("Quiet hours are on. Background sync waits until ${currentSettings.quietEndHour}:00."),
+            )
+            return@withContext null
+        }
         if (!force && currentSettings.lastFullSync > 0 &&
             System.currentTimeMillis() - currentSettings.lastFullSync < 10 * 60 * 1000
         ) {
@@ -523,6 +595,7 @@ class PeekRepository(
 
         try {
             val profiles = db.profiles().following()
+                .filter { !currentSettings.privateContentHidden || !it.isPrivate }
             if (profiles.isEmpty()) {
                 _syncState.value = SyncState(running = false, finishedAt = System.currentTimeMillis())
                 return@withContext SyncReport(emptyMap(), 0)
@@ -541,7 +614,9 @@ class PeekRepository(
                     it.copy(current = index, label = "Refreshing @${profile.username}")
                 }
                 try {
-                    val scraped = client.fetchProfile(profile.username)
+                    val scraped = budgeted(background = true) {
+                        client.fetchProfile(profile.username)
+                    }
                     val result = cacheProfile(scraped, followed = null, followedAt = null)
                     if (result.newCodes.isNotEmpty()) newByProfile[profile.username] = result.newCodes
                     db.profiles().setError(profile.username, null)
@@ -629,9 +704,48 @@ class PeekRepository(
 
     suspend fun clearSearchHistory() = db.searches().clear()
 
+    suspend fun privateProfileBlock(username: String): String? = withContext(Dispatchers.IO) {
+        val profile = db.profiles().get(username) ?: return@withContext null
+        if (!profile.isPrivate) return@withContext null
+        val current = settings.settings.first()
+        if (current.privateDownloadPolicy == com.avi.peek.data.local.PrivateDownloadPolicy.BLOCK) {
+            return@withContext "Private media downloads are off. Enable them in Settings → Privacy & storage."
+        }
+        if (!PrivateAccess.isRevealed()) {
+            return@withContext "Unlock private content to download this profile."
+        }
+        null
+    }
+
+    suspend fun privateDownloadBlock(code: String): String? = withContext(Dispatchers.IO) {
+        val media = db.media().get(code) ?: return@withContext null
+        val profile = db.profiles().get(media.username)
+        val isPrivate = media.isPrivate || profile?.isPrivate == true
+        if (!isPrivate) return@withContext null
+        val current = settings.settings.first()
+        if (current.privateDownloadPolicy == com.avi.peek.data.local.PrivateDownloadPolicy.BLOCK) {
+            return@withContext "Private media downloads are off. Enable them in Settings → Privacy & storage."
+        }
+        if (!PrivateAccess.isRevealed()) {
+            return@withContext "Unlock private content to download this post."
+        }
+        null
+    }
+
+    suspend fun privateGalleryBlock(code: String): String? = withContext(Dispatchers.IO) {
+        val media = db.media().get(code) ?: return@withContext null
+        val profile = db.profiles().get(media.username)
+        if (media.isPrivate || profile?.isPrivate == true) {
+            "Private media can't be copied to the public gallery. It stays in the private vault."
+        } else {
+            null
+        }
+    }
+
     suspend fun download(code: String): MediaEntity? = withContext(Dispatchers.IO) {
         if (_downloadProgress.value.containsKey(code)) return@withContext db.media().get(code)
         val before = db.media().get(code)
+        before?.let { privateDownloadBlock(code)?.let { reason -> throw IllegalStateException(reason) } }
         if (before?.isDownloaded == true) return@withContext before
         val loaded = loadMediaDetail(code) ?: db.media().get(code) ?: return@withContext null
         val children = loaded.children().ifEmpty {
@@ -648,7 +762,8 @@ class PeekRepository(
         }
         if (children.isEmpty()) throw GuestException(GuestErrorKind.PARSE, "Nothing to download for this post")
 
-        val dataSaver = settings.settings.first().dataSaver
+        val currentSettings = settings.settings.first()
+        val dataSaver = currentSettings.dataSaver
         val dir = downloads.directoryFor(code)
         dir.deleteRecursively()
         dir.mkdirs()
@@ -702,6 +817,20 @@ class PeekRepository(
             val now = System.currentTimeMillis()
             val imageJson = json.encodeToString(stringListSerializer, imagePaths)
             db.media().setDownloaded(code, true, now, imageJson, videoPath)
+            val profile = db.profiles().get(loaded.username)
+            val isPrivate = before?.isPrivate == true || loaded.isPrivate || profile?.isPrivate == true
+            if (isPrivate && currentSettings.privateVault) {
+                runCatching { vault.seal(listOf(code), downloads.root) }
+                    .onFailure { error ->
+                        downloads.deleteFor(code)
+                        vault.purge(code)
+                        db.media().clearDownload(code)
+                        throw IllegalStateException(
+                            "Private vault could not seal this download, so it was removed.",
+                            error,
+                        )
+                    }
+            }
             _downloadProgress.update { it - code }
             requestLog.record("download $code", "ok")
             db.media().get(code)
@@ -716,6 +845,7 @@ class PeekRepository(
     /** Downloads every slide first, then copies the files into Pictures/Peek. */
     suspend fun saveToGallery(code: String): GallerySaver.Summary = withContext(Dispatchers.IO) {
         if (gallery.needsLegacyPermission()) throw GallerySaver.PermissionRequired()
+        privateGalleryBlock(code)?.let { throw IllegalStateException(it) }
         val media = download(code)
             ?: throw IllegalStateException("That post could not be downloaded")
         val writeSidecar = settings.settings.first().gallerySidecars
@@ -724,7 +854,35 @@ class PeekRepository(
 
     suspend fun deleteDownload(code: String) {
         downloads.deleteFor(code)
+        vault.purge(code)
         db.media().clearDownload(code)
+    }
+
+    suspend fun openPrivateVault(): Int = withContext(Dispatchers.IO) {
+        val codes = db.media().privateDownloads().map { it.code }
+        vault.open(codes, downloads.root)
+        codes.size
+    }
+
+    suspend fun sealPrivateVault(): Int = withContext(Dispatchers.IO) {
+        val codes = db.media().privateDownloads().map { it.code }
+        vault.seal(codes, downloads.root)
+        codes.size
+    }
+
+    suspend fun privateVaultSize(): Long = withContext(Dispatchers.IO) { vault.sizeBytes() }
+
+    suspend fun purgePrivateDownloads() = withContext(Dispatchers.IO) {
+        db.media().privateDownloads().forEach { item ->
+            downloads.deleteFor(item.code)
+            db.media().clearDownload(item.code)
+        }
+        vault.purge()
+    }
+
+    suspend fun purgePrivateContent() = withContext(Dispatchers.IO) {
+        purgePrivateDownloads()
+        db.media().deleteAllPrivateMedia()
     }
 
     suspend fun deleteCachedMedia() {
@@ -757,6 +915,7 @@ class PeekRepository(
     suspend fun deleteDownloadsForProfile(username: String) = withContext(Dispatchers.IO) {
         db.media().forProfile(username).filter { it.isDownloaded }.forEach { item ->
             downloads.deleteFor(item.code)
+            vault.purge(item.code)
             db.media().clearDownload(item.code)
         }
     }
@@ -777,7 +936,7 @@ class PeekRepository(
     }
 
     suspend fun storageUsage(): Pair<Long, Long> = withContext(Dispatchers.IO) {
-        val downloadsSize = downloads.sizeBytes()
+        val downloadsSize = downloads.sizeBytes() + vault.sizeBytes()
         val imageCache = File(context.cacheDir, "image_cache")
         val imageSize = if (imageCache.exists()) {
             imageCache.walkTopDown().filter { it.isFile }.sumOf { it.length() }
@@ -789,13 +948,21 @@ class PeekRepository(
         db.clearAllTables()
         downloads.root.deleteRecursively()
         downloads.root.mkdirs()
+        vault.purge()
         File(context.cacheDir, "image_cache").deleteRecursively()
     }
 
     suspend fun exportBackup(): BackupData = withContext(Dispatchers.IO) {
-        val follows = db.profiles().following().map { it.username }
-        val saved = db.media().allSaved().map { it.code }
-        val liked = db.media().allLiked().map { it.code }
+        val current = settings.settings.first()
+        val follows = db.profiles().following()
+            .filter { current.includePrivateInBackups || !it.isPrivate }
+            .map { it.username }
+        val saved = db.media().allSaved()
+            .filter { current.includePrivateInBackups || !it.isPrivate }
+            .map { it.code }
+        val liked = db.media().allLiked()
+            .filter { current.includePrivateInBackups || !it.isPrivate }
+            .map { it.code }
         BackupData(follows = follows, saved = saved, liked = liked)
     }
 

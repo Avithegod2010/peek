@@ -39,8 +39,11 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Palette
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Vibration
@@ -79,6 +83,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -92,8 +97,10 @@ import com.avi.peek.BuildConfig
 import com.avi.peek.data.local.AccountState
 import com.avi.peek.data.local.PaletteStyle
 import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.data.local.PrivateDownloadPolicy
 import com.avi.peek.data.local.ThemeMode
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.ui.rememberPrivateUnlock
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.LocalPeekHaptics
@@ -106,12 +113,15 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenAccount: () -> Unit,
+    onOpenAudit: () -> Unit = {},
+    onOpenRateLimits: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val account by ServiceLocator.accountManager.state
         .collectAsStateWithLifecycle(initialValue = AccountState())
     val storage by viewModel.storage.collectAsStateWithLifecycle()
+    val unlockPrivate = rememberPrivateUnlock { viewModel.syncMessage(it) }
     val sync by viewModel.syncState.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val haptics = LocalPeekHaptics.current
@@ -194,12 +204,26 @@ fun SettingsScreen(
                             haptics.tap()
                         }
                     }
+                    CustomAccentPicker(settings.customAccent) {
+                        viewModel.setCustomAccent(it)
+                        haptics.tap()
+                    }
+                    FontScaleSlider(settings.fontScale) {
+                        viewModel.setFontScale(it)
+                    }
                     SettingsSwitch(
                         icon = Icons.Rounded.VisibilityOff,
                         title = "AMOLED black",
                         subtitle = "Pure black surfaces in dark mode",
                         checked = settings.amoled,
                         onCheckedChange = { viewModel.setAmoled(it); haptics.tap() },
+                    )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Contrast,
+                        title = "High contrast",
+                        subtitle = "Stronger text and outlines",
+                        checked = settings.highContrast,
+                        onCheckedChange = { viewModel.setHighContrast(it); haptics.tap() },
                     )
                     SettingsSwitch(
                         icon = Icons.Rounded.Vibration,
@@ -359,11 +383,21 @@ fun SettingsScreen(
                             "Sign in (optional)"
                         },
                         subtitle = if (account.signedIn) {
-                            "Session stored encrypted on this device · tap to manage"
+                            if (account.health == com.avi.peek.data.local.SessionHealth.EXPIRED) {
+                                "Session expired · tap to reconnect"
+                            } else {
+                                "Session stored encrypted on this device · tap to manage"
+                            }
                         } else {
                             "View private accounts you follow · public browsing stays available"
                         },
                         onClick = onOpenAccount,
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.History,
+                        title = "Session audit",
+                        subtitle = "Cookie names, expiry state and recent request outcomes",
+                        onClick = onOpenAudit,
                     )
                     Text(
                         "Peek never stores your Instagram password and never sends your session anywhere.",
@@ -397,10 +431,66 @@ fun SettingsScreen(
                         checked = settings.gallerySidecars,
                         onCheckedChange = { viewModel.setGallerySidecars(it) },
                     )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Lock,
+                        title = "Private downloads",
+                        subtitle = settings.privateDownloadPolicy.label +
+                            " · private media never goes to the public gallery",
+                        onClick = {
+                            viewModel.setPrivateDownloadPolicy(
+                                if (settings.privateDownloadPolicy == PrivateDownloadPolicy.BLOCK) {
+                                    PrivateDownloadPolicy.ALLOW
+                                } else {
+                                    PrivateDownloadPolicy.BLOCK
+                                },
+                            )
+                        },
+                    )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Lock,
+                        title = "Seal private downloads",
+                        subtitle = "Encrypt private media at rest with the Android Keystore",
+                        checked = settings.privateVault,
+                        onCheckedChange = { viewModel.setPrivateVault(it) },
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.LockOpen,
+                        title = "Unlock private vault",
+                        subtitle = "Required for private downloads and sealed offline media",
+                        onClick = {
+                            unlockPrivate { viewModel.revealPrivateContent() }
+                        },
+                    )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.VisibilityOff,
+                        title = "Panic mode · hide private content",
+                        subtitle = "Hide private profiles, posts and downloads until biometric unlock",
+                        checked = settings.privateContentHidden,
+                        onCheckedChange = { hide ->
+                            if (hide) {
+                                viewModel.hidePrivateContent()
+                            } else {
+                                unlockPrivate { viewModel.revealPrivateContent() }
+                            }
+                        },
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.DeleteSweep,
+                        title = "Clear private content",
+                        subtitle = "Delete private downloads and cached private posts",
+                        destructive = true,
+                        onClick = viewModel::clearPrivateContent,
+                    )
                     SettingsInfoRow(
                         icon = Icons.Rounded.Storage,
                         title = "Storage used",
                         subtitle = "Offline ${storage.first.fileSize()} · image cache ${storage.second.fileSize()}",
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Speed,
+                        title = "Request budget & rate limits",
+                        subtitle = "Hourly cap, quiet hours, backoff and recent outcomes",
+                        onClick = onOpenRateLimits,
                     )
                     SettingsClickRow(
                         icon = Icons.Rounded.DeleteSweep,
@@ -435,6 +525,20 @@ fun SettingsScreen(
                                 arrayOf("application/octet-stream", "application/json", "text/plain"),
                             )
                         },
+                    )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Lock,
+                        title = "Include private content in backups",
+                        subtitle = "Off by default · private follows, saves and likes are omitted",
+                        checked = settings.includePrivateInBackups,
+                        onCheckedChange = { viewModel.setIncludePrivateInBackups(it) },
+                    )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Code,
+                        title = "Include private content in archives",
+                        subtitle = "Off by default · excludes private captions and local files",
+                        checked = settings.includePrivateInArchives,
+                        onCheckedChange = { viewModel.setIncludePrivateInArchives(it) },
                     )
                     SettingsClickRow(
                         icon = Icons.Rounded.Code,
@@ -785,6 +889,91 @@ private fun PalettePicker(current: PaletteStyle, onSelect: (PaletteStyle) -> Uni
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CustomAccentPicker(current: Long?, onChange: (Long?) -> Unit) {
+    val currentColor = current?.let { Color(it.toInt()) }
+    val hsv = remember(current) {
+        FloatArray(3).also { array ->
+            if (current != null) {
+                android.graphics.Color.colorToHSV(current.toInt(), array)
+            } else {
+                array[0] = 265f
+                array[1] = 0.62f
+                array[2] = 0.78f
+            }
+        }
+    }
+    var hue by remember(current) { mutableFloatStateOf(hsv[0]) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(currentColor ?: Color(0xFF5B4BC4)),
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Custom accent", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    if (current == null) "Off · using the palette or wallpaper" else "Overrides the palette accent",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = current != null,
+                onCheckedChange = { enabled ->
+                    onChange(
+                        if (enabled) {
+                            Color.hsv(hue, 0.62f, 0.78f).toArgb().toLong()
+                        } else {
+                            null
+                        },
+                    )
+                },
+            )
+        }
+        if (current != null) {
+            Slider(
+                value = hue,
+                onValueChange = { hue = it },
+                onValueChangeFinished = {
+                    onChange(Color.hsv(hue, 0.62f, 0.78f).toArgb().toLong())
+                },
+                valueRange = 0f..360f,
+            )
+            Text(
+                "Hue ${hue.roundToInt()}° · drag to recolour Peek",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FontScaleSlider(value: Float, onChange: (Float) -> Unit) {
+    var local by remember(value) { mutableFloatStateOf(value) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Text size", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.weight(1f))
+            Text(
+                "${(local * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = local,
+            onValueChange = { local = it },
+            onValueChangeFinished = { onChange(local) },
+            valueRange = 0.85f..1.3f,
+        )
     }
 }
 

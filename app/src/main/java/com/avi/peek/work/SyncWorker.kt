@@ -23,7 +23,15 @@ class SyncWorker(
             if (!settings.backgroundSync) return Result.success()
             val report = ServiceLocator.repository.syncAll(force = true) ?: return Result.success()
             if (settings.notifications) {
-                PeekNotifications.postNewPosts(applicationContext, report)
+                val privateNames = if (settings.privateContentHidden) {
+                    ServiceLocator.repository.following.first()
+                        .filter { it.isPrivate }
+                        .map { it.username }
+                        .toSet()
+                } else {
+                    emptySet()
+                }
+                PeekNotifications.postNewPosts(applicationContext, report, privateNames)
             }
             Result.success()
         } catch (_: Exception) {

@@ -12,6 +12,7 @@ data class MediaChild(
     val videoUrlLow: String? = null,
     val width: Int = 0,
     val height: Int = 0,
+    val durationMs: Long = 0L,
     val accessibilityCaption: String? = null,
 )
 
@@ -77,6 +78,21 @@ data class RelatedProfile(
 data class ViewerIdentity(
     val username: String?,
     val userId: String?,
+)
+
+data class ScrapedComment(
+    val pk: String,
+    val username: String,
+    val avatarUrl: String?,
+    val text: String,
+    val createdAt: Long?,
+    val likeCount: Long,
+    val verified: Boolean,
+)
+
+data class CommentPage(
+    val comments: List<ScrapedComment>,
+    val nextMaxId: String?,
 )
 
 data class ScrapedPost(

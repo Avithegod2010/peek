@@ -66,7 +66,11 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Read-only highlights** with the public cover and any media Instagram exposes
 - Public/private state is re-checked on refresh and never inferred from an empty grid
 - **Clear private-account state** — “This account is private” with a sign-in action, or an explanation that the signed-in session does not follow that account
+- **Private profile diagnostics** — distinguishes signed out, expired session, not following, rate limit, network failure and hidden-by-panic-mode
 - **Optional Instagram sign-in** in Settings for private accounts you already follow; passwords are never stored, only session cookies encrypted with the Android Keystore
+- **Session health + guided reconnect** — expired cookies are detected and the profile offers a reconnect action
+- **Session audit** — cookie names (never values), saved/verified/success timestamps and the recent request log
+- **Manual session fallback** — paste your own `sessionid` when Instagram blocks the in-app login
 - Local saved state shown on the grid
 - Share, copy, open on Instagram, pin, unfollow or remove a profile
 - Shared-element avatar transition from your Home circle into the profile header
@@ -80,6 +84,8 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - Reels tab with a vertically snapping player and action rail
 - Double-tap like, read-only comments sheet, share, bookmark, download
 - **Save to gallery** from a post or from the Offline library; photos go to `Pictures/Peek/<username>`, videos to `Movies/Peek/<username>`
+- **Read-only comments** with an Instagram session: author, avatar, text, date and like count, with no reply box
+- **Story-style highlight viewer** with segmented progress, previous/next controls, local seen marks and a session-aware API fallback
 - Caption, date, location, like count, comment count and audio
 
 ### Library
@@ -87,6 +93,11 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Liked** local feed and a **Weekly recap** with saved/downloaded/viewed counts
 - **Collections** — private folders of saved posts with a cover and per-collection grid
 - **Private circles** — local groups, close-friends labels and a combined cached timeline
+- **Private feed** — a separate local timeline of posts from private accounts you follow
+- **Panic mode** — hide private profiles, posts and downloads until biometric unlock; also available as a Quick Settings tile
+- **Encrypted private vault** — private downloads are sealed with Android Keystore AES-GCM at rest and only opened after biometric unlock
+- **Private-safe downloads** — private media is never downloaded by default and never copied to the public gallery
+- **Request budget** — hourly caps, quiet hours, exponential backoff and pause-on-rate-limit controls
 - **Rate-limit dashboard** — recent profile/page/post outcomes, rate-limit count, pause-all downloads and background-sync control
 - **Offline** downloads manager with file sizes and a **download queue** that can pause, resume, retry and remove carousel downloads
 - **Download scheduler** settings: Wi-Fi only, charge-only, and a maximum newest-post count per profile
@@ -94,8 +105,9 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Passphrase-encrypted backups** (AES-256-GCM + PBKDF2), with legacy JSON restore
 - **HTML and JSON archive export** of cached, saved and liked posts, plus per-profile and selected-post archives with incremental “only new since last export”
 - **Gallery albums** under `Pictures/Peek/<username>` and `Movies/Peek/<username>`, with optional JSON caption/date sidecars
-- Settings for theme, palette, haptics, motion, sync depth, Wi-Fi only, charge-only downloads, notifications and storage
-- Biometric / device-lock app lock and a one-handed Home search action
+- Settings for theme, palette, custom accent hue, text scale, high contrast, haptics, motion, sync depth, Wi-Fi only, charge-only downloads, notifications and storage
+- **Backup/export privacy controls** — private content is excluded by default from backups and archives
+- Biometric / device-lock app lock, a private-vault biometric gate and a one-handed Home search action
 - Adaptive navigation rail on tablets and foldables, bottom bar on phones, and a two-pane profile on wide screens
 
 ### Under the hood

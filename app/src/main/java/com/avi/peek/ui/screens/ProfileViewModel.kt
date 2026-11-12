@@ -6,10 +6,12 @@ import com.avi.peek.data.directory.CreatorDirectory
 import com.avi.peek.data.directory.PopularCreator
 import com.avi.peek.data.local.AccountState
 import com.avi.peek.data.local.MediaEntity
+import com.avi.peek.data.local.SessionHealth
 import com.avi.peek.data.local.ProfileWithMedia
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.data.repo.ProfileDownloadState
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.userMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +67,25 @@ data class ProfileFilters(
         ).count { it }
 }
 
+enum class ProfileLockReason {
+    HIDDEN,
+    SIGNED_OUT,
+    SESSION_EXPIRED,
+    NOT_FOLLOWING,
+    RATE_LIMITED,
+    NETWORK,
+    BLOCKED,
+    UNKNOWN,
+}
+
+data class ProfileDiagnosis(
+    val locked: Boolean = false,
+    val reason: ProfileLockReason = ProfileLockReason.UNKNOWN,
+    val title: String = "",
+    val message: String = "",
+    val detail: String? = null,
+)
+
 class ProfileViewModel(private val username: String) : ViewModel() {
     private val repo = ServiceLocator.repository
 
@@ -79,6 +100,68 @@ class ProfileViewModel(private val username: String) : ViewModel() {
 
     val account: StateFlow<AccountState> = ServiceLocator.accountManager.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountState())
+
+    val diagnosis: StateFlow<ProfileDiagnosis> = combine(
+        data,
+        account,
+        settings,
+        PrivateAccess.revealed,
+    ) { value, currentAccount, currentSettings, revealed ->
+        val profile = value?.profile
+        val private = profile?.isPrivate == true
+        val media = value?.media.orEmpty()
+        val hidden = private && currentSettings.privateContentHidden && !revealed
+        if (!private || (media.isNotEmpty() && !hidden)) {
+            return@combine ProfileDiagnosis()
+        }
+        val error = profile?.lastError
+        val reason = when {
+            hidden -> ProfileLockReason.HIDDEN
+            !currentAccount.signedIn -> ProfileLockReason.SIGNED_OUT
+            currentAccount.health == SessionHealth.EXPIRED -> ProfileLockReason.SESSION_EXPIRED
+            error?.contains("rate limit", ignoreCase = true) == true -> ProfileLockReason.RATE_LIMITED
+            error?.contains("reach Instagram", ignoreCase = true) == true -> ProfileLockReason.NETWORK
+            error?.contains("login", ignoreCase = true) == true -> ProfileLockReason.SESSION_EXPIRED
+            error != null -> ProfileLockReason.BLOCKED
+            currentAccount.signedIn -> ProfileLockReason.NOT_FOLLOWING
+            else -> ProfileLockReason.UNKNOWN
+        }
+        val title = when (reason) {
+            ProfileLockReason.HIDDEN -> "Private content is hidden"
+            ProfileLockReason.SIGNED_OUT -> "This account is private"
+            ProfileLockReason.SESSION_EXPIRED -> "Instagram session expired"
+            ProfileLockReason.NOT_FOLLOWING -> "This account is private"
+            ProfileLockReason.RATE_LIMITED -> "Instagram is rate limiting"
+            ProfileLockReason.NETWORK -> "Couldn't reach Instagram"
+            ProfileLockReason.BLOCKED -> "Private content unavailable"
+            ProfileLockReason.UNKNOWN -> "This account is private"
+        }
+        val message = when (reason) {
+            ProfileLockReason.HIDDEN ->
+                "Private profiles and their cached posts are locked. Unlock with your device biometric or screen lock."
+            ProfileLockReason.SIGNED_OUT ->
+                "Private accounts only show posts to signed-in followers. Sign in to Instagram in Peek, then refresh."
+            ProfileLockReason.SESSION_EXPIRED ->
+                "Your saved Instagram session is no longer accepted. Reconnect in Settings → Instagram account."
+            ProfileLockReason.NOT_FOLLOWING ->
+                "Peek is signed in, but Instagram did not reveal @$username's posts. This usually means the session does not follow that account. Follow it on Instagram, then refresh."
+            ProfileLockReason.RATE_LIMITED ->
+                error ?: "Instagram is asking Peek to slow down. Try again later or open the rate-limit dashboard."
+            ProfileLockReason.NETWORK ->
+                "Check your connection and try again. Cached public content still works."
+            ProfileLockReason.BLOCKED ->
+                error ?: "Instagram didn't return this private account's posts to this session."
+            ProfileLockReason.UNKNOWN ->
+                "Peek couldn't read this private account. Refresh to retry, or reconnect your Instagram session."
+        }
+        ProfileDiagnosis(
+            locked = true,
+            reason = reason,
+            title = title,
+            message = message,
+            detail = listOfNotNull(error, currentAccount.lastError).distinct().joinToString(" · ").ifBlank { null },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileDiagnosis())
 
     val downloadProgress = repo.downloadProgress
     private val queue = ServiceLocator.downloadQueue
@@ -328,8 +411,10 @@ class ProfileViewModel(private val username: String) : ViewModel() {
     }
 
     fun download(code: String) {
-        val blocked = queue.enqueue(code)
-        _messages.tryEmit(blocked ?: "Added to the download queue")
+        viewModelScope.launch {
+            val blocked = queue.enqueueChecked(code)
+            _messages.tryEmit(blocked ?: "Added to the download queue")
+        }
     }
 
     fun downloadProfile(saveToGallery: Boolean) {
@@ -383,7 +468,7 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         viewModelScope.launch {
             var blocked: String? = null
             codes.forEach { code ->
-                val reason = queue.enqueue(code)
+                val reason = queue.enqueueChecked(code)
                 if (reason != null) blocked = reason
             }
             _messages.emit(

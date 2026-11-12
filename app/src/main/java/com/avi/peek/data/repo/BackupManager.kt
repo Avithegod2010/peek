@@ -100,17 +100,25 @@ class BackupManager(
         html: Boolean,
         since: Long = 0L,
     ) {
+        val settings = repository.currentSettings()
         val media = repository.profileMedia(username)
             .filter { since <= 0L || (it.downloadedAt ?: it.fetchedAt) > since }
-        val following = repository.following.first().map { it.username }
+            .filter { settings.includePrivateInArchives || !it.isPrivate }
+        val following = repository.following.first()
+            .filter { settings.includePrivateInArchives || !it.isPrivate }
+            .map { it.username }
         val archive = archiveFrom(media, following)
         if (html) writeHtmlArchive(uri, archive) else writeJsonArchive(uri, archive)
     }
 
     suspend fun exportMediaArchive(uri: Uri, codes: List<String>, html: Boolean) {
+        val settings = repository.currentSettings()
         val media = repository.mediaByCodesOnce(codes)
         val ordered = codes.mapNotNull { code -> media.firstOrNull { it.code == code } }
-        val following = repository.following.first().map { it.username }
+            .filter { settings.includePrivateInArchives || !it.isPrivate }
+        val following = repository.following.first()
+            .filter { settings.includePrivateInArchives || !it.isPrivate }
+            .map { it.username }
         val archive = archiveFrom(ordered, following)
         if (html) writeHtmlArchive(uri, archive) else writeJsonArchive(uri, archive)
     }
@@ -197,7 +205,7 @@ class BackupManager(
                 <ul class="circle">${following.ifBlank { "<li>No follows yet</li>" }}</ul>
               </header>
               <main class="grid">$cards</main>
-              <footer>Made with Peek. Read-only, account-free, and stored on your device. Post media belongs to its creators.</footer>
+              <footer>Made with Peek. Read-only, stored on your device, and no Peek account is required. Post media belongs to its creators.</footer>
             </body>
             </html>
         """.trimIndent()
@@ -207,12 +215,17 @@ class BackupManager(
     }
 
     private suspend fun buildArchive(): ArchiveData {
-        val follows = repository.following.first().map { it.username }
+        val settings = repository.currentSettings()
+        val follows = repository.following.first()
+            .filter { settings.includePrivateInArchives || !it.isPrivate }
+            .map { it.username }
         val saved = repository.saved.first()
         val liked = repository.liked.first()
         val downloaded = repository.downloaded.first()
         val byCode = LinkedHashMap<String, MediaEntity>()
-        (saved + liked + downloaded).forEach { entity -> byCode.putIfAbsent(entity.code, entity) }
+        (saved + liked + downloaded)
+            .filter { settings.includePrivateInArchives || !it.isPrivate }
+            .forEach { entity -> byCode.putIfAbsent(entity.code, entity) }
         return archiveFrom(byCode.values.toList(), follows)
     }
 

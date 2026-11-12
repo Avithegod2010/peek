@@ -108,6 +108,7 @@ import com.avi.peek.ui.screens.HomeScreen
 import com.avi.peek.ui.screens.LibraryScreen
 import com.avi.peek.ui.screens.OnboardingScreen
 import com.avi.peek.ui.screens.PostScreen
+import com.avi.peek.ui.screens.PrivateFeedScreen
 import com.avi.peek.ui.screens.ProfileScreen
 import com.avi.peek.ui.screens.ProfileStorageScreen
 import com.avi.peek.ui.screens.RateLimitScreen
@@ -117,6 +118,7 @@ import com.avi.peek.ui.screens.PackScreen
 import com.avi.peek.ui.screens.RecapScreen
 import com.avi.peek.ui.screens.SavedScreen
 import com.avi.peek.ui.screens.SearchScreen
+import com.avi.peek.ui.screens.SessionAuditScreen
 import com.avi.peek.ui.screens.SettingsScreen
 import com.avi.peek.ui.theme.PeekTheme
 import com.avi.peek.util.DeepLinkBus
@@ -378,6 +380,7 @@ private fun MainScaffold(
                     onOpenRecap = { navController.navigate("recap") },
                     onOpenCollections = { navController.navigate("collections") },
                     onOpenCircles = { navController.navigate("circles") },
+                    onOpenPrivateFeed = { navController.navigate("private-feed") },
                     onOpenRateLimits = { navController.navigate("ratelimit") },
                     onOpenSettings = { navController.navigate("settings") },
                     onOpenPost = { openPost(it) },
@@ -415,6 +418,7 @@ private fun MainScaffold(
                     onBack = { navController.popBackStack() },
                     onOpenProfile = { openProfile(it) },
                     onOpenAudio = { title -> navController.navigate("audio?title=${Uri.encode(title)}") },
+                    onOpenAccount = { navController.navigate("account") },
                 )
             }
             composable(
@@ -465,6 +469,7 @@ private fun MainScaffold(
                     title = entry.arguments?.getString("title").orEmpty(),
                     coverUrl = entry.arguments?.getString("cover")?.takeIf { it.isNotBlank() },
                     onBack = { navController.popBackStack() },
+                    onOpenAccount = { navController.navigate("account") },
                 )
             }
             composable("collections") {
@@ -507,10 +512,25 @@ private fun MainScaffold(
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenAccount = { navController.navigate("account") },
+                    onOpenAudit = { navController.navigate("session-audit") },
+                    onOpenRateLimits = { navController.navigate("ratelimit") },
                 )
             }
             composable("account") {
-                AccountScreen(onBack = { navController.popBackStack() })
+                AccountScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenAudit = { navController.navigate("session-audit") },
+                )
+            }
+            composable("session-audit") {
+                SessionAuditScreen(onBack = { navController.popBackStack() })
+            }
+            composable("private-feed") {
+                PrivateFeedScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenPost = { openPost(it) },
+                    onOpenDiscover = { navigateTab("discover") },
+                )
             }
             composable("saved") {
                 SavedScreen(

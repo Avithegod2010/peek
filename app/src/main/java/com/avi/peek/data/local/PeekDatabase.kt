@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProfileEntity::class, MediaEntity::class, SearchHistoryEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class PeekDatabase : RoomDatabase() {
@@ -26,11 +26,21 @@ abstract class PeekDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE media ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "UPDATE media SET isPrivate = 1 WHERE username IN " +
+                        "(SELECT username FROM profiles WHERE isPrivate = 1)",
+                )
+            }
+        }
+
         fun build(context: Context): PeekDatabase = Room.databaseBuilder(
             context.applicationContext,
             PeekDatabase::class.java,
             "peek.db",
-        ).addMigrations(MIGRATION_1_2)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
     }

@@ -48,15 +48,24 @@ class LibraryStore(private val context: Context) {
     private val circlesKey = stringPreferencesKey("circles")
     private val visitsKey = stringPreferencesKey("visits")
     private val archivesKey = stringPreferencesKey("archives")
+    private val seenHighlightsKey = stringPreferencesKey("seen_highlights")
     private val collectionSerializer = ListSerializer(LocalCollection.serializer())
     private val circleSerializer = ListSerializer(LocalCircle.serializer())
     private val mapSerializer = MapSerializer(String.serializer(), Long.serializer())
+    private val stringListSerializer = ListSerializer(String.serializer())
 
     private val prefs = context.peekLibraryData.data
         .catch { emit(emptyPreferences()) }
 
     val collections: Flow<List<LocalCollection>> = prefs.map { readCollections(it[collectionsKey]) }
     val circles: Flow<List<LocalCircle>> = prefs.map { readCircles(it[circlesKey]) }
+    val seenHighlights: Flow<Set<String>> = prefs.map { preferences ->
+        runCatching {
+            preferences[seenHighlightsKey]?.let {
+                json.decodeFromString(stringListSerializer, it).toSet()
+            } ?: emptySet()
+        }.getOrDefault(emptySet())
+    }
 
     suspend fun createCollection(name: String, codes: List<String>): String? {
         val clean = name.trim().take(60)
@@ -178,6 +187,35 @@ class LibraryStore(private val context: Context) {
         context.peekLibraryData.edit { prefs ->
             val next = readLongMap(prefs[archivesKey]) + (username to at)
             prefs[archivesKey] = json.encodeToString(mapSerializer, next)
+        }
+    }
+
+    suspend fun markHighlightSeen(id: String) {
+        if (id.isBlank()) return
+        context.peekLibraryData.edit { prefs ->
+            val current = runCatching {
+                prefs[seenHighlightsKey]?.let {
+                    json.decodeFromString(stringListSerializer, it).toSet()
+                } ?: emptySet()
+            }.getOrDefault(emptySet())
+            prefs[seenHighlightsKey] = json.encodeToString(
+                stringListSerializer,
+                (current + id).toList(),
+            )
+        }
+    }
+
+    suspend fun clearHighlightSeen(id: String) {
+        context.peekLibraryData.edit { prefs ->
+            val current = runCatching {
+                prefs[seenHighlightsKey]?.let {
+                    json.decodeFromString(stringListSerializer, it).toSet()
+                } ?: emptySet()
+            }.getOrDefault(emptySet())
+            prefs[seenHighlightsKey] = json.encodeToString(
+                stringListSerializer,
+                (current - id).toList(),
+            )
         }
     }
 

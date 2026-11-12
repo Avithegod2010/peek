@@ -2,10 +2,14 @@ package com.avi.peek
 
 import android.app.Application
 import android.util.Log
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.work.PeekNotifications
 import com.avi.peek.work.SyncScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -22,8 +26,17 @@ class PeekApp : Application(), Configuration.Provider, ImageLoaderFactory {
         super.onCreate()
         ServiceLocator.init(this)
         PeekNotifications.createChannel(this)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                PrivateAccess.hide()
+                appScope.launch {
+                    runCatching { ServiceLocator.repository.sealPrivateVault() }
+                }
+            }
+        })
         appScope.launch {
             runCatching { ServiceLocator.accountManager.ensureRestored() }
+            runCatching { ServiceLocator.repository.sealPrivateVault() }
             val settings = ServiceLocator.settings.settings.first()
             if (settings.backgroundSync) {
                 SyncScheduler.schedule(this@PeekApp, settings.backgroundIntervalHours, settings.wifiOnlySync)

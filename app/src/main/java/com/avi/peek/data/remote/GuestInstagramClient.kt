@@ -235,6 +235,64 @@ class GuestInstagramClient(
         }
     }
 
+    suspend fun fetchComments(
+        mediaPk: String,
+        after: String? = null,
+        first: Int = 30,
+    ): CommentPage = withContext(Dispatchers.IO) {
+        if (!hasSession()) {
+            throw GuestException(
+                GuestErrorKind.LOGIN_REQUIRED,
+                "Sign in to Instagram in Settings to read comments.",
+            )
+        }
+        val url = "https://www.instagram.com/api/v1/media/$mediaPk/comments/"
+            .toHttpUrl()
+            .newBuilder()
+            .addQueryParameter("can_support_threading", "true")
+            .addQueryParameter("permalink_enabled", "false")
+            .addQueryParameter("count", first.toString())
+            .apply { if (!after.isNullOrBlank()) addQueryParameter("min_id", after) }
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "*/*")
+            .header("X-IG-App-ID", APP_ID)
+            .header("X-ASBD-ID", "359341")
+            .header("X-IG-WWW-Claim", "0")
+            .header("X-CSRFToken", cookieJar.value("csrftoken").orEmpty())
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Referer", "https://www.instagram.com/")
+            .get()
+            .build()
+        try {
+            okHttp.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                when {
+                    response.code == 429 -> throw GuestException(
+                        GuestErrorKind.RATE_LIMITED,
+                        "Instagram is rate limiting comments. Try again in a few minutes.",
+                    )
+                    response.code == 401 || response.code == 403 -> throw GuestException(
+                        GuestErrorKind.LOGIN_REQUIRED,
+                        "Instagram wants you to reconnect before showing comments.",
+                    )
+                    response.code != 200 -> throw GuestException(
+                        GuestErrorKind.UNKNOWN,
+                        "Comments returned ${response.code}",
+                    )
+                }
+                parser.parseComments(body)
+                    ?: throw GuestException(GuestErrorKind.PARSE, "Couldn't read comments")
+            }
+        } catch (e: GuestException) {
+            throw e
+        } catch (e: IOException) {
+            throw GuestException(GuestErrorKind.NETWORK, "Couldn't reach Instagram comments", e)
+        }
+    }
+
     private fun fetchMediaInfo(pk: String): ScrapedPost? {
         val request = Request.Builder()
             .url("https://www.instagram.com/api/v1/media/$pk/info/")
@@ -267,16 +325,73 @@ class GuestInstagramClient(
     }
 
     suspend fun fetchHighlightMedia(highlightId: String): List<MediaChild> = withContext(Dispatchers.IO) {
+        if (hasSession()) {
+            val authenticated = try {
+                fetchReelsMedia(highlightId)
+            } catch (e: GuestException) {
+                if (e.kind == GuestErrorKind.RATE_LIMITED ||
+                    e.kind == GuestErrorKind.LOGIN_REQUIRED
+                ) {
+                    throw e
+                }
+                emptyList()
+            }
+            if (authenticated.isNotEmpty()) return@withContext authenticated
+        }
         val url = "https://www.instagram.com/stories/highlights/$highlightId/"
         val html = getHtml(url, isDocument = true, referer = "https://www.instagram.com/")
         val items = parser.parseHighlightMedia(html)
         if (items.isEmpty()) {
             throw GuestException(
                 GuestErrorKind.PARSE,
-                "Instagram doesn't expose this highlight's items to logged-out guests",
+                if (hasSession()) {
+                    "Instagram didn't return this highlight to the current session"
+                } else {
+                    "Instagram doesn't expose this highlight's items without an account"
+                },
             )
         }
         items
+    }
+
+    private fun fetchReelsMedia(highlightId: String): List<MediaChild> {
+        val url = "https://www.instagram.com/api/v1/feed/reels_media/"
+            .toHttpUrl()
+            .newBuilder()
+            .addQueryParameter("reel_ids", "highlight:$highlightId")
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "*/*")
+            .header("X-IG-App-ID", APP_ID)
+            .header("X-ASBD-ID", "359341")
+            .header("X-IG-WWW-Claim", "0")
+            .header("X-CSRFToken", cookieJar.value("csrftoken").orEmpty())
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Referer", "https://www.instagram.com/")
+            .get()
+            .build()
+        return try {
+            okHttp.newCall(request).execute().use { response ->
+                when (response.code) {
+                    200 -> parser.parseReelsMedia(response.body?.string().orEmpty())
+                    429 -> throw GuestException(
+                        GuestErrorKind.RATE_LIMITED,
+                        "Instagram is rate limiting highlights. Try again in a few minutes.",
+                    )
+                    401, 403 -> throw GuestException(
+                        GuestErrorKind.LOGIN_REQUIRED,
+                        "Instagram wants you to reconnect before showing this highlight.",
+                    )
+                    else -> emptyList()
+                }
+            }
+        } catch (e: GuestException) {
+            throw e
+        } catch (e: IOException) {
+            emptyList()
+        }
     }
 
     suspend fun download(

@@ -59,6 +59,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -86,6 +87,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -113,6 +115,7 @@ import com.avi.peek.ui.components.Avatar
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.MediaGridItem
+import com.avi.peek.ui.rememberPrivateUnlock
 import com.avi.peek.ui.components.MiniCreatorCard
 import com.avi.peek.ui.components.PeekImage
 import com.avi.peek.ui.components.SectionHeader
@@ -120,6 +123,7 @@ import com.avi.peek.ui.components.ShimmerBox
 import com.avi.peek.ui.components.VerifiedBadge
 import com.avi.peek.ui.components.pressScale
 import com.avi.peek.util.LocalPeekHaptics
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.compactCount
 import com.avi.peek.util.copyText
 import com.avi.peek.util.instagramWebUrl
@@ -127,6 +131,7 @@ import com.avi.peek.util.openInstagram
 import com.avi.peek.util.openUrl
 import com.avi.peek.util.relativeTime
 import com.avi.peek.util.shareText
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
@@ -159,6 +164,7 @@ fun ProfileScreen(
     val newSinceVisit by viewModel.newSinceVisit.collectAsStateWithLifecycle()
     val visitBaseline by viewModel.visitBaseline.collectAsStateWithLifecycle()
     val account by viewModel.account.collectAsStateWithLifecycle()
+    val diagnosis by viewModel.diagnosis.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val context = LocalContext.current
     val haptics = LocalPeekHaptics.current
@@ -178,6 +184,8 @@ fun ProfileScreen(
     var lastArchiveAt by remember { mutableStateOf(0L) }
     var archiveOnlyNew by remember { mutableStateOf(true) }
     val collections by ServiceLocator.libraryStore.collections.collectAsStateWithLifecycle(emptyList())
+    val scope = rememberCoroutineScope()
+    val unlock = rememberPrivateUnlock { viewModel.postMessage(it) }
 
     val galleryPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -332,35 +340,53 @@ fun ProfileScreen(
                             onClearFilters = viewModel::clearFilters,
                         )
                     }
-                    if (visibleMedia.isEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-                            val private = data!!.profile.isPrivate && data!!.media.isEmpty()
+                    if (diagnosis.locked) {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "private-locked") {
+                            val hidden = diagnosis.reason == ProfileLockReason.HIDDEN
                             EmptyState(
-                                title = when {
-                                    private -> "This account is private"
-                                    tab == ProfileTab.SAVED -> "Nothing saved yet"
-                                    tab == ProfileTab.REELS -> "No reels cached"
+                                title = diagnosis.title,
+                                message = diagnosis.message +
+                                    (diagnosis.detail?.let { "\n\n$it" } ?: ""),
+                                icon = if (hidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Lock,
+                                actionLabel = when {
+                                    hidden -> "Unlock private content"
+                                    diagnosis.reason == ProfileLockReason.SIGNED_OUT -> "Sign in to Instagram"
+                                    diagnosis.reason == ProfileLockReason.SESSION_EXPIRED -> "Reconnect session"
+                                    else -> "Refresh"
+                                },
+                                onAction = {
+                                    when {
+                                        hidden -> unlock {
+                                            PrivateAccess.reveal()
+                                            scope.launch {
+                                                runCatching { ServiceLocator.repository.openPrivateVault() }
+                                                    .onSuccess { viewModel.postMessage("Private content revealed") }
+                                                    .onFailure { viewModel.postMessage(it.message ?: "Couldn't open the private vault") }
+                                            }
+                                        }
+                                        diagnosis.reason == ProfileLockReason.SIGNED_OUT ||
+                                            diagnosis.reason == ProfileLockReason.SESSION_EXPIRED -> onOpenAccount
+                                        else -> viewModel.refresh()
+                                    }
+                                },
+                                modifier = Modifier.padding(vertical = 30.dp),
+                            )
+                        }
+                    } else if (visibleMedia.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
+                            EmptyState(
+                                title = when (tab) {
+                                    ProfileTab.SAVED -> "Nothing saved yet"
+                                    ProfileTab.REELS -> "No reels cached"
                                     else -> "No posts cached"
                                 },
-                                message = when {
-                                    private && !account.signedIn ->
-                                        "Private accounts only show their posts to signed-in followers. Sign in to Instagram in Peek, then refresh. Public browsing still works without an account."
-                                    private && account.signedIn ->
-                                        "Peek is signed in, but Instagram only reveals this account's posts to sessions that follow it. Follow @$username on Instagram, then refresh."
-                                    tab == ProfileTab.SAVED -> "Tap the bookmark on any post to keep it here."
+                                message = when (tab) {
+                                    ProfileTab.SAVED -> "Tap the bookmark on any post to keep it here."
                                     else -> "Pull to refresh and Peek will cache the latest public posts."
                                 },
-                                icon = if (private) Icons.Rounded.Lock else Icons.Rounded.Refresh,
-                                actionLabel = if (private && !account.signedIn) {
-                                    "Sign in to Instagram"
-                                } else {
-                                    "Refresh"
-                                },
-                                onAction = if (private && !account.signedIn) {
-                                    onOpenAccount
-                                } else {
-                                    viewModel::refresh
-                                },
+                                icon = Icons.Rounded.Refresh,
+                                actionLabel = "Refresh",
+                                onAction = viewModel::refresh,
                                 modifier = Modifier.padding(vertical = 30.dp),
                             )
                         }

@@ -81,7 +81,9 @@ class HomeViewModel : ViewModel() {
     }
 
     fun download(code: String) {
-        val blocked = queue.enqueue(code)
-        _messages.tryEmit(blocked ?: "Added to the download queue")
+        viewModelScope.launch {
+            val blocked = queue.enqueueChecked(code)
+            _messages.tryEmit(blocked ?: "Added to the download queue")
+        }
     }
 }

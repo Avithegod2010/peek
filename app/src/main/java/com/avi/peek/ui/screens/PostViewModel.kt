@@ -2,7 +2,9 @@ package com.avi.peek.ui.screens
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.avi.peek.data.local.AccountState
 import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.data.remote.ScrapedComment
 import com.avi.peek.data.repo.DownloadProgress
 import com.avi.peek.data.repo.GallerySaver
 import com.avi.peek.di.ServiceLocator
@@ -31,8 +33,26 @@ class PostViewModel(private val code: String) : ViewModel() {
 
     private val queue = ServiceLocator.downloadQueue
 
+    val account: StateFlow<AccountState> = ServiceLocator.accountManager.state
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountState())
+
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages = _messages.asSharedFlow()
+
+    private val _comments = kotlinx.coroutines.flow.MutableStateFlow<List<ScrapedComment>>(emptyList())
+    val comments: StateFlow<List<ScrapedComment>> = _comments.asStateFlow()
+
+    private val _commentsLoading = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val commentsLoading = _commentsLoading.asStateFlow()
+
+    private val _commentsError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val commentsError = _commentsError.asStateFlow()
+
+    private val _commentsHasMore = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val commentsHasMore = _commentsHasMore.asStateFlow()
+
+    private var commentsNext: String? = null
+    private var commentsLoaded = false
 
     private val _loading = kotlinx.coroutines.flow.MutableStateFlow(false)
     val loading = _loading.asStateFlow()
@@ -62,9 +82,39 @@ class PostViewModel(private val code: String) : ViewModel() {
         viewModelScope.launch { repo.toggleSaved(code) }
     }
 
+    fun loadComments(reset: Boolean = false) {
+        if (_commentsLoading.value) return
+        if (!reset && commentsLoaded && commentsNext == null) return
+        viewModelScope.launch {
+            _commentsLoading.value = true
+            _commentsError.value = null
+            runCatching {
+                repo.loadComments(code, after = if (reset) null else commentsNext)
+            }.onSuccess { page ->
+                _comments.value = if (reset) page.comments else _comments.value + page.comments
+                commentsNext = page.nextMaxId
+                _commentsHasMore.value = page.nextMaxId != null
+                commentsLoaded = true
+            }.onFailure {
+                _commentsError.value = it.userMessage()
+            }
+            _commentsLoading.value = false
+        }
+    }
+
+    fun moreComments() = loadComments(reset = false)
+
+    fun retryComments() {
+        commentsLoaded = false
+        commentsNext = null
+        loadComments(reset = true)
+    }
+
     fun download() {
-        val blocked = queue.enqueue(code)
-        _messages.tryEmit(blocked ?: "Added to the download queue · Library → Downloads")
+        viewModelScope.launch {
+            val blocked = queue.enqueueChecked(code)
+            _messages.tryEmit(blocked ?: "Added to the download queue · Library → Downloads")
+        }
     }
 
     fun saveToGallery() {

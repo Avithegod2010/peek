@@ -14,8 +14,11 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 import com.avi.peek.ui.components.findActivity
 import androidx.compose.ui.text.TextStyle
@@ -147,7 +150,13 @@ private fun PaletteStyle.colors(): PaletteColors = when (this) {
 private val LightBackground = Color(0xFFFBF8FF)
 private val DarkBackground = Color(0xFF121016)
 
-fun peekColorScheme(palette: PaletteStyle, dark: Boolean, amoled: Boolean): ColorScheme {
+fun peekColorScheme(
+    palette: PaletteStyle,
+    dark: Boolean,
+    amoled: Boolean,
+    accent: Color? = null,
+    highContrast: Boolean = false,
+): ColorScheme {
     val c = palette.colors()
     if (dark) {
         val background = if (amoled) Color.Black else DarkBackground
@@ -156,7 +165,7 @@ fun peekColorScheme(palette: PaletteStyle, dark: Boolean, amoled: Boolean): Colo
         val container = if (amoled) Color(0xFF0D0D0F) else Color(0xFF1F1D24)
         val high = if (amoled) Color(0xFF151517) else Color(0xFF2A272F)
         val highest = if (amoled) Color(0xFF1C1C1E) else Color(0xFF353138)
-        return darkColorScheme(
+        return applyOverrides(darkColorScheme(
             primary = c.dark,
             onPrimary = Color(0xFF1A1A1A),
             primaryContainer = c.darkContainer,
@@ -186,10 +195,10 @@ fun peekColorScheme(palette: PaletteStyle, dark: Boolean, amoled: Boolean): Colo
             surfaceContainer = container,
             surfaceContainerHigh = high,
             surfaceContainerHighest = highest,
-        )
+        ), accent, true, highContrast)
     }
     val tinted = c.light.copy(alpha = 0.035f).compositeOver(LightBackground)
-    return lightColorScheme(
+    return applyOverrides(lightColorScheme(
         primary = c.light,
         onPrimary = Color.White,
         primaryContainer = c.lightContainer,
@@ -219,7 +228,51 @@ fun peekColorScheme(palette: PaletteStyle, dark: Boolean, amoled: Boolean): Colo
         surfaceContainer = Color(0xFFEFEBF5),
         surfaceContainerHigh = Color(0xFFE9E5F0),
         surfaceContainerHighest = Color(0xFFE3DFEA),
-    )
+    ), accent, false, highContrast)
+}
+
+private fun applyOverrides(
+    base: ColorScheme,
+    accent: Color?,
+    dark: Boolean,
+    highContrast: Boolean,
+): ColorScheme {
+    var scheme = base
+    if (accent != null) {
+        val primary = if (dark && accent.luminance() < 0.28f) {
+            accent.copy(alpha = 0.72f).compositeOver(Color.White)
+        } else {
+            accent
+        }
+        val container = if (dark) {
+            accent.copy(alpha = 0.34f).compositeOver(base.surface)
+        } else {
+            accent.copy(alpha = 0.16f).compositeOver(base.surface)
+        }
+        val onContainer = if (container.luminance() > 0.5f) {
+            Color(0xFF1B1B1F)
+        } else {
+            Color.White
+        }
+        scheme = scheme.copy(
+            primary = primary,
+            onPrimary = if (primary.luminance() > 0.5f) Color(0xFF1B1B1F) else Color.White,
+            primaryContainer = container,
+            onPrimaryContainer = onContainer,
+            surfaceTint = primary,
+        )
+    }
+    if (highContrast) {
+        scheme = scheme.copy(
+            onSurface = if (dark) Color.White else Color.Black,
+            onBackground = if (dark) Color.White else Color.Black,
+            onSurfaceVariant = if (dark) Color(0xFFE7E1E9) else Color(0xFF2A2730),
+            outline = if (dark) Color.White.copy(alpha = 0.72f) else Color.Black.copy(alpha = 0.72f),
+            outlineVariant = if (dark) Color.White.copy(alpha = 0.36f) else Color.Black.copy(alpha = 0.28f),
+            secondaryContainer = if (dark) base.secondaryContainer else Color(0xFFDAD3E4),
+        )
+    }
+    return scheme
 }
 
 val PeekTypography = Typography(
@@ -346,11 +399,19 @@ fun PeekTheme(
         ThemeMode.DARK -> true
     }
     val context = LocalContext.current
-    val dynamic = settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val dynamic = settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+        settings.customAccent == null
+    val accent = settings.customAccent?.let { Color(it.toInt()) }
     val baseScheme = when {
-        dynamic && dark -> dynamicDarkColorScheme(context)
-        dynamic -> dynamicLightColorScheme(context)
-        else -> peekColorScheme(settings.palette, dark, settings.amoled)
+        dynamic && dark -> applyOverrides(dynamicDarkColorScheme(context), null, true, settings.highContrast)
+        dynamic -> applyOverrides(dynamicLightColorScheme(context), null, false, settings.highContrast)
+        else -> peekColorScheme(
+            palette = settings.palette,
+            dark = dark,
+            amoled = settings.amoled,
+            accent = accent,
+            highContrast = settings.highContrast,
+        )
     }
     val scheme = if (dark && settings.amoled) {
         baseScheme.copy(
@@ -373,10 +434,15 @@ fun PeekTheme(
         controller.isAppearanceLightStatusBars = light
         controller.isAppearanceLightNavigationBars = light
     }
-    MaterialTheme(
-        colorScheme = scheme,
-        typography = PeekTypography,
-        shapes = PeekShapes,
-        content = content,
-    )
+    val density = LocalDensity.current
+    CompositionLocalProvider(
+        LocalDensity provides Density(density.density, settings.fontScale),
+    ) {
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = PeekTypography,
+            shapes = PeekShapes,
+            content = content,
+        )
+    }
 }

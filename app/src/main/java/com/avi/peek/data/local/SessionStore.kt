@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -37,13 +39,23 @@ data class StoredSession(
     val username: String? = null,
     val userId: String? = null,
     val savedAt: Long = System.currentTimeMillis(),
+    val lastVerifiedAt: Long = 0L,
+    val lastSuccessAt: Long = 0L,
+    val expiredAt: Long = 0L,
+    val lastError: String? = null,
 )
+
+enum class SessionHealth { UNKNOWN, HEALTHY, EXPIRED }
 
 data class AccountState(
     val signedIn: Boolean = false,
     val username: String? = null,
     val userId: String? = null,
     val savedAt: Long = 0L,
+    val health: SessionHealth = SessionHealth.UNKNOWN,
+    val lastVerifiedAt: Long = 0L,
+    val lastSuccessAt: Long = 0L,
+    val lastError: String? = null,
 )
 
 /**
@@ -55,6 +67,7 @@ class SessionStore(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val cookieSerializer = ListSerializer(SessionCookie.serializer())
     private val sessionKey = stringPreferencesKey("encrypted_session")
+    private val writeMutex = Mutex()
 
     private val prefs = context.peekSessionData.data
         .catch { emit(emptyPreferences()) }
@@ -66,6 +79,14 @@ class SessionStore(private val context: Context) {
                 username = session.username,
                 userId = session.userId,
                 savedAt = session.savedAt,
+                health = when {
+                    session.expiredAt > 0L -> SessionHealth.EXPIRED
+                    session.lastSuccessAt > 0L || session.lastVerifiedAt > 0L -> SessionHealth.HEALTHY
+                    else -> SessionHealth.UNKNOWN
+                },
+                lastVerifiedAt = session.lastVerifiedAt,
+                lastSuccessAt = session.lastSuccessAt,
+                lastError = session.lastError,
             )
         } ?: AccountState()
     }
@@ -86,10 +107,21 @@ class SessionStore(private val context: Context) {
                 username = session.username,
                 userId = session.userId,
                 savedAt = session.savedAt,
+                lastVerifiedAt = session.lastVerifiedAt,
+                lastSuccessAt = session.lastSuccessAt,
+                expiredAt = session.expiredAt,
+                lastError = session.lastError,
             ),
         )
         val encrypted = SessionCrypto.encrypt(payload)
         context.peekSessionData.edit { it[sessionKey] = encrypted }
+    }
+
+    suspend fun update(block: (StoredSession) -> StoredSession): StoredSession? = writeMutex.withLock {
+        val current = load() ?: return@withLock null
+        val next = block(current)
+        save(next)
+        next
     }
 
     suspend fun clear() {
@@ -110,6 +142,10 @@ class SessionStore(private val context: Context) {
             username = payload.username,
             userId = payload.userId,
             savedAt = payload.savedAt,
+            lastVerifiedAt = payload.lastVerifiedAt,
+            lastSuccessAt = payload.lastSuccessAt,
+            expiredAt = payload.expiredAt,
+            lastError = payload.lastError,
         )
     }
 
@@ -119,6 +155,10 @@ class SessionStore(private val context: Context) {
         val username: String? = null,
         val userId: String? = null,
         val savedAt: Long = 0L,
+        val lastVerifiedAt: Long = 0L,
+        val lastSuccessAt: Long = 0L,
+        val expiredAt: Long = 0L,
+        val lastError: String? = null,
     )
 }
 

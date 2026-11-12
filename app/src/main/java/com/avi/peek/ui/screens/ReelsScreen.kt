@@ -234,7 +234,10 @@ private fun ReelPage(
 
     val children = remember(media.code, media.childrenJson) { media.children() }
     val firstVideo = children.firstOrNull { it.videoUrl != null }?.videoUrl ?: media.videoUrl
-    val videoUrl = media.localVideoPath?.let { File(it).toURI().toString() } ?: firstVideo
+    val videoUrl = media.localVideoPath
+        ?.takeIf { File(it).exists() }
+        ?.let { File(it).toURI().toString() }
+        ?: firstVideo
     val player = rememberPeekPlayer(
         url = videoUrl,
         muted = muted,

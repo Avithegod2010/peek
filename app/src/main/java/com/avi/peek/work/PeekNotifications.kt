@@ -34,20 +34,25 @@ object PeekNotifications {
         manager.createNotificationChannel(channel)
     }
 
-    fun postNewPosts(context: Context, report: SyncReport) {
-        if (report.newCodesByUsername.isEmpty()) return
+    fun postNewPosts(
+        context: Context,
+        report: SyncReport,
+        hiddenPrivateUsernames: Set<String> = emptySet(),
+    ) {
+        val visible = report.newCodesByUsername.filterKeys { it !in hiddenPrivateUsernames }
+        if (visible.isEmpty()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
 
-        val lines = report.newCodesByUsername.entries.take(6).map { (username, codes) ->
+        val lines = visible.entries.take(6).map { (username, codes) ->
             "@$username · ${codes.size} new ${if (codes.size == 1) "post" else "posts"}"
         }
-        val summary = if (lines.size == 1) lines.first() else "${report.newCodesByUsername.size} accounts have something new"
+        val summary = if (lines.size == 1) lines.first() else "${visible.size} accounts have something new"
 
-        val firstUsername = report.newCodesByUsername.keys.firstOrNull()
+        val firstUsername = visible.keys.firstOrNull()
         val intent = Intent(context, MainActivity::class.java).apply {
             data = Uri.parse(if (firstUsername != null) "peek://profile/$firstUsername" else "peek://home")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

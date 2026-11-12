@@ -57,6 +57,14 @@ class ProfileDownloadManager(
                 )
         }
         jobs[username] = scope.launch {
+            repository.privateProfileBlock(username)?.let { reason ->
+                _states.update { current ->
+                    val state = current[username] ?: return@update current
+                    current + (username to state.copy(running = false, error = reason))
+                }
+                jobs.remove(username)
+                return@launch
+            }
             val max = repository.currentSettings().downloadQueuePerProfile
             val limited = if (max > 0) clean.take(max) else clean
             _states.update { current ->
@@ -96,6 +104,20 @@ class ProfileDownloadManager(
                 )
         }
         jobs[username] = scope.launch {
+            repository.privateProfileBlock(username)?.let { reason ->
+                _states.update { current ->
+                    val state = current[username] ?: return@update current
+                    current + (
+                        username to state.copy(
+                            running = false,
+                            preparing = false,
+                            error = reason,
+                        )
+                        )
+                }
+                jobs.remove(username)
+                return@launch
+            }
             var loaded = 0
             runCatching {
                 repository.loadAllProfilePosts(username) { count, _ ->

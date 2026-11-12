@@ -50,6 +50,7 @@ import com.avi.peek.ui.components.Avatar
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.MediaGridItem
 import com.avi.peek.ui.components.SimpleTopBar
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.compactCount
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -132,12 +133,27 @@ class RecapViewModel : ViewModel() {
     private val repo = ServiceLocator.repository
     private val weekStart = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
 
-    val following = repo.followingCount.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    private val hidden = kotlinx.coroutines.flow.combine(
+        repo.settingsFlow,
+        PrivateAccess.revealed,
+    ) { settings, revealed -> settings.privateContentHidden && !revealed }
+
+    val following = kotlinx.coroutines.flow.combine(repo.following, hidden) { profiles, hide ->
+        if (hide) profiles.count { !it.isPrivate } else profiles.size
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     val liked = repo.liked.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val savedThisWeek = repo.savedSince(weekStart).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     val downloadedThisWeek = repo.downloadedSince(weekStart).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-    val viewedThisWeek = repo.viewedSince(weekStart).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val recentlyViewed = repo.recentlyViewed.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val viewedThisWeek = kotlinx.coroutines.flow.combine(
+        repo.viewedSince(weekStart),
+        hidden,
+    ) { profiles, hide -> if (hide) profiles.filterNot { it.isPrivate } else profiles }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val recentlyViewed = kotlinx.coroutines.flow.combine(
+        repo.recentlyViewed,
+        hidden,
+    ) { profiles, hide -> if (hide) profiles.filterNot { it.isPrivate } else profiles }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val cached = repo.mediaCount.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 }
 

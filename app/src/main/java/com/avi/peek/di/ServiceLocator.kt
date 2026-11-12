@@ -16,7 +16,9 @@ import com.avi.peek.data.repo.DownloadQueue
 import com.avi.peek.data.repo.DownloadStore
 import com.avi.peek.data.repo.PeekRepository
 import com.avi.peek.data.repo.ProfileDownloadManager
+import com.avi.peek.data.repo.RequestBudget
 import com.avi.peek.data.repo.RequestLog
+import com.avi.peek.data.repo.VaultStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -52,6 +54,10 @@ object ServiceLocator {
 
     val accountManager: AccountManager by lazy { AccountManager(sessionStore, client) }
 
+    val requestBudget: RequestBudget by lazy { RequestBudget(appContext, settings) }
+
+    val vault: VaultStore by lazy { VaultStore(appContext) }
+
     val globalSearch: GlobalSearchClient by lazy { GlobalSearchClient(okHttp) }
 
     val database: PeekDatabase by lazy { PeekDatabase.build(appContext) }
@@ -70,6 +76,8 @@ object ServiceLocator {
             downloads = downloads,
             requestLog = requestLog,
             accountManager = accountManager,
+            requestBudget = requestBudget,
+            vault = vault,
         )
     }
 

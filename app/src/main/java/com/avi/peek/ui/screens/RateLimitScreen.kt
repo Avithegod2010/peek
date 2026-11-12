@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.avi.peek.data.repo.RequestBudgetState
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.relativeTime
@@ -46,6 +47,9 @@ fun RateLimitScreen(onBack: () -> Unit) {
     val events by ServiceLocator.requestLog.events.collectAsStateWithLifecycle()
     val paused by ServiceLocator.downloadQueue.pausedAll.collectAsStateWithLifecycle()
     val settings by ServiceLocator.settings.settings.collectAsStateWithLifecycle(initialValue = null)
+    val budget by ServiceLocator.requestBudget.state.collectAsStateWithLifecycle(
+        initialValue = RequestBudgetState(),
+    )
     val scope = rememberCoroutineScope()
     val rateLimited = events.count { it.rateLimited }
 
@@ -83,6 +87,104 @@ fun RateLimitScreen(onBack: () -> Unit) {
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                }
+            }
+
+            item(key = "budget") {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Request budget", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "${budget.usedThisHour} / ${settings?.requestBudgetPerHour ?: 120} requests this hour" +
+                                if (budget.windowResetsAt > 0L) {
+                                    " · resets ${(budget.windowResetsAt / 1000L).relativeTime()}"
+                                } else {
+                                    ""
+                                },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (budget.paused) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "Paused until ${(budget.pauseUntil / 1000L).relativeTime()}" +
+                                    (budget.lastError?.let { " · $it" } ?: ""),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        if (budget.challengeUntil > System.currentTimeMillis()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "Background requests paused after an Instagram challenge until " +
+                                    "${(budget.challengeUntil / 1000L).relativeTime()}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TextButton(
+                                onClick = {
+                                    scope.launch { ServiceLocator.requestBudget.clearPause() }
+                                },
+                            ) { Text("Resume now") }
+                            TextButton(
+                                onClick = {
+                                    scope.launch { ServiceLocator.requestBudget.resetWindow() }
+                                },
+                            ) { Text("Reset hour") }
+                            TextButton(
+                                onClick = {
+                                    val current = settings?.requestBudgetPerHour ?: 120
+                                    val next = when (current) {
+                                        60 -> 120
+                                        120 -> 240
+                                        240 -> 480
+                                        else -> 60
+                                    }
+                                    scope.launch { ServiceLocator.settings.setRequestBudgetPerHour(next) }
+                                },
+                            ) {
+                                Text("Limit ${settings?.requestBudgetPerHour ?: 120}")
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Quiet hours", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "${settings?.quietStartHour ?: 23}:00 – ${settings?.quietEndHour ?: 7}:00 · background sync waits",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = settings?.quietHoursEnabled == true,
+                                onCheckedChange = { on ->
+                                    scope.launch { ServiceLocator.settings.setQuietHours(on) }
+                                },
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TextButton(
+                                onClick = {
+                                    val start = settings?.quietStartHour ?: 23
+                                    scope.launch { ServiceLocator.settings.setQuietStartHour((start + 1) % 24) }
+                                },
+                            ) { Text("Start ${settings?.quietStartHour ?: 23}:00") }
+                            TextButton(
+                                onClick = {
+                                    val end = settings?.quietEndHour ?: 7
+                                    scope.launch { ServiceLocator.settings.setQuietEndHour((end + 1) % 24) }
+                                },
+                            ) { Text("End ${settings?.quietEndHour ?: 7}:00") }
+                        }
                     }
                 }
             }

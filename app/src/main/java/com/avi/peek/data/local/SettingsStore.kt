@@ -17,6 +17,11 @@ private val Context.peekSettings: DataStore<Preferences> by preferencesDataStore
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+enum class PrivateDownloadPolicy(val label: String) {
+    BLOCK("Never"),
+    ALLOW("Private vault only"),
+}
+
 enum class PaletteStyle(val label: String) {
     LAVENDER("Lavender"),
     OCEAN("Ocean"),
@@ -57,6 +62,18 @@ data class PeekSettings(
     val downloadChargingOnly: Boolean = false,
     val downloadQueuePerProfile: Int = 0,
     val gallerySidecars: Boolean = false,
+    val privateDownloadPolicy: PrivateDownloadPolicy = PrivateDownloadPolicy.BLOCK,
+    val privateVault: Boolean = true,
+    val privateContentHidden: Boolean = false,
+    val customAccent: Long? = null,
+    val fontScale: Float = 1f,
+    val highContrast: Boolean = false,
+    val requestBudgetPerHour: Int = 120,
+    val quietHoursEnabled: Boolean = false,
+    val quietStartHour: Int = 23,
+    val quietEndHour: Int = 7,
+    val includePrivateInBackups: Boolean = false,
+    val includePrivateInArchives: Boolean = false,
     val lastFullSync: Long = 0L,
 )
 
@@ -86,6 +103,18 @@ class SettingsStore(private val context: Context) {
         val DOWNLOAD_CHARGING = booleanPreferencesKey("download_charging")
         val DOWNLOAD_QUEUE_LIMIT = intPreferencesKey("download_queue_limit")
         val GALLERY_SIDECARS = booleanPreferencesKey("gallery_sidecars")
+        val PRIVATE_DOWNLOAD_POLICY = stringPreferencesKey("private_download_policy")
+        val PRIVATE_VAULT = booleanPreferencesKey("private_vault")
+        val PRIVATE_CONTENT_HIDDEN = booleanPreferencesKey("private_content_hidden")
+        val CUSTOM_ACCENT = stringPreferencesKey("custom_accent")
+        val FONT_SCALE = stringPreferencesKey("font_scale")
+        val HIGH_CONTRAST = booleanPreferencesKey("high_contrast")
+        val REQUEST_BUDGET_PER_HOUR = intPreferencesKey("request_budget_per_hour")
+        val QUIET_HOURS = booleanPreferencesKey("quiet_hours")
+        val QUIET_START = intPreferencesKey("quiet_start")
+        val QUIET_END = intPreferencesKey("quiet_end")
+        val INCLUDE_PRIVATE_BACKUPS = booleanPreferencesKey("include_private_backups")
+        val INCLUDE_PRIVATE_ARCHIVES = booleanPreferencesKey("include_private_archives")
         val LAST_SYNC = stringPreferencesKey("last_full_sync")
     }
 
@@ -116,6 +145,22 @@ class SettingsStore(private val context: Context) {
                 downloadChargingOnly = prefs[Keys.DOWNLOAD_CHARGING] ?: false,
                 downloadQueuePerProfile = (prefs[Keys.DOWNLOAD_QUEUE_LIMIT] ?: 0).coerceIn(0, 500),
                 gallerySidecars = prefs[Keys.GALLERY_SIDECARS] ?: false,
+                privateDownloadPolicy = runCatching {
+                    PrivateDownloadPolicy.valueOf(
+                        prefs[Keys.PRIVATE_DOWNLOAD_POLICY] ?: PrivateDownloadPolicy.BLOCK.name,
+                    )
+                }.getOrDefault(PrivateDownloadPolicy.BLOCK),
+                privateVault = prefs[Keys.PRIVATE_VAULT] ?: true,
+                privateContentHidden = prefs[Keys.PRIVATE_CONTENT_HIDDEN] ?: false,
+                customAccent = prefs[Keys.CUSTOM_ACCENT]?.toLongOrNull(),
+                fontScale = (prefs[Keys.FONT_SCALE]?.toFloatOrNull() ?: 1f).coerceIn(0.85f, 1.3f),
+                highContrast = prefs[Keys.HIGH_CONTRAST] ?: false,
+                requestBudgetPerHour = (prefs[Keys.REQUEST_BUDGET_PER_HOUR] ?: 120).coerceIn(20, 600),
+                quietHoursEnabled = prefs[Keys.QUIET_HOURS] ?: false,
+                quietStartHour = (prefs[Keys.QUIET_START] ?: 23).coerceIn(0, 23),
+                quietEndHour = (prefs[Keys.QUIET_END] ?: 7).coerceIn(0, 23),
+                includePrivateInBackups = prefs[Keys.INCLUDE_PRIVATE_BACKUPS] ?: false,
+                includePrivateInArchives = prefs[Keys.INCLUDE_PRIVATE_ARCHIVES] ?: false,
                 lastFullSync = prefs[Keys.LAST_SYNC]?.toLongOrNull() ?: 0L,
             )
         }
@@ -144,6 +189,24 @@ class SettingsStore(private val context: Context) {
     suspend fun setDownloadQueuePerProfile(value: Int) =
         edit { it[Keys.DOWNLOAD_QUEUE_LIMIT] = value.coerceIn(0, 500) }
     suspend fun setGallerySidecars(value: Boolean) = edit { it[Keys.GALLERY_SIDECARS] = value }
+    suspend fun setPrivateDownloadPolicy(value: PrivateDownloadPolicy) =
+        edit { it[Keys.PRIVATE_DOWNLOAD_POLICY] = value.name }
+    suspend fun setPrivateVault(value: Boolean) = edit { it[Keys.PRIVATE_VAULT] = value }
+    suspend fun setPrivateContentHidden(value: Boolean) = edit { it[Keys.PRIVATE_CONTENT_HIDDEN] = value }
+    suspend fun setCustomAccent(value: Long?) = edit {
+        if (value == null) it.remove(Keys.CUSTOM_ACCENT) else it[Keys.CUSTOM_ACCENT] = value.toString()
+    }
+    suspend fun setFontScale(value: Float) = edit { it[Keys.FONT_SCALE] = value.coerceIn(0.85f, 1.3f).toString() }
+    suspend fun setHighContrast(value: Boolean) = edit { it[Keys.HIGH_CONTRAST] = value }
+    suspend fun setRequestBudgetPerHour(value: Int) =
+        edit { it[Keys.REQUEST_BUDGET_PER_HOUR] = value.coerceIn(20, 600) }
+    suspend fun setQuietHours(value: Boolean) = edit { it[Keys.QUIET_HOURS] = value }
+    suspend fun setQuietStartHour(value: Int) = edit { it[Keys.QUIET_START] = value.coerceIn(0, 23) }
+    suspend fun setQuietEndHour(value: Int) = edit { it[Keys.QUIET_END] = value.coerceIn(0, 23) }
+    suspend fun setIncludePrivateInBackups(value: Boolean) =
+        edit { it[Keys.INCLUDE_PRIVATE_BACKUPS] = value }
+    suspend fun setIncludePrivateInArchives(value: Boolean) =
+        edit { it[Keys.INCLUDE_PRIVATE_ARCHIVES] = value }
     suspend fun setLastFullSync(value: Long) = edit { it[Keys.LAST_SYNC] = value.toString() }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {

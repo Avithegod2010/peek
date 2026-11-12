@@ -23,6 +23,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Security
@@ -31,18 +36,24 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -50,7 +61,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.data.local.AccountState
+import com.avi.peek.data.local.SessionHealth
+import com.avi.peek.data.repo.SessionAudit
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.ui.rememberPrivateUnlock
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.auth.InstagramLoginActivity
 import com.avi.peek.ui.components.LocalSnackbarHostState
@@ -69,6 +84,7 @@ import kotlinx.coroutines.launch
 
 class AccountViewModel : ViewModel() {
     private val manager = ServiceLocator.accountManager
+    private val repo = ServiceLocator.repository
 
     val account: StateFlow<AccountState> = manager.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountState())
@@ -76,8 +92,25 @@ class AccountViewModel : ViewModel() {
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
+    private val _audit = MutableStateFlow<SessionAudit?>(null)
+    val audit: StateFlow<SessionAudit?> = _audit.asStateFlow()
+
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages = _messages.asSharedFlow()
+
+    init {
+        refreshAudit()
+    }
+
+    fun refreshAudit() {
+        viewModelScope.launch {
+            _audit.value = runCatching { manager.audit() }.getOrNull()
+        }
+    }
+
+    fun message(text: String) {
+        _messages.tryEmit(text)
+    }
 
     fun connect(cookies: List<String>) {
         if (cookies.isEmpty()) return
@@ -92,9 +125,24 @@ class AccountViewModel : ViewModel() {
                 )
                 _busy.value = false
                 runCatching { manager.refreshIdentity() }
+                refreshAudit()
             } else {
                 _busy.value = false
             }
+        }
+    }
+
+    fun connectManual(raw: String) {
+        viewModelScope.launch {
+            _busy.value = true
+            runCatching { manager.connectManual(raw) }
+                .onSuccess {
+                    _messages.emit("Instagram session connected")
+                    runCatching { manager.refreshIdentity() }
+                }
+                .onFailure { _messages.emit(it.userMessage()) }
+            _busy.value = false
+            refreshAudit()
         }
     }
 
@@ -103,12 +151,14 @@ class AccountViewModel : ViewModel() {
             _busy.value = true
             runCatching {
                 manager.disconnect()
+                repo.purgePrivateContent()
                 CookieManager.getInstance().removeAllCookies(null)
                 CookieManager.getInstance().flush()
             }
-                .onSuccess { _messages.emit("Instagram session removed from this device") }
+                .onSuccess { _messages.emit("Session and private downloads removed from this device") }
                 .onFailure { _messages.emit(it.userMessage()) }
             _busy.value = false
+            refreshAudit()
         }
     }
 
@@ -116,7 +166,41 @@ class AccountViewModel : ViewModel() {
         viewModelScope.launch {
             _busy.value = true
             runCatching { manager.refreshIdentity() }
-                .onSuccess { _messages.emit("Session checked") }
+                .onSuccess { verified ->
+                    _messages.emit(if (verified) "Session checked" else "Couldn't verify the session")
+                }
+                .onFailure { _messages.emit(it.userMessage()) }
+            _busy.value = false
+            refreshAudit()
+        }
+    }
+
+    fun unlockVault() {
+        viewModelScope.launch {
+            _busy.value = true
+            PrivateAccess.reveal()
+            runCatching { repo.openPrivateVault() }
+                .onSuccess { _messages.emit("Private vault unlocked for this session") }
+                .onFailure { _messages.emit(it.userMessage()) }
+            _busy.value = false
+        }
+    }
+
+    fun sealVault() {
+        viewModelScope.launch {
+            _busy.value = true
+            runCatching { repo.sealPrivateVault() }
+                .onSuccess { _messages.emit("Private downloads sealed") }
+                .onFailure { _messages.emit(it.userMessage()) }
+            _busy.value = false
+        }
+    }
+
+    fun purgePrivate() {
+        viewModelScope.launch {
+            _busy.value = true
+            runCatching { repo.purgePrivateContent() }
+                .onSuccess { _messages.emit("Private downloads and cached private posts removed") }
                 .onFailure { _messages.emit(it.userMessage()) }
             _busy.value = false
         }
@@ -126,12 +210,17 @@ class AccountViewModel : ViewModel() {
 @Composable
 fun AccountScreen(
     onBack: () -> Unit,
+    onOpenAudit: () -> Unit,
     viewModel: AccountViewModel = viewModel(factory = SimpleViewModelFactory { AccountViewModel() }),
 ) {
     val context = LocalContext.current
     val account by viewModel.account.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val audit by viewModel.audit.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
+    var showManual by remember { mutableStateOf(false) }
+    var manualCookie by remember { mutableStateOf("") }
+    val unlock = rememberPrivateUnlock { viewModel.message(it) }
 
     val loginLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -173,6 +262,141 @@ fun AccountScreen(
                 onSignOut = viewModel::disconnect,
                 onRefresh = viewModel::refreshIdentity,
             )
+
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.History, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Session audit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                audit?.let {
+                                    "${it.cookieNames.size} cookie names · ${it.state.health.name.lowercase()}"
+                                } ?: "Status, cookie names and request history",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = onOpenAudit) { Text("Open") }
+                    }
+                    if (audit?.lastError != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            audit!!.lastError!!,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (audit!!.state.health == SessionHealth.EXPIRED) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Private vault", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Private downloads are sealed with your device key",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { unlock { viewModel.unlockVault() } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Icon(Icons.Rounded.LockOpen, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Unlock")
+                        }
+                        OutlinedButton(
+                            onClick = viewModel::sealVault,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Seal")
+                        }
+                    }
+                    TextButton(onClick = viewModel::purgePrivate) {
+                        Icon(Icons.Rounded.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Delete private downloads & cache")
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Advanced: manual session", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Fallback when Instagram blocks the in-app login",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        IconButton(onClick = { showManual = !showManual }) {
+                            Icon(Icons.Rounded.Key, contentDescription = "Toggle manual session")
+                        }
+                    }
+                    if (showManual) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Paste only your own sessionid cookie or a full Instagram cookie header. It is encrypted on this device. Never share it with anyone.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = manualCookie,
+                            onValueChange = { manualCookie = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("sessionid or cookie header") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            enabled = manualCookie.isNotBlank() && !busy,
+                            onClick = {
+                                viewModel.connectManual(manualCookie)
+                                manualCookie = ""
+                                showManual = false
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                        ) { Text("Connect session") }
+                    }
+                }
+            }
 
             Surface(
                 shape = RoundedCornerShape(24.dp),
@@ -300,13 +524,17 @@ private fun AccountStatusCard(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        if (account.signedIn) {
-                            "Private accounts you follow can be requested"
-                        } else {
-                            "Peek still works for public profiles"
+                        when {
+                            !account.signedIn -> "Peek still works for public profiles"
+                            account.health == SessionHealth.EXPIRED -> "Session expired · reconnect to keep private access"
+                            else -> "Private accounts you follow can be requested"
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (account.health == SessionHealth.EXPIRED) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
             }
@@ -332,11 +560,19 @@ private fun AccountStatusCard(
                 }
             } else if (account.signedIn) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = onRefresh,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(16.dp),
-                    ) { Text("Check session") }
+                    if (account.health == SessionHealth.EXPIRED) {
+                        Button(
+                            onClick = onSignIn,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                        ) { Text("Reconnect") }
+                    } else {
+                        OutlinedButton(
+                            onClick = onRefresh,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                        ) { Text("Check session") }
+                    }
                     Button(
                         onClick = onSignOut,
                         modifier = Modifier.weight(1f),

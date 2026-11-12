@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Speed
@@ -70,6 +71,7 @@ fun LibraryScreen(
     onOpenRecap: () -> Unit,
     onOpenCollections: () -> Unit,
     onOpenCircles: () -> Unit,
+    onOpenPrivateFeed: () -> Unit,
     onOpenRateLimits: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPost: (String) -> Unit,
@@ -233,6 +235,7 @@ fun LibraryScreen(
                     LibraryRow(Icons.Rounded.Favorite, "Liked posts", "Your local liked feed", onOpenLiked)
                     LibraryRow(Icons.Rounded.CollectionsBookmark, "Collections", "Private folders of saved posts", onOpenCollections)
                     LibraryRow(Icons.Rounded.Groups, "Private circles", "Local groups and close friends", onOpenCircles)
+                    LibraryRow(Icons.Rounded.Lock, "Private feed", "Posts from private accounts you follow", onOpenPrivateFeed)
                     LibraryRow(Icons.Rounded.Download, "Offline posts", "$downloadCount downloaded", onOpenDownloads)
                     LibraryRow(Icons.Rounded.Insights, "Weekly recap", "A private look at your week", onOpenRecap)
                     LibraryRow(Icons.Rounded.Speed, "Rate-limit dashboard", "Requests, pauses and recent outcomes", onOpenRateLimits)

@@ -206,6 +206,19 @@ class SsrParser(
         )
     }
 
+    /** Parses the authenticated reels-media response used for highlights. */
+    fun parseReelsMedia(jsonText: String): List<MediaChild> {
+        val root = runCatching { json.parseToJsonElement(jsonText).jsonObject }.getOrNull()
+            ?: return emptyList()
+        val reels = root.array("reels_media") ?: return emptyList()
+        val first = reels.firstOrNull() as? JsonObject ?: return emptyList()
+        val items = first.array("items") ?: return emptyList()
+        return items.mapIndexedNotNull { index, element ->
+            val item = element as? JsonObject ?: return@mapIndexedNotNull null
+            parseChild(item, index)?.copy(durationMs = (item.long("video_duration") ?: 0L) * 1000L)
+        }
+    }
+
     /** Best-effort read of a public highlight page. Guest pages often omit items. */
     fun parseHighlightMedia(html: String): List<MediaChild> {
         val roots = parseScripts(html)
@@ -240,6 +253,31 @@ class SsrParser(
             nodes = nodes,
             hasNextPage = more && next != null,
             endCursor = next,
+        )
+    }
+
+    /** Parses one page of the authenticated comments endpoint. */
+    fun parseComments(jsonText: String): CommentPage? {
+        val root = runCatching { json.parseToJsonElement(jsonText).jsonObject }.getOrNull()
+            ?: return null
+        val items = root.array("comments") ?: return CommentPage(emptyList(), null)
+        val comments = items.mapNotNull { element ->
+            val node = element as? JsonObject ?: return@mapNotNull null
+            val user = node.obj("user")
+            val text = node.string("text")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            ScrapedComment(
+                pk = node.string("pk") ?: return@mapNotNull null,
+                username = user?.string("username").orEmpty().ifBlank { "instagram" },
+                avatarUrl = user?.string("profile_pic_url"),
+                text = text,
+                createdAt = node.long("created_at"),
+                likeCount = node.long("like_count") ?: 0L,
+                verified = user?.boolean("is_verified") ?: false,
+            )
+        }
+        return CommentPage(
+            comments = comments,
+            nextMaxId = root.string("next_max_id")?.takeIf { it.isNotBlank() },
         )
     }
 
@@ -371,6 +409,7 @@ class SsrParser(
             videoUrlLow = videos.lastOrNull()?.first,
             width = bestImage?.second ?: bestVideo?.second ?: node.int("original_width") ?: 0,
             height = bestImage?.third ?: bestVideo?.third ?: node.int("original_height") ?: 0,
+            durationMs = (node.long("video_duration") ?: 0L) * 1000L,
             accessibilityCaption = node.string("accessibility_caption"),
         )
     }

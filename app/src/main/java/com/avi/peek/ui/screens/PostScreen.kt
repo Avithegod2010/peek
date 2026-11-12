@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +48,7 @@ import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Pause
@@ -62,6 +65,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -94,6 +98,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.remote.MediaChild
+import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.Avatar
 import com.avi.peek.ui.components.DarkSystemBars
@@ -104,7 +109,9 @@ import com.avi.peek.ui.components.PeekVideoSurface
 import com.avi.peek.ui.components.VerifiedBadge
 import com.avi.peek.ui.components.ZoomablePeekImage
 import com.avi.peek.ui.components.rememberPeekPlayer
+import com.avi.peek.ui.rememberPrivateUnlock
 import com.avi.peek.util.LocalPeekHaptics
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.compactCount
 import com.avi.peek.util.copyText
 import com.avi.peek.util.fullDate
@@ -121,6 +128,7 @@ fun PostScreen(
     onBack: () -> Unit,
     onOpenProfile: (String) -> Unit,
     onOpenAudio: (String) -> Unit,
+    onOpenAccount: () -> Unit = {},
     embedded: Boolean = false,
     viewModel: PostViewModel = viewModel(
         key = "post_$code",
@@ -133,12 +141,21 @@ fun PostScreen(
     val media by viewModel.media.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
+    val comments by viewModel.comments.collectAsStateWithLifecycle()
+    val commentsLoading by viewModel.commentsLoading.collectAsStateWithLifecycle()
+    val commentsError by viewModel.commentsError.collectAsStateWithLifecycle()
+    val commentsHasMore by viewModel.commentsHasMore.collectAsStateWithLifecycle()
+    val postAccount by viewModel.account.collectAsStateWithLifecycle()
     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
     var muted by remember { mutableStateOf(settings.muteVideos) }
     var burst by remember(code) { mutableIntStateOf(0) }
     var showComments by remember { mutableStateOf(false) }
     val dragOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val privateRevealed by PrivateAccess.revealed.collectAsStateWithLifecycle()
+    val unlockPrivate = rememberPrivateUnlock { message ->
+        scope.launch { snackbar.showSnackbar(message) }
+    }
     val galleryPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -169,6 +186,9 @@ fun PostScreen(
 
     LaunchedEffect(settings.muteVideos) { muted = settings.muteVideos }
     LaunchedEffect(Unit) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(showComments) {
+        if (showComments) viewModel.loadComments(reset = true)
+    }
 
     val value = media
     if (value == null) {
@@ -184,6 +204,57 @@ fun PostScreen(
                 modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(8.dp),
             ) {
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
+        }
+        return
+    }
+
+    if (value.isPrivate && settings.privateContentHidden && !privateRevealed) {
+        Box(
+            Modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(8.dp),
+            ) {
+                Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
+            Column(
+                Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(52.dp))
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    "Private post hidden",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(7.dp))
+                Text(
+                    "Unlock private content to open this post.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.72f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                Spacer(Modifier.height(18.dp))
+                Button(
+                    onClick = {
+                        unlockPrivate {
+                            PrivateAccess.reveal()
+                            scope.launch {
+                                runCatching { ServiceLocator.repository.openPrivateVault() }
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Unlock private content")
+                }
             }
         }
         return
@@ -235,8 +306,10 @@ fun PostScreen(
                         ?: MediaChild(index = 0, mediaType = value.mediaType, imageUrl = value.displayUrl)
                     val isActive = pagerState.currentPage == page
                     val localImage = value.localImages().getOrNull(page)
-                    val videoUrl = if (value.localVideoPath != null && children.size == 1) {
-                        File(value.localVideoPath!!).toURI().toString()
+                        ?.takeIf { File(it).exists() }
+                    val localVideo = value.localVideoPath?.takeIf { File(it).exists() }
+                    val videoUrl = if (localVideo != null && children.size == 1) {
+                        File(localVideo).toURI().toString()
                     } else {
                         child.videoUrl ?: child.videoUrlLow ?: value.videoUrl
                     }
@@ -575,42 +648,144 @@ fun PostScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 22.dp)
-                    .padding(bottom = 28.dp),
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 26.dp),
             ) {
-                Text(
-                    "Comments",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if ((value.commentCount ?: 0L) > 0L) {
-                        "${value.commentCount!!.compactCount()} comments on this post. Instagram's public page only exposes the count, not the comment text, so Peek can't show a read-only thread here."
-                    } else {
-                        "Instagram's public page does not expose comment text. Peek does not load comment threads, and guest mode never logs in; optional signed-in mode only reads profile pages."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        showComments = false
-                        context.openInstagram("p/${value.code}/")
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(17.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Open comments on Instagram")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Comments",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "Read-only · Peek never posts",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { showComments = false }) {
+                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Close comments")
+                    }
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Peek stays read-only and account-free. Comments cannot be posted from here.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Spacer(Modifier.height(8.dp))
+                when {
+                    !postAccount.signedIn -> {
+                        Text(
+                            "Comments need your Instagram session. Sign in in Settings → Instagram account, then come back.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = { onOpenAccount() }, shape = RoundedCornerShape(16.dp)) {
+                            Text("Open Instagram account")
+                        }
+                    }
+                    commentsLoading && comments.isEmpty() -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(9.dp))
+                            Text("Loading comments…", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    commentsError != null && comments.isEmpty() -> {
+                        Text(
+                            commentsError!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        androidx.compose.foundation.layout.FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Button(onClick = viewModel::retryComments, shape = RoundedCornerShape(16.dp)) {
+                                Text("Try again")
+                            }
+                            OutlinedButton(onClick = onOpenAccount, shape = RoundedCornerShape(16.dp)) {
+                                Text("Reconnect")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    showComments = false
+                                    context.openInstagram("p/${value.code}/")
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                            ) { Text("Open on Instagram") }
+                        }
+                    }
+                    comments.isEmpty() -> {
+                        Text(
+                            "No comments are visible for this post.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.heightIn(max = 420.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(comments, key = { it.pk }) { comment ->
+                                Row(verticalAlignment = Alignment.Top) {
+                                    Avatar(
+                                        url = comment.avatarUrl,
+                                        username = comment.username,
+                                        size = 32.dp,
+                                    )
+                                    Spacer(Modifier.width(9.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                comment.username,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.SemiBold,
+                                            )
+                                            if (comment.verified) {
+                                                Spacer(Modifier.width(3.dp))
+                                                VerifiedBadge(size = 12.dp)
+                                            }
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                comment.createdAt?.let { (it).relativeTime() } ?: "",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        Text(
+                                            comment.text,
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                        if (comment.likeCount > 0L) {
+                                            Text(
+                                                "${comment.likeCount.compactCount()} likes",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            if (commentsHasMore) {
+                                item(key = "more-comments") {
+                                    TextButton(
+                                        onClick = viewModel::moreComments,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !commentsLoading,
+                                    ) {
+                                        Text(if (commentsLoading) "Loading…" else "Load more comments")
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Comments belong to their authors. Peek only reads them; there is no reply box.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }

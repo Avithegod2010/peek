@@ -91,6 +91,22 @@ interface MediaDao {
     @Query("SELECT * FROM media WHERE username IN (:usernames) ORDER BY COALESCE(takenAt, 0) DESC")
     fun observeForUsernames(usernames: List<String>): Flow<List<MediaEntity>>
 
+    @Query(
+        """
+        SELECT m.* FROM media m
+        INNER JOIN profiles p ON p.username = m.username
+        WHERE p.isFollowed = 1 AND p.isPrivate = 1
+        ORDER BY COALESCE(m.takenAt, 0) DESC, m.sortIndex ASC
+        """,
+    )
+    fun observePrivateFeed(): Flow<List<MediaEntity>>
+
+    @Query("SELECT * FROM media WHERE isPrivate = 1 AND isDownloaded = 1")
+    suspend fun privateDownloads(): List<MediaEntity>
+
+    @Query("UPDATE media SET isPrivate = :isPrivate WHERE username = :username")
+    suspend fun setPrivateForProfile(username: String, isPrivate: Boolean)
+
     @Query("SELECT * FROM media WHERE isSaved = 1 ORDER BY savedAt DESC")
     fun observeSaved(): Flow<List<MediaEntity>>
 
@@ -162,6 +178,12 @@ interface MediaDao {
 
     @Query("DELETE FROM media WHERE isSaved = 0 AND isDownloaded = 0")
     suspend fun clearCached()
+
+    @Query("DELETE FROM media WHERE isPrivate = 1 AND isSaved = 0 AND isLiked = 0")
+    suspend fun deletePrivateCached()
+
+    @Query("DELETE FROM media WHERE isPrivate = 1")
+    suspend fun deleteAllPrivateMedia()
 
     @Query("SELECT COUNT(*) FROM media")
     fun observeMediaCount(): Flow<Int>

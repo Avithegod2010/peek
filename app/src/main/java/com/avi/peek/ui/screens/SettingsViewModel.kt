@@ -6,8 +6,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.avi.peek.data.local.PaletteStyle
 import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.data.local.PrivateDownloadPolicy
 import com.avi.peek.data.local.ThemeMode
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.userMessage
 import com.avi.peek.work.SyncScheduler
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -70,6 +72,44 @@ class SettingsViewModel : ViewModel() {
     fun setGallerySidecars(value: Boolean) = viewModelScope.launch { store.setGallerySidecars(value) }
     fun setAutoplayReels(value: Boolean) = viewModelScope.launch { store.setAutoplayReels(value) }
     fun setMuteVideos(value: Boolean) = viewModelScope.launch { store.setMuteVideos(value) }
+    fun setPrivateDownloadPolicy(value: PrivateDownloadPolicy) =
+        viewModelScope.launch { store.setPrivateDownloadPolicy(value) }
+    fun setPrivateVault(value: Boolean) = viewModelScope.launch { store.setPrivateVault(value) }
+    fun setCustomAccent(value: Long?) = viewModelScope.launch { store.setCustomAccent(value) }
+    fun setFontScale(value: Float) = viewModelScope.launch { store.setFontScale(value) }
+    fun setHighContrast(value: Boolean) = viewModelScope.launch { store.setHighContrast(value) }
+    fun setRequestBudgetPerHour(value: Int) = viewModelScope.launch { store.setRequestBudgetPerHour(value) }
+    fun setQuietHours(value: Boolean) = viewModelScope.launch { store.setQuietHours(value) }
+    fun setQuietStartHour(value: Int) = viewModelScope.launch { store.setQuietStartHour(value) }
+    fun setQuietEndHour(value: Int) = viewModelScope.launch { store.setQuietEndHour(value) }
+    fun setIncludePrivateInBackups(value: Boolean) =
+        viewModelScope.launch { store.setIncludePrivateInBackups(value) }
+    fun setIncludePrivateInArchives(value: Boolean) =
+        viewModelScope.launch { store.setIncludePrivateInArchives(value) }
+
+    fun hidePrivateContent() {
+        PrivateAccess.hide()
+        viewModelScope.launch {
+            store.setPrivateContentHidden(true)
+            runCatching { repo.sealPrivateVault() }
+        }
+    }
+
+    fun revealPrivateContent() {
+        PrivateAccess.reveal()
+        viewModelScope.launch {
+            store.setPrivateContentHidden(false)
+            runCatching { repo.openPrivateVault() }
+        }
+    }
+
+    fun clearPrivateContent() {
+        viewModelScope.launch {
+            runCatching { repo.purgePrivateContent() }
+            refreshStorage()
+            syncMessage("Private downloads and cached private posts removed")
+        }
+    }
 
     fun setNotifications(value: Boolean) {
         viewModelScope.launch {
