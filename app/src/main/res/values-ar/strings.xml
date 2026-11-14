@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_reels">ريلز</string>
+    <string name="nav_explore">استكشاف</string>
+    <string name="nav_library">المكتبة</string>
+    <string name="app_tagline">إنستغرام، بلا ضوضاء.</string>
+    <string name="disclaimer">Peek تطبيق غير رسمي للعرض المحلي فقط. غير تابع لـ Instagram أو Meta. يمكن عرض الملفات العامة فقط. المحتوى ملك لأصحابه.</string>
+</resources>

@@ -88,8 +88,18 @@ class PostViewModel(private val code: String) : ViewModel() {
         viewModelScope.launch {
             _commentsLoading.value = true
             _commentsError.value = null
+            if (reset) {
+                runCatching { repo.cachedComments(code) }.getOrNull()?.let { cached ->
+                    _comments.value = cached.comments
+                    commentsLoaded = cached.comments.isNotEmpty()
+                }
+            }
             runCatching {
-                repo.loadComments(code, after = if (reset) null else commentsNext)
+                repo.loadComments(
+                    code = code,
+                    after = if (reset) null else commentsNext,
+                    force = reset,
+                )
             }.onSuccess { page ->
                 _comments.value = if (reset) page.comments else _comments.value + page.comments
                 commentsNext = page.nextMaxId

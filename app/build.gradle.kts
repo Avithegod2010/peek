@@ -8,6 +8,12 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+val peekKeystorePath = System.getenv("PEEK_KEYSTORE")
+val peekKeystoreFile = peekKeystorePath?.let { file(it) }
+val peekKeystorePassword = System.getenv("PEEK_KEYSTORE_PASSWORD")
+val peekKeyAlias = System.getenv("PEEK_KEY_ALIAS") ?: "peek-release"
+val peekKeyPassword = System.getenv("PEEK_KEY_PASSWORD") ?: peekKeystorePassword
+
 android {
     namespace = "com.avi.peek"
     compileSdk = 36
@@ -19,6 +25,18 @@ android {
         versionCode = 8
         versionName = "1.5.0"
         vectorDrawables.useSupportLibrary = true
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (peekKeystoreFile?.exists() == true && !peekKeystorePassword.isNullOrBlank()) {
+            create("release") {
+                storeFile = peekKeystoreFile
+                storePassword = peekKeystorePassword
+                keyAlias = peekKeyAlias
+                keyPassword = peekKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -27,8 +45,10 @@ android {
             versionNameSuffix = "-debug"
         }
         release {
+            isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -113,4 +133,9 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.6.1")
     implementation("androidx.media3:media3-ui:1.6.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.6.1")
+
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:core:1.6.1")
 }

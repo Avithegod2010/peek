@@ -263,21 +263,31 @@ class SsrParser(
         val items = root.array("comments") ?: return CommentPage(emptyList(), null)
         val comments = items.mapNotNull { element ->
             val node = element as? JsonObject ?: return@mapNotNull null
-            val user = node.obj("user")
-            val text = node.string("text")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            ScrapedComment(
-                pk = node.string("pk") ?: return@mapNotNull null,
-                username = user?.string("username").orEmpty().ifBlank { "instagram" },
-                avatarUrl = user?.string("profile_pic_url"),
-                text = text,
-                createdAt = node.long("created_at"),
-                likeCount = node.long("like_count") ?: 0L,
-                verified = user?.boolean("is_verified") ?: false,
-            )
+            parseCommentNode(node, parentPk = null)
         }
         return CommentPage(
             comments = comments,
             nextMaxId = root.string("next_max_id")?.takeIf { it.isNotBlank() },
+        )
+    }
+
+    private fun parseCommentNode(node: JsonObject, parentPk: String?): ScrapedComment? {
+        val user = node.obj("user")
+        val text = node.string("text")?.takeIf { it.isNotBlank() } ?: return null
+        val pk = node.string("pk") ?: return null
+        val replies = node.array("child_comments").orEmpty().mapNotNull { child ->
+            (child as? JsonObject)?.let { parseCommentNode(it, parentPk = pk) }
+        }
+        return ScrapedComment(
+            pk = pk,
+            parentPk = parentPk,
+            username = user?.string("username").orEmpty().ifBlank { "instagram" },
+            avatarUrl = user?.string("profile_pic_url"),
+            text = text,
+            createdAt = node.long("created_at"),
+            likeCount = node.long("like_count") ?: 0L,
+            verified = user?.boolean("is_verified") ?: false,
+            replies = replies,
         )
     }
 

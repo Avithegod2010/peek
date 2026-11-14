@@ -1,6 +1,8 @@
 package com.avi.peek.ui.screens
 
 import android.Manifest
+import android.app.Activity
+import android.app.LocaleManager
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -51,6 +53,7 @@ import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Sync
@@ -89,6 +92,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import android.os.LocaleList
+import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -115,6 +120,7 @@ fun SettingsScreen(
     onOpenAccount: () -> Unit,
     onOpenAudit: () -> Unit = {},
     onOpenRateLimits: () -> Unit = {},
+    onOpenSecurity: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -189,6 +195,7 @@ fun SettingsScreen(
                         viewModel.setThemeMode(it)
                         haptics.tap()
                     }
+                    LanguagePicker()
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         SettingsSwitch(
                             icon = Icons.Rounded.Contrast,
@@ -204,10 +211,17 @@ fun SettingsScreen(
                             haptics.tap()
                         }
                     }
-                    CustomAccentPicker(settings.customAccent) {
-                        viewModel.setCustomAccent(it)
-                        haptics.tap()
-                    }
+                    CustomAccentPicker(
+                        current = settings.customAccent,
+                        saturation = settings.accentSaturation,
+                        value = settings.accentValue,
+                        onAccent = {
+                            viewModel.setCustomAccent(it)
+                            haptics.tap()
+                        },
+                        onSaturation = viewModel::setAccentSaturation,
+                        onValue = viewModel::setAccentValue,
+                    )
                     FontScaleSlider(settings.fontScale) {
                         viewModel.setFontScale(it)
                     }
@@ -410,6 +424,12 @@ fun SettingsScreen(
 
             item(key = "privacy") {
                 SettingsSection("Privacy & storage", Icons.Rounded.Lock) {
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Security,
+                        title = "Security center",
+                        subtitle = "Session, data map, network destinations and wipe actions",
+                        onClick = onOpenSecurity,
+                    )
                     SettingsSwitch(
                         icon = Icons.Rounded.VisibilityOff,
                         title = "Hide like counts",
@@ -491,6 +511,20 @@ fun SettingsScreen(
                         title = "Request budget & rate limits",
                         subtitle = "Hourly cap, quiet hours, backoff and recent outcomes",
                         onClick = onOpenRateLimits,
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Storage,
+                        title = "Image cache limit",
+                        subtitle = "${settings.imageCacheMb} MB · applied on the next app start",
+                        onClick = {
+                            val next = when (settings.imageCacheMb) {
+                                128 -> 256
+                                256 -> 512
+                                512 -> 1024
+                                else -> 128
+                            }
+                            viewModel.setImageCacheMb(next)
+                        },
                     )
                     SettingsClickRow(
                         icon = Icons.Rounded.DeleteSweep,
@@ -823,6 +857,60 @@ private fun ThemeModePicker(current: ThemeMode, onSelect: (ThemeMode) -> Unit) {
 }
 
 @Composable
+private fun LanguagePicker() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+    val context = LocalContext.current
+    val manager = context.getSystemService(LocaleManager::class.java) ?: return
+    val current = manager.applicationLocales
+    val currentTag = if (current.isEmpty) "" else current.get(0)?.language.orEmpty()
+    val options = listOf(
+        "" to "System",
+        "en" to "English",
+        "hi" to "हिन्दी",
+        "es" to "Español",
+        "pt" to "Português",
+        "ar" to "العربية",
+        "ja" to "日本語",
+    )
+    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+        Text("App language", style = MaterialTheme.typography.titleSmall)
+        Text(
+            "Translated navigation and disclaimers · Arabic switches the layout to RTL",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            options.forEach { (tag, label) ->
+                val selected = currentTag == tag
+                Surface(
+                    onClick = {
+                        manager.applicationLocales = if (tag.isBlank()) {
+                            LocaleList.getEmptyLocaleList()
+                        } else {
+                            LocaleList.forLanguageTags(tag)
+                        }
+                        (context as? Activity)?.recreate()
+                    },
+                    shape = CircleShape,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PalettePicker(current: PaletteStyle, onSelect: (PaletteStyle) -> Unit) {
     val colors = mapOf(
         PaletteStyle.LAVENDER to Color(0xFF5B4BC4),
@@ -893,7 +981,15 @@ private fun PalettePicker(current: PaletteStyle, onSelect: (PaletteStyle) -> Uni
 }
 
 @Composable
-private fun CustomAccentPicker(current: Long?, onChange: (Long?) -> Unit) {
+private fun CustomAccentPicker(
+    current: Long?,
+    saturation: Float,
+    value: Float,
+    onAccent: (Long?) -> Unit,
+    onSaturation: (Float) -> Unit,
+    onValue: (Float) -> Unit,
+) {
+    val context = LocalContext.current
     val currentColor = current?.let { Color(it.toInt()) }
     val hsv = remember(current) {
         FloatArray(3).also { array ->
@@ -901,12 +997,24 @@ private fun CustomAccentPicker(current: Long?, onChange: (Long?) -> Unit) {
                 android.graphics.Color.colorToHSV(current.toInt(), array)
             } else {
                 array[0] = 265f
-                array[1] = 0.62f
-                array[2] = 0.78f
+                array[1] = saturation
+                array[2] = value
             }
         }
     }
     var hue by remember(current) { mutableFloatStateOf(hsv[0]) }
+    var sat by remember(saturation) { mutableFloatStateOf(saturation) }
+    var bright by remember(value) { mutableFloatStateOf(value) }
+    var hex by remember(current) {
+        mutableStateOf(current?.let { String.format("#%08X", it) } ?: "#FF5B4BC4")
+    }
+
+    fun apply() {
+        onAccent(Color.hsv(hue, sat, bright).toArgb().toLong())
+        onSaturation(sat)
+        onValue(bright)
+    }
+
     Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -927,13 +1035,11 @@ private fun CustomAccentPicker(current: Long?, onChange: (Long?) -> Unit) {
             Switch(
                 checked = current != null,
                 onCheckedChange = { enabled ->
-                    onChange(
-                        if (enabled) {
-                            Color.hsv(hue, 0.62f, 0.78f).toArgb().toLong()
-                        } else {
-                            null
-                        },
-                    )
+                    if (enabled) {
+                        apply()
+                    } else {
+                        onAccent(null)
+                    }
                 },
             )
         }
@@ -941,16 +1047,97 @@ private fun CustomAccentPicker(current: Long?, onChange: (Long?) -> Unit) {
             Slider(
                 value = hue,
                 onValueChange = { hue = it },
-                onValueChangeFinished = {
-                    onChange(Color.hsv(hue, 0.62f, 0.78f).toArgb().toLong())
-                },
+                onValueChangeFinished = ::apply,
                 valueRange = 0f..360f,
             )
             Text(
-                "Hue ${hue.roundToInt()}° · drag to recolour Peek",
+                "Hue ${hue.roundToInt()}°",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Slider(
+                value = sat,
+                onValueChange = { sat = it },
+                onValueChangeFinished = ::apply,
+                valueRange = 0.15f..1f,
+            )
+            Text(
+                "Saturation ${(sat * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Slider(
+                value = bright,
+                onValueChange = { bright = it },
+                onValueChangeFinished = ::apply,
+                valueRange = 0.25f..1f,
+            )
+            Text(
+                "Brightness ${(bright * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = hex,
+                    onValueChange = { hex = it.take(9) },
+                    label = { Text("Hex") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Button(
+                    onClick = {
+                        val raw = hex.removePrefix("#")
+                        val parsed = runCatching {
+                            if (raw.length == 6) raw.toLong(16) or 0xFF000000L else raw.toLong(16)
+                        }.getOrNull()
+                        if (parsed != null) {
+                            onAccent(parsed)
+                            val fresh = FloatArray(3)
+                            android.graphics.Color.colorToHSV(parsed.toInt(), fresh)
+                            hue = fresh[0]
+                            sat = fresh[1]
+                            bright = fresh[2]
+                        }
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                ) { Text("Apply") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(
+                    onClick = {
+                        val json = """{"accent":${current},"saturation":$saturation,"value":$value,"hex":"$hex"}"""
+                        val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                        clipboard?.setPrimaryClip(
+                            android.content.ClipData.newPlainText("Peek theme", json),
+                        )
+                    },
+                ) { Text("Copy theme") }
+                TextButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                        val text = clipboard?.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
+                        Regex("""#([0-9a-fA-F]{6,8})""").find(text)?.groupValues?.getOrNull(1)?.let { raw ->
+                            val parsed = runCatching {
+                                if (raw.length == 6) raw.toLong(16) or 0xFF000000L else raw.toLong(16)
+                            }.getOrNull() ?: return@let
+                            hex = "#$raw"
+                            onAccent(parsed)
+                            val fresh = FloatArray(3)
+                            android.graphics.Color.colorToHSV(parsed.toInt(), fresh)
+                            hue = fresh[0]
+                            sat = fresh[1]
+                            bright = fresh[2]
+                        }
+                        Regex("\"saturation\"\\s*:\\s*([0-9.]+)").find(text)
+                            ?.groupValues?.getOrNull(1)?.toFloatOrNull()?.let { onSaturation(it) }
+                        Regex("\"value\"\\s*:\\s*([0-9.]+)").find(text)
+                            ?.groupValues?.getOrNull(1)?.toFloatOrNull()?.let { onValue(it) }
+                    },
+                ) { Text("Paste theme") }
+            }
         }
     }
 }

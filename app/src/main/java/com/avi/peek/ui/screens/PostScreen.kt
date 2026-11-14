@@ -98,6 +98,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.remote.MediaChild
+import com.avi.peek.data.remote.ScrapedComment
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.Avatar
@@ -727,42 +728,10 @@ fun PostScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             items(comments, key = { it.pk }) { comment ->
-                                Row(verticalAlignment = Alignment.Top) {
-                                    Avatar(
-                                        url = comment.avatarUrl,
-                                        username = comment.username,
-                                        size = 32.dp,
-                                    )
-                                    Spacer(Modifier.width(9.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                comment.username,
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.SemiBold,
-                                            )
-                                            if (comment.verified) {
-                                                Spacer(Modifier.width(3.dp))
-                                                VerifiedBadge(size = 12.dp)
-                                            }
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(
-                                                comment.createdAt?.let { (it).relativeTime() } ?: "",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        Text(
-                                            comment.text,
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        if (comment.likeCount > 0L) {
-                                            Text(
-                                                "${comment.likeCount.compactCount()} likes",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
+                                Column {
+                                    CommentLine(comment)
+                                    comment.replies.forEach { reply ->
+                                        CommentLine(reply, indent = true)
                                     }
                                 }
                             }
@@ -786,6 +755,51 @@ fun PostScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentLine(
+    comment: ScrapedComment,
+    indent: Boolean = false,
+) {
+    Row(
+        modifier = Modifier.padding(start = if (indent) 30.dp else 0.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Avatar(
+            url = comment.avatarUrl,
+            username = comment.username,
+            size = if (indent) 27.dp else 32.dp,
+        )
+        Spacer(Modifier.width(9.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    comment.username,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (comment.verified) {
+                    Spacer(Modifier.width(3.dp))
+                    VerifiedBadge(size = 12.dp)
+                }
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    comment.createdAt?.let { it.relativeTime() } ?: "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(comment.text, style = MaterialTheme.typography.bodySmall)
+            if (comment.likeCount > 0L) {
+                Text(
+                    "${comment.likeCount.compactCount()} likes",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

@@ -54,7 +54,14 @@ data class ProfileEntity(
 
 @Entity(
     tableName = "media",
-    indices = [Index("username"), Index("takenAt"), Index("isSaved"), Index("isDownloaded")],
+    indices = [
+        Index("username"),
+        Index("takenAt"),
+        Index("isSaved"),
+        Index("isDownloaded"),
+        Index("isPrivate"),
+        Index("username", "takenAt"),
+    ],
 )
 data class MediaEntity(
     @PrimaryKey val code: String,
@@ -109,6 +116,24 @@ data class MediaEntity(
 
     val displayThumb: String? get() = displayUrl
 }
+
+@Entity(
+    tableName = "comments",
+    primaryKeys = ["pk"],
+    indices = [Index("mediaCode"), Index("parentPk")],
+)
+data class CommentEntity(
+    val pk: String,
+    val mediaCode: String,
+    val parentPk: String? = null,
+    val username: String,
+    val avatarUrl: String? = null,
+    val text: String,
+    val createdAt: Long? = null,
+    val likeCount: Long = 0L,
+    val verified: Boolean = false,
+    val fetchedAt: Long = System.currentTimeMillis(),
+)
 
 @Entity(tableName = "searches")
 data class SearchHistoryEntity(

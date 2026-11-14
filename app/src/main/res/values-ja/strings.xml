@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">ホーム</string>
+    <string name="nav_reels">リール</string>
+    <string name="nav_explore">探索</string>
+    <string name="nav_library">ライブラリ</string>
+    <string name="app_tagline">Instagramを、静かに。</string>
+    <string name="disclaimer">Peekは非公式のローカル専用ビューアです。InstagramやMetaとは提携していません。閲覧できるのは公開プロフィールのみです。コンテンツは各制作者に帰属します。</string>
+</resources>

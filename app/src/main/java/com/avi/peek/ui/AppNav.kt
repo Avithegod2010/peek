@@ -2,6 +2,7 @@ package com.avi.peek.ui
 
 import android.app.Activity
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -71,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -88,6 +90,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.avi.peek.R
 import com.avi.peek.data.directory.PackTransfer
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.data.repo.SyncEvent
@@ -118,8 +121,11 @@ import com.avi.peek.ui.screens.PackScreen
 import com.avi.peek.ui.screens.RecapScreen
 import com.avi.peek.ui.screens.SavedScreen
 import com.avi.peek.ui.screens.SearchScreen
+import com.avi.peek.ui.screens.SecurityCenterScreen
 import com.avi.peek.ui.screens.SessionAuditScreen
 import com.avi.peek.ui.screens.SettingsScreen
+import com.avi.peek.ui.screens.StoriesScreen
+import com.avi.peek.ui.screens.VaultManagerScreen
 import com.avi.peek.ui.theme.PeekTheme
 import com.avi.peek.util.DeepLinkBus
 import com.avi.peek.util.LocalPeekHaptics
@@ -128,15 +134,15 @@ import kotlinx.coroutines.launch
 
 private data class TopTab(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 )
 
 private val topTabs = listOf(
-    TopTab("home", "Home", Icons.Rounded.Home),
-    TopTab("reels", "Reels", Icons.Rounded.Movie),
-    TopTab("discover", "Explore", Icons.Rounded.Explore),
-    TopTab("library", "Library", Icons.Rounded.CollectionsBookmark),
+    TopTab("home", R.string.nav_home, Icons.Rounded.Home),
+    TopTab("reels", R.string.nav_reels, Icons.Rounded.Movie),
+    TopTab("discover", R.string.nav_explore, Icons.Rounded.Explore),
+    TopTab("library", R.string.nav_library, Icons.Rounded.CollectionsBookmark),
 )
 
 @Composable
@@ -337,6 +343,7 @@ private fun MainScaffold(
                     syncState = syncState,
                     onOpenPost = { openPost(it) },
                     onOpenProfile = { openProfile(it) },
+                    onOpenStories = { navController.navigate("stories/$it") },
                     onOpenDiscover = { navigateTab("discover") },
                     onOpenSearch = { openSearch() },
                     storyAvatarModifier = { username -> avatarModifiers[username] ?: Modifier },
@@ -514,6 +521,25 @@ private fun MainScaffold(
                     onOpenAccount = { navController.navigate("account") },
                     onOpenAudit = { navController.navigate("session-audit") },
                     onOpenRateLimits = { navController.navigate("ratelimit") },
+                    onOpenSecurity = { navController.navigate("security") },
+                )
+            }
+            composable("security") {
+                SecurityCenterScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenAudit = { navController.navigate("session-audit") },
+                    onOpenVault = { navController.navigate("vault") },
+                    onOpenRateLimits = { navController.navigate("ratelimit") },
+                )
+            }
+            composable("vault") {
+                VaultManagerScreen(onBack = { navController.popBackStack() })
+            }
+            composable("stories/{username}") { entry ->
+                StoriesScreen(
+                    username = entry.arguments?.getString("username").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onOpenAccount = { navController.navigate("account") },
                 )
             }
             composable("account") {
@@ -588,7 +614,7 @@ private fun PeekNavigationRail(
                 },
                 icon = {
                     Box {
-                        Icon(tab.icon, contentDescription = tab.label)
+                        Icon(tab.icon, contentDescription = stringResource(tab.labelRes))
                         val badge = badges[tab.route] ?: 0
                         if (badge > 0) {
                             Box(
@@ -608,7 +634,7 @@ private fun PeekNavigationRail(
                         }
                     }
                 },
-                label = { Text(tab.label) },
+                label = { Text(stringResource(tab.labelRes)) },
                 alwaysShowLabel = true,
             )
         }
@@ -690,7 +716,7 @@ private fun PeekBottomBar(
                     ) {
                         Icon(
                             tab.icon,
-                            contentDescription = tab.label,
+                            contentDescription = stringResource(tab.labelRes),
                             tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
                                 .size(21.dp)
@@ -720,7 +746,7 @@ private fun PeekBottomBar(
                     }
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        tab.label,
+                        stringResource(tab.labelRes),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,

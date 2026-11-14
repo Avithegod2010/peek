@@ -15,6 +15,7 @@ import com.avi.peek.data.repo.BackupManager
 import com.avi.peek.data.repo.DownloadQueue
 import com.avi.peek.data.repo.DownloadStore
 import com.avi.peek.data.repo.PeekRepository
+import com.avi.peek.data.repo.PrivateBackupManager
 import com.avi.peek.data.repo.ProfileDownloadManager
 import com.avi.peek.data.repo.RequestBudget
 import com.avi.peek.data.repo.RequestLog
@@ -22,6 +23,8 @@ import com.avi.peek.data.repo.VaultStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import com.avi.peek.util.NetworkMonitor
 import java.io.File
 
@@ -91,15 +94,22 @@ object ServiceLocator {
 
     val backupManager: BackupManager by lazy { BackupManager(appContext, repository) }
 
+    val privateBackupManager: PrivateBackupManager by lazy {
+        PrivateBackupManager(appContext, database)
+    }
+
     val requestLog: RequestLog by lazy { RequestLog(appContext) }
 
     val imageLoader: ImageLoader by lazy {
+        val cacheMb = runBlocking {
+            runCatching { settings.settings.first().imageCacheMb }.getOrDefault(320)
+        }
         ImageLoader.Builder(appContext)
             .crossfade(true)
             .diskCache {
                 DiskCache.Builder()
                     .directory(File(appContext.cacheDir, "image_cache"))
-                    .maxSizeBytes(320L * 1024 * 1024)
+                    .maxSizeBytes(cacheMb.toLong() * 1024 * 1024)
                     .build()
             }
             .build()

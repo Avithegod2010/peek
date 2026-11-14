@@ -1,6 +1,7 @@
 package com.avi.peek.data.repo
 
 import android.content.Context
+import com.avi.peek.data.local.CommentEntity
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.PeekDatabase
 import com.avi.peek.data.local.ProfileEntity
@@ -202,15 +203,78 @@ class PeekRepository(
         budgeted { client.fetchHighlightMedia(highlightId) }
     }
 
-    suspend fun loadComments(code: String, after: String? = null): CommentPage =
-        withContext(Dispatchers.IO) {
-            accountManager.ensureRestored()
-            val media = db.media().get(code)
-                ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Open the post first")
-            val pk = media.pk ?: loadMediaDetail(code)?.pk
-                ?: throw GuestException(GuestErrorKind.PARSE, "This post has no comments id")
-            budgeted { client.fetchComments(pk, after) }
+    suspend fun fetchStories(username: String): List<MediaChild> = withContext(Dispatchers.IO) {
+        accountManager.ensureRestored()
+        val profile = db.profiles().get(username)
+            ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Open the profile first")
+        val userId = profile.userId ?: profile.pk
+            ?: throw GuestException(GuestErrorKind.PARSE, "This profile has no story id")
+        budgeted { client.fetchStories(userId) }
+    }
+
+    suspend fun cachedComments(code: String): CommentPage? = withContext(Dispatchers.IO) {
+        val rows = db.comments().forMedia(code)
+        if (rows.isEmpty()) null else {
+            val replies = rows.filter { it.parentPk != null }.groupBy { it.parentPk }
+            val roots = rows.filter { it.parentPk == null }.map { row ->
+                row.toScrapedComment(
+                    replies[row.pk].orEmpty().map { it.toScrapedComment(emptyList()) },
+                )
+            }
+            CommentPage(roots, null)
         }
+    }
+
+    suspend fun loadComments(
+        code: String,
+        after: String? = null,
+        force: Boolean = false,
+    ): CommentPage = withContext(Dispatchers.IO) {
+        accountManager.ensureRestored()
+        val media = db.media().get(code)
+            ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Open the post first")
+        val pk = media.pk ?: loadMediaDetail(code)?.pk
+            ?: throw GuestException(GuestErrorKind.PARSE, "This post has no comments id")
+        val cached = if (after == null) cachedComments(code) else null
+        if (cached != null && !force) return@withContext cached
+        try {
+            val page = budgeted { client.fetchComments(pk, after) }
+            val rows = page.comments.flatMap { comment ->
+                listOf(comment.toEntity(code)) + comment.replies.map { it.toEntity(code) }
+            }
+            if (after == null) db.comments().clearForMedia(code)
+            db.comments().upsertAll(rows)
+            page
+        } catch (e: GuestException) {
+            if (cached != null) cached else throw e
+        } catch (e: Exception) {
+            if (cached != null) cached else throw e
+        }
+    }
+
+    private fun ScrapedComment.toEntity(mediaCode: String) = CommentEntity(
+        pk = pk,
+        mediaCode = mediaCode,
+        parentPk = parentPk,
+        username = username,
+        avatarUrl = avatarUrl,
+        text = text,
+        createdAt = createdAt,
+        likeCount = likeCount,
+        verified = verified,
+    )
+
+    private fun CommentEntity.toScrapedComment(replies: List<ScrapedComment>) = ScrapedComment(
+        pk = pk,
+        parentPk = parentPk,
+        username = username,
+        avatarUrl = avatarUrl,
+        text = text,
+        createdAt = createdAt,
+        likeCount = likeCount,
+        verified = verified,
+        replies = replies,
+    )
 
     suspend fun lookup(raw: String): ScrapedProfile {
         val username = GuestInstagramClient.normalizeUsername(raw)
@@ -872,6 +936,56 @@ class PeekRepository(
 
     suspend fun privateVaultSize(): Long = withContext(Dispatchers.IO) { vault.sizeBytes() }
 
+    suspend fun databaseSize(): Long = withContext(Dispatchers.IO) {
+        val db = context.getDatabasePath("peek.db")
+        listOf(db, File(db.path + "-wal"), File(db.path + "-shm"))
+            .sumOf { if (it.exists()) it.length() else 0L }
+    }
+
+    suspend fun privateMediaCounts(): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        val media = db.media().allPrivateMedia()
+        media.size to media.count { it.isDownloaded }
+    }
+
+    suspend fun vaultEntries(): List<VaultEntry> = withContext(Dispatchers.IO) {
+        db.media().privateDownloads().map { item ->
+            val sealed = vault.hasSealed(item.code)
+            val bytes = vault.sizeFor(item.code) + downloads.directoryFor(item.code)
+                .walkTopDown()
+                .filter { it.isFile }
+                .sumOf { it.length() }
+            VaultEntry(
+                username = item.username,
+                code = item.code,
+                bytes = bytes,
+                sealed = sealed,
+                caption = item.caption?.take(120),
+            )
+        }.sortedWith(compareBy({ it.username }, { it.code }))
+    }
+
+    suspend fun sealVaultProfile(username: String) = withContext(Dispatchers.IO) {
+        val codes = db.media().forProfile(username)
+            .filter { it.isDownloaded }
+            .map { it.code }
+        vault.seal(codes, downloads.root)
+    }
+
+    suspend fun openVaultProfile(username: String) = withContext(Dispatchers.IO) {
+        val codes = db.media().forProfile(username)
+            .filter { it.isDownloaded }
+            .map { it.code }
+        vault.open(codes, downloads.root)
+    }
+
+    suspend fun deleteVaultProfile(username: String) = withContext(Dispatchers.IO) {
+        db.media().forProfile(username).filter { it.isDownloaded }.forEach { item ->
+            downloads.deleteFor(item.code)
+            vault.purge(item.code)
+            db.media().clearDownload(item.code)
+        }
+    }
+
     suspend fun purgePrivateDownloads() = withContext(Dispatchers.IO) {
         db.media().privateDownloads().forEach { item ->
             downloads.deleteFor(item.code)
@@ -1003,6 +1117,14 @@ data class ImportSummary(
 data class ProfilePageResult(
     val added: Int,
     val hasMore: Boolean,
+)
+
+data class VaultEntry(
+    val username: String,
+    val code: String,
+    val bytes: Long,
+    val sealed: Boolean,
+    val caption: String?,
 )
 
 data class ProfileStorage(

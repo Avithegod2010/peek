@@ -88,6 +88,7 @@ fun HomeScreen(
     syncState: SyncState,
     onOpenPost: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
+    onOpenStories: (String) -> Unit = onOpenProfile,
     onOpenDiscover: () -> Unit,
     onOpenSearch: () -> Unit,
     storyAvatarModifier: (String) -> Modifier = { Modifier },
@@ -162,6 +163,7 @@ fun HomeScreen(
                     StoryStrip(
                         profiles = following,
                         onOpenProfile = onOpenProfile,
+                        onOpenStories = onOpenStories,
                         onAdd = onOpenDiscover,
                         avatarModifier = storyAvatarModifier,
                     )
@@ -364,6 +366,7 @@ private fun HomeHeader(
 private fun StoryStrip(
     profiles: List<ProfileEntity>,
     onOpenProfile: (String) -> Unit,
+    onOpenStories: (String) -> Unit,
     onAdd: () -> Unit,
     avatarModifier: (String) -> Modifier,
 ) {
@@ -393,7 +396,13 @@ private fun StoryStrip(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(66.dp)
-                    .clickable { onOpenProfile(profile.username) },
+                    .clickable {
+                        if ((profile.latestReelMedia ?: 0L) > 0L) {
+                            onOpenStories(profile.username)
+                        } else {
+                            onOpenProfile(profile.username)
+                        }
+                    },
             ) {
                 Avatar(
                     url = profile.profilePicUrl,

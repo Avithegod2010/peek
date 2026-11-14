@@ -8,14 +8,20 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProfileEntity::class, MediaEntity::class, SearchHistoryEntity::class],
-    version = 3,
+    entities = [
+        ProfileEntity::class,
+        MediaEntity::class,
+        SearchHistoryEntity::class,
+        CommentEntity::class,
+    ],
+    version = 5,
     exportSchema = true,
 )
 abstract class PeekDatabase : RoomDatabase() {
     abstract fun profiles(): ProfileDao
     abstract fun media(): MediaDao
     abstract fun searches(): SearchDao
+    abstract fun comments(): CommentDao
 
     companion object {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -36,11 +42,44 @@ abstract class PeekDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS comments (
+                        pk TEXT NOT NULL PRIMARY KEY,
+                        mediaCode TEXT NOT NULL,
+                        parentPk TEXT,
+                        username TEXT NOT NULL,
+                        avatarUrl TEXT,
+                        text TEXT NOT NULL,
+                        createdAt INTEGER,
+                        likeCount INTEGER NOT NULL DEFAULT 0,
+                        verified INTEGER NOT NULL DEFAULT 0,
+                        fetchedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_comments_mediaCode ON comments(mediaCode)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_comments_parentPk ON comments(parentPk)")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_media_isPrivate ON media(isPrivate)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_media_username_takenAt " +
+                        "ON media(username, takenAt)",
+                )
+            }
+        }
+
         fun build(context: Context): PeekDatabase = Room.databaseBuilder(
             context.applicationContext,
             PeekDatabase::class.java,
             "peek.db",
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .fallbackToDestructiveMigration()
             .build()
     }

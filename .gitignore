@@ -10,6 +10,9 @@ captures/
 .cxx/
 *.keystore
 *.jks
+release/
+keystore.properties
+release-keystore.properties
 *-log*.txt
 build-log.txt
 kotlin-log*.txt
@@ -21,5 +24,6 @@ assemble-*.txt
 compile-*.txt
 package-*.txt
 history-audit.txt
+test-*.txt
 .agents/
 skills-lock.json

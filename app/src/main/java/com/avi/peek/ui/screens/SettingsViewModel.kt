@@ -76,8 +76,14 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch { store.setPrivateDownloadPolicy(value) }
     fun setPrivateVault(value: Boolean) = viewModelScope.launch { store.setPrivateVault(value) }
     fun setCustomAccent(value: Long?) = viewModelScope.launch { store.setCustomAccent(value) }
+    fun setAccentSaturation(value: Float) = viewModelScope.launch { store.setAccentSaturation(value) }
+    fun setAccentValue(value: Float) = viewModelScope.launch { store.setAccentValue(value) }
     fun setFontScale(value: Float) = viewModelScope.launch { store.setFontScale(value) }
     fun setHighContrast(value: Boolean) = viewModelScope.launch { store.setHighContrast(value) }
+    fun setImageCacheMb(value: Int) = viewModelScope.launch {
+        store.setImageCacheMb(value)
+        syncMessage("Image cache limit changes after the next app start")
+    }
     fun setRequestBudgetPerHour(value: Int) = viewModelScope.launch { store.setRequestBudgetPerHour(value) }
     fun setQuietHours(value: Boolean) = viewModelScope.launch { store.setQuietHours(value) }
     fun setQuietStartHour(value: Int) = viewModelScope.launch { store.setQuietStartHour(value) }

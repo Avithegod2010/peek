@@ -104,6 +104,9 @@ interface MediaDao {
     @Query("SELECT * FROM media WHERE isPrivate = 1 AND isDownloaded = 1")
     suspend fun privateDownloads(): List<MediaEntity>
 
+    @Query("SELECT * FROM media WHERE isPrivate = 1")
+    suspend fun allPrivateMedia(): List<MediaEntity>
+
     @Query("UPDATE media SET isPrivate = :isPrivate WHERE username = :username")
     suspend fun setPrivateForProfile(username: String, isPrivate: Boolean)
 
@@ -202,6 +205,21 @@ interface MediaDao {
 
     @Query("SELECT * FROM media WHERE code IN (:codes)")
     suspend fun byCodes(codes: List<String>): List<MediaEntity>
+}
+
+@Dao
+interface CommentDao {
+    @Query("SELECT * FROM comments WHERE mediaCode = :mediaCode ORDER BY COALESCE(createdAt, 0) ASC")
+    fun observeForMedia(mediaCode: String): Flow<List<CommentEntity>>
+
+    @Query("SELECT * FROM comments WHERE mediaCode = :mediaCode ORDER BY COALESCE(createdAt, 0) ASC")
+    suspend fun forMedia(mediaCode: String): List<CommentEntity>
+
+    @Upsert
+    suspend fun upsertAll(comments: List<CommentEntity>)
+
+    @Query("DELETE FROM comments WHERE mediaCode = :mediaCode")
+    suspend fun clearForMedia(mediaCode: String)
 }
 
 @Dao

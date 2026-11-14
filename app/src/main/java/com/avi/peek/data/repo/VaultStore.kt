@@ -28,6 +28,9 @@ class VaultStore(context: Context) {
 
     fun hasSealed(code: String): Boolean = File(root, code).listFiles()?.isNotEmpty() == true
 
+    fun sizeFor(code: String): Long =
+        File(root, code).walkTopDown().filter { it.isFile }.sumOf { it.length() }
+
     fun sizeBytes(): Long = root.walkTopDown().filter { it.isFile }.sumOf { it.length() }
 
     suspend fun seal(codes: List<String>, downloadRoot: File) = withContext(Dispatchers.IO) {

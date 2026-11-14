@@ -327,7 +327,7 @@ class GuestInstagramClient(
     suspend fun fetchHighlightMedia(highlightId: String): List<MediaChild> = withContext(Dispatchers.IO) {
         if (hasSession()) {
             val authenticated = try {
-                fetchReelsMedia(highlightId)
+                fetchReelsMedia("highlight:$highlightId")
             } catch (e: GuestException) {
                 if (e.kind == GuestErrorKind.RATE_LIMITED ||
                     e.kind == GuestErrorKind.LOGIN_REQUIRED
@@ -354,11 +354,21 @@ class GuestInstagramClient(
         items
     }
 
-    private fun fetchReelsMedia(highlightId: String): List<MediaChild> {
+    suspend fun fetchStories(userId: String): List<MediaChild> = withContext(Dispatchers.IO) {
+        if (!hasSession()) {
+            throw GuestException(
+                GuestErrorKind.LOGIN_REQUIRED,
+                "Sign in to Instagram in Settings to read stories.",
+            )
+        }
+        fetchReelsMedia(userId)
+    }
+
+    private fun fetchReelsMedia(reelId: String): List<MediaChild> {
         val url = "https://www.instagram.com/api/v1/feed/reels_media/"
             .toHttpUrl()
             .newBuilder()
-            .addQueryParameter("reel_ids", "highlight:$highlightId")
+            .addQueryParameter("reel_ids", reelId)
             .build()
         val request = Request.Builder()
             .url(url)

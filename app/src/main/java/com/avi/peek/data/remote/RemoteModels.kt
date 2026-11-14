@@ -82,12 +82,14 @@ data class ViewerIdentity(
 
 data class ScrapedComment(
     val pk: String,
+    val parentPk: String? = null,
     val username: String,
     val avatarUrl: String?,
     val text: String,
     val createdAt: Long?,
     val likeCount: Long,
     val verified: Boolean,
+    val replies: List<ScrapedComment> = emptyList(),
 )
 
 data class CommentPage(

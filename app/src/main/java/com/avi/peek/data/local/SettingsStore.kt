@@ -66,8 +66,11 @@ data class PeekSettings(
     val privateVault: Boolean = true,
     val privateContentHidden: Boolean = false,
     val customAccent: Long? = null,
+    val accentSaturation: Float = 0.62f,
+    val accentValue: Float = 0.78f,
     val fontScale: Float = 1f,
     val highContrast: Boolean = false,
+    val imageCacheMb: Int = 320,
     val requestBudgetPerHour: Int = 120,
     val quietHoursEnabled: Boolean = false,
     val quietStartHour: Int = 23,
@@ -107,8 +110,11 @@ class SettingsStore(private val context: Context) {
         val PRIVATE_VAULT = booleanPreferencesKey("private_vault")
         val PRIVATE_CONTENT_HIDDEN = booleanPreferencesKey("private_content_hidden")
         val CUSTOM_ACCENT = stringPreferencesKey("custom_accent")
+        val ACCENT_SATURATION = stringPreferencesKey("accent_saturation")
+        val ACCENT_VALUE = stringPreferencesKey("accent_value")
         val FONT_SCALE = stringPreferencesKey("font_scale")
         val HIGH_CONTRAST = booleanPreferencesKey("high_contrast")
+        val IMAGE_CACHE_MB = intPreferencesKey("image_cache_mb")
         val REQUEST_BUDGET_PER_HOUR = intPreferencesKey("request_budget_per_hour")
         val QUIET_HOURS = booleanPreferencesKey("quiet_hours")
         val QUIET_START = intPreferencesKey("quiet_start")
@@ -153,8 +159,11 @@ class SettingsStore(private val context: Context) {
                 privateVault = prefs[Keys.PRIVATE_VAULT] ?: true,
                 privateContentHidden = prefs[Keys.PRIVATE_CONTENT_HIDDEN] ?: false,
                 customAccent = prefs[Keys.CUSTOM_ACCENT]?.toLongOrNull(),
+                accentSaturation = (prefs[Keys.ACCENT_SATURATION]?.toFloatOrNull() ?: 0.62f).coerceIn(0.15f, 1f),
+                accentValue = (prefs[Keys.ACCENT_VALUE]?.toFloatOrNull() ?: 0.78f).coerceIn(0.25f, 1f),
                 fontScale = (prefs[Keys.FONT_SCALE]?.toFloatOrNull() ?: 1f).coerceIn(0.85f, 1.3f),
                 highContrast = prefs[Keys.HIGH_CONTRAST] ?: false,
+                imageCacheMb = (prefs[Keys.IMAGE_CACHE_MB] ?: 320).coerceIn(64, 1024),
                 requestBudgetPerHour = (prefs[Keys.REQUEST_BUDGET_PER_HOUR] ?: 120).coerceIn(20, 600),
                 quietHoursEnabled = prefs[Keys.QUIET_HOURS] ?: false,
                 quietStartHour = (prefs[Keys.QUIET_START] ?: 23).coerceIn(0, 23),
@@ -196,8 +205,14 @@ class SettingsStore(private val context: Context) {
     suspend fun setCustomAccent(value: Long?) = edit {
         if (value == null) it.remove(Keys.CUSTOM_ACCENT) else it[Keys.CUSTOM_ACCENT] = value.toString()
     }
+    suspend fun setAccentSaturation(value: Float) =
+        edit { it[Keys.ACCENT_SATURATION] = value.coerceIn(0.15f, 1f).toString() }
+    suspend fun setAccentValue(value: Float) =
+        edit { it[Keys.ACCENT_VALUE] = value.coerceIn(0.25f, 1f).toString() }
     suspend fun setFontScale(value: Float) = edit { it[Keys.FONT_SCALE] = value.coerceIn(0.85f, 1.3f).toString() }
     suspend fun setHighContrast(value: Boolean) = edit { it[Keys.HIGH_CONTRAST] = value }
+    suspend fun setImageCacheMb(value: Int) =
+        edit { it[Keys.IMAGE_CACHE_MB] = value.coerceIn(64, 1024) }
     suspend fun setRequestBudgetPerHour(value: Int) =
         edit { it[Keys.REQUEST_BUDGET_PER_HOUR] = value.coerceIn(20, 600) }
     suspend fun setQuietHours(value: Boolean) = edit { it[Keys.QUIET_HOURS] = value }
