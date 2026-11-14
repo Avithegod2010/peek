@@ -39,7 +39,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.avi.peek.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -163,8 +165,8 @@ fun SecurityCenterScreen(
 
     Column(Modifier.fillMaxSize().navigationBarsPadding()) {
         SimpleTopBar(
-            title = "Security center",
-            subtitle = "What is stored, where it goes, and how to wipe it",
+            title = stringResource(R.string.security_title),
+            subtitle = stringResource(R.string.security_subtitle),
             onBack = onBack,
         )
         LazyColumn(
@@ -182,7 +184,11 @@ fun SecurityCenterScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.Security, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
-                            Text("Session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                stringResource(R.string.security_session),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                         Spacer(Modifier.height(6.dp))
                         Text(
@@ -203,10 +209,12 @@ fun SecurityCenterScreen(
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = onOpenAudit, shape = RoundedCornerShape(16.dp)) {
-                                Text("Audit")
+                                Text(stringResource(R.string.security_audit))
                             }
                             if (snapshot.audit?.state?.signedIn == true) {
-                                TextButton(onClick = viewModel::signOut) { Text("Sign out") }
+                                TextButton(onClick = viewModel::signOut) {
+                                    Text(stringResource(R.string.security_sign_out))
+                                }
                             }
                         }
                     }
@@ -223,7 +231,11 @@ fun SecurityCenterScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
-                            Text("On this device", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                stringResource(R.string.security_data),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                         Spacer(Modifier.height(8.dp))
                         SecurityLine("Database metadata (captions, URLs, dates)", snapshot.databaseBytes.fileSize())
@@ -234,10 +246,13 @@ fun SecurityCenterScreen(
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = onOpenVault, shape = RoundedCornerShape(16.dp)) {
-                                Text("Vault manager")
+                                Text(stringResource(R.string.security_vault))
                             }
                             TextButton(onClick = viewModel::wipePrivate) {
-                                Text("Wipe private data", color = MaterialTheme.colorScheme.error)
+                                Text(
+                                    stringResource(R.string.security_wipe),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
                             }
                         }
                     }
@@ -254,7 +269,11 @@ fun SecurityCenterScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
-                            Text("Network destinations", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                stringResource(R.string.security_network),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                         Spacer(Modifier.height(6.dp))
                         Text("instagram.com and Instagram's CDN — profiles, posts, comments, highlights, media", style = MaterialTheme.typography.bodySmall)
@@ -266,12 +285,12 @@ fun SecurityCenterScreen(
 
             item(key = "actions") {
                 TextButton(onClick = onOpenRateLimits, modifier = Modifier.fillMaxWidth()) {
-                    Text("Open request budget & rate limits")
+                    Text(stringResource(R.string.security_rate_limits))
                 }
                 TextButton(onClick = viewModel::clearLog, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("Clear request log")
+                    Text(stringResource(R.string.security_clear_log))
                 }
             }
 

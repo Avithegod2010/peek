@@ -15,6 +15,7 @@ import com.avi.peek.work.SyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -34,6 +35,11 @@ class PeekApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 }
             }
         })
+        appScope.launch {
+            ServiceLocator.settings.settings.collect { current ->
+                PrivateAccess.setAutoLockMinutes(current.privateAutoLockMinutes)
+            }
+        }
         appScope.launch {
             runCatching { ServiceLocator.accountManager.ensureRestored() }
             runCatching { ServiceLocator.repository.sealPrivateVault() }

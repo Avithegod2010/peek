@@ -44,7 +44,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.avi.peek.R
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -235,7 +237,7 @@ fun PrivateFeedScreen(
 
     Column(Modifier.fillMaxSize().navigationBarsPadding()) {
         SimpleTopBar(
-            title = "Private feed",
+            title = stringResource(R.string.feed_title),
             subtitle = if (hidden) "Locked" else "${media.size} cached private posts",
             onBack = onBack,
         )
@@ -272,7 +274,7 @@ fun PrivateFeedScreen(
                     value = query,
                     onValueChange = viewModel::setQuery,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search private posts") },
+                    placeholder = { Text(stringResource(R.string.feed_search)) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     singleLine = true,
                     shape = RoundedCornerShape(18.dp),
@@ -331,7 +333,9 @@ fun PrivateFeedScreen(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = viewModel::markSeen) { Text("Mark seen") }
+                        TextButton(onClick = viewModel::markSeen) {
+                            Text(stringResource(R.string.feed_mark_seen))
+                        }
                     }
                 }
             }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.PeekDatabase
+import com.avi.peek.data.local.SecureMediaDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -57,6 +58,7 @@ class PrivateBackupManager(
     private val context: Context,
     private val db: PeekDatabase,
 ) {
+    private val mediaDao = SecureMediaDao(db.media())
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val mediaSerializer = ListSerializer(PrivateMediaRecord.serializer())
     private val fileSerializer = ListSerializer(PrivateFileRecord.serializer())
@@ -64,7 +66,7 @@ class PrivateBackupManager(
 
     suspend fun exportTo(uri: Uri, passphrase: String): Int = withContext(Dispatchers.IO) {
         require(passphrase.isNotBlank()) { "Choose a backup passphrase" }
-        val media = db.media().allPrivateMedia().filter { it.isDownloaded }
+        val media = mediaDao.allPrivateMedia().filter { it.isDownloaded }
         val records = media.map { item ->
             PrivateMediaRecord(
                 code = item.code,
@@ -129,8 +131,8 @@ class PrivateBackupManager(
                 ?.name
                 ?.removeSuffix(".vault")
             val downloadDir = File(context.filesDir, "downloads/${record.code}")
-            val existing = db.media().get(record.code)
-            db.media().upsert(
+            val existing = mediaDao.get(record.code)
+            mediaDao.upsert(
                 MediaEntity(
                     code = record.code,
                     pk = record.pk ?: existing?.pk,

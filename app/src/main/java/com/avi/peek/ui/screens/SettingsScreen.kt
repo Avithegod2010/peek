@@ -57,6 +57,7 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.VolumeOff
@@ -89,7 +90,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.avi.peek.R
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import android.os.LocaleList
@@ -190,7 +193,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item(key = "appearance") {
-                SettingsSection("Appearance", Icons.Rounded.Palette) {
+                SettingsSection(stringResource(R.string.settings_appearance), Icons.Rounded.Palette) {
                     ThemeModePicker(settings.themeMode) {
                         viewModel.setThemeMode(it)
                         haptics.tap()
@@ -267,7 +270,7 @@ fun SettingsScreen(
             }
 
             item(key = "sync") {
-                SettingsSection("Sync", Icons.Rounded.Sync) {
+                SettingsSection(stringResource(R.string.settings_sync), Icons.Rounded.Sync) {
                     SettingsSwitch(
                         icon = Icons.Rounded.Refresh,
                         title = "Refresh when Peek opens",
@@ -362,7 +365,7 @@ fun SettingsScreen(
             }
 
             item(key = "playback") {
-                SettingsSection("Playback", Icons.Rounded.PlayCircle) {
+                SettingsSection(stringResource(R.string.settings_playback), Icons.Rounded.PlayCircle) {
                     SettingsSwitch(
                         icon = Icons.Rounded.PlayCircle,
                         title = "Autoplay reels",
@@ -388,7 +391,7 @@ fun SettingsScreen(
             }
 
             item(key = "account") {
-                SettingsSection("Instagram account", Icons.Rounded.AccountCircle) {
+                SettingsSection(stringResource(R.string.settings_account), Icons.Rounded.AccountCircle) {
                     SettingsClickRow(
                         icon = Icons.Rounded.AccountCircle,
                         title = if (account.signedIn) {
@@ -423,7 +426,7 @@ fun SettingsScreen(
             }
 
             item(key = "privacy") {
-                SettingsSection("Privacy & storage", Icons.Rounded.Lock) {
+                SettingsSection(stringResource(R.string.settings_privacy), Icons.Rounded.Lock) {
                     SettingsClickRow(
                         icon = Icons.Rounded.Security,
                         title = "Security center",
@@ -472,6 +475,25 @@ fun SettingsScreen(
                         subtitle = "Encrypt private media at rest with the Android Keystore",
                         checked = settings.privateVault,
                         onCheckedChange = { viewModel.setPrivateVault(it) },
+                    )
+                    SettingsClickRow(
+                        icon = Icons.Rounded.Timer,
+                        title = "Private auto-lock",
+                        subtitle = if (settings.privateAutoLockMinutes == 0) {
+                            "Off · private content stays revealed while Peek is open"
+                        } else {
+                            "Re-hide private content after ${settings.privateAutoLockMinutes} min"
+                        },
+                        onClick = {
+                            val next = when (settings.privateAutoLockMinutes) {
+                                0 -> 1
+                                1 -> 2
+                                2 -> 5
+                                5 -> 15
+                                else -> 0
+                            }
+                            viewModel.setPrivateAutoLockMinutes(next)
+                        },
                     )
                     SettingsClickRow(
                         icon = Icons.Rounded.LockOpen,
@@ -543,7 +565,7 @@ fun SettingsScreen(
             }
 
             item(key = "backup") {
-                SettingsSection("Backup", Icons.Rounded.Backup) {
+                SettingsSection(stringResource(R.string.settings_backup), Icons.Rounded.Backup) {
                     SettingsClickRow(
                         icon = Icons.Rounded.Backup,
                         title = "Export backup",
@@ -590,7 +612,7 @@ fun SettingsScreen(
             }
 
             item(key = "about") {
-                SettingsSection("About", Icons.Rounded.Info) {
+                SettingsSection(stringResource(R.string.settings_about), Icons.Rounded.Info) {
                     SettingsInfoRow(
                         icon = Icons.Rounded.Info,
                         title = "Peek ${BuildConfig.VERSION_NAME}",

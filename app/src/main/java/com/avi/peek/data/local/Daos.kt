@@ -64,6 +64,9 @@ interface ProfileDao {
 
     @Query("SELECT COUNT(*) FROM profiles WHERE isFollowed = 1")
     fun observeFollowingCount(): Flow<Int>
+
+    @Query("SELECT * FROM profiles")
+    suspend fun allOnce(): List<ProfileEntity>
 }
 
 @Dao
@@ -205,6 +208,12 @@ interface MediaDao {
 
     @Query("SELECT * FROM media WHERE code IN (:codes)")
     suspend fun byCodes(codes: List<String>): List<MediaEntity>
+
+    @Query("SELECT * FROM media ORDER BY COALESCE(takenAt, 0) DESC")
+    fun observeAll(): Flow<List<MediaEntity>>
+
+    @Query("SELECT * FROM media")
+    suspend fun allOnce(): List<MediaEntity>
 }
 
 @Dao

@@ -43,7 +43,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.avi.peek.R
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -181,7 +183,7 @@ fun VaultManagerScreen(
 
     Column(Modifier.fillMaxSize().navigationBarsPadding()) {
         SimpleTopBar(
-            title = "Private vault",
+            title = stringResource(R.string.vault_title),
             subtitle = "${entries.size} files · ${total.fileSize()} sealed on this device",
             onBack = onBack,
             actions = {
@@ -198,14 +200,14 @@ fun VaultManagerScreen(
                 modifier = Modifier.weight(1f),
                 onClick = { exportLauncher.launch("peek-private-vault.peekvault") },
                 shape = RoundedCornerShape(16.dp),
-            ) { Text("Export encrypted") }
+            ) { Text(stringResource(R.string.vault_export)) }
             OutlinedButton(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     importLauncher.launch(arrayOf("application/octet-stream", "application/json"))
                 },
                 shape = RoundedCornerShape(16.dp),
-            ) { Text("Import backup") }
+            ) { Text(stringResource(R.string.vault_import)) }
         }
         if (entries.isEmpty()) {
             androidx.compose.material3.Surface(
@@ -214,10 +216,14 @@ fun VaultManagerScreen(
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
                 Column(Modifier.padding(18.dp)) {
-                    Text("No private downloads yet", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.vault_empty_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Private downloads are sealed with Android Keystore AES-GCM. Enable private downloads in Settings → Privacy & storage, unlock private content, then download a private post.",
+                        stringResource(R.string.vault_empty_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -266,7 +272,7 @@ fun VaultManagerScreen(
                                     ) {
                                         Icon(Icons.Rounded.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("Open")
+                                        Text(stringResource(R.string.vault_open))
                                     }
                                     OutlinedButton(
                                         enabled = !busy,
@@ -275,13 +281,13 @@ fun VaultManagerScreen(
                                     ) {
                                         Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("Seal")
+                                        Text(stringResource(R.string.vault_seal))
                                     }
                                     TextButton(
                                         enabled = !busy,
                                         onClick = { confirmDelete = username },
                                     ) {
-                                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                                        Text(stringResource(R.string.vault_delete), color = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
@@ -357,7 +363,7 @@ fun VaultManagerScreen(
                 ) { Text(if (pendingExport != null) "Export" else "Restore") }
             },
             dismissButton = {
-                TextButton(onClick = { showPassphrase = false; passphrase = "" }) { Text("Cancel") }
+                TextButton(onClick = { showPassphrase = false; passphrase = "" }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -371,9 +377,9 @@ fun VaultManagerScreen(
                 TextButton(onClick = {
                     confirmDelete = null
                     viewModel.delete(username)
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.vault_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

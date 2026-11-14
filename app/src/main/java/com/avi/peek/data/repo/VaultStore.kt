@@ -1,8 +1,11 @@
 package com.avi.peek.data.repo
 
 import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
+import android.security.keystore.UserNotAuthenticatedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -14,15 +17,24 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
+class VaultLockedException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
 /**
  * AES-GCM at-rest storage for downloads that belong to private profiles.
  *
  * Files are sealed into filesDir/private_vault/<code>/<name>.vault and the
  * plain files are removed. Opening the vault decrypts them back into the
- * normal download directory for playback. The key never leaves Android
- * Keystore.
+ * normal download directory for playback.
+ *
+ * The data key lives in Android Keystore and is bound to user authentication:
+ * on Android 11+ it can only be used after a biometric or device-credential
+ * check, and it is invalidated when biometrics are re-enrolled. The app keeps
+ * the unlock window short and re-locks private content on a timer.
  */
-class VaultStore(context: Context) {
+class VaultStore(
+    context: Context,
+    private val requireUserAuth: Boolean = true,
+) {
 
     private val root = File(context.filesDir, "private_vault").apply { mkdirs() }
 
@@ -83,6 +95,12 @@ class VaultStore(context: Context) {
                     source.inputStream().buffered().use { input -> input.copyTo(encrypted) }
                 }
             }
+        } catch (e: UserNotAuthenticatedException) {
+            target.delete()
+            throw VaultLockedException("Unlock private content with your biometric before using the vault.", e)
+        } catch (e: KeyPermanentlyInvalidatedException) {
+            target.delete()
+            throw VaultLockedException("Biometrics changed, so the old vault key was invalidated.", e)
         } catch (e: Exception) {
             target.delete()
             throw e
@@ -91,51 +109,89 @@ class VaultStore(context: Context) {
 
     private fun decrypt(source: File, target: File) {
         try {
-            source.inputStream().buffered().use { input ->
-                val iv = ByteArray(IV_BYTES)
-                var read = 0
-                while (read < IV_BYTES) {
-                    val step = input.read(iv, read, IV_BYTES - read)
-                    if (step <= 0) error("Incomplete vault file")
-                    read += step
-                }
-                val cipher = Cipher.getInstance(TRANSFORMATION)
-                cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(TAG_BITS, iv))
-                target.parentFile?.mkdirs()
-                CipherInputStream(input, cipher).use { decrypted ->
-                    target.outputStream().buffered().use { output -> decrypted.copyTo(output) }
-                }
-            }
+            decryptWith(source, target, key())
+        } catch (e: UserNotAuthenticatedException) {
+            target.delete()
+            throw VaultLockedException("Unlock private content with your biometric before opening the vault.", e)
+        } catch (e: KeyPermanentlyInvalidatedException) {
+            target.delete()
+            throw VaultLockedException("Biometrics changed, so the old vault key was invalidated.", e)
         } catch (e: Exception) {
             target.delete()
-            throw e
+            // Files sealed by older Peek builds used a key without user
+            // authentication. Try that key once so upgrades don't lose access.
+            runCatching { decryptWith(source, target, legacyKey()) }
+                .onFailure {
+                    target.delete()
+                    throw e
+                }
+        }
+    }
+
+    private fun decryptWith(source: File, target: File, secretKey: SecretKey) {
+        source.inputStream().buffered().use { input ->
+            val iv = ByteArray(IV_BYTES)
+            var read = 0
+            while (read < IV_BYTES) {
+                val step = input.read(iv, read, IV_BYTES - read)
+                if (step <= 0) error("Incomplete vault file")
+                read += step
+            }
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(TAG_BITS, iv))
+            target.parentFile?.mkdirs()
+            CipherInputStream(input, cipher).use { decrypted ->
+                target.outputStream().buffered().use { output -> decrypted.copyTo(output) }
+            }
         }
     }
 
     private fun key(): SecretKey {
+        val alias = if (requireUserAuth) KEY_ALIAS_AUTH else KEY_ALIAS_TEST
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey?.let { return it }
+        (keyStore.getEntry(alias, null) as? KeyStore.SecretKeyEntry)?.secretKey?.let { return it }
         val generator = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
             "AndroidKeyStore",
         )
-        generator.init(
-            KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
-                .build(),
+        val builder = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
+            .setRandomizedEncryptionRequired(true)
+        if (requireUserAuth) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                builder.setUserAuthenticationParameters(
+                    AUTH_WINDOW_SECONDS,
+                    KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL,
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                builder.setUserAuthenticationValidityDurationSeconds(AUTH_WINDOW_SECONDS)
+            }
+            builder.setInvalidatedByBiometricEnrollment(true)
+        }
+        generator.init(builder.build())
         return generator.generateKey()
     }
 
+    private fun legacyKey(): SecretKey {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (keyStore.getEntry(KEY_ALIAS_LEGACY, null) as? KeyStore.SecretKeyEntry)?.secretKey
+            ?.let { return it }
+        throw IllegalStateException("No legacy vault key on this device")
+    }
+
     private companion object {
-        const val KEY_ALIAS = "peek_private_vault"
+        const val KEY_ALIAS_AUTH = "peek_private_vault_v2"
+        const val KEY_ALIAS_LEGACY = "peek_private_vault"
+        const val KEY_ALIAS_TEST = "peek_private_vault_test"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
         const val TAG_BITS = 128
+        const val AUTH_WINDOW_SECONDS = 300
     }
 }

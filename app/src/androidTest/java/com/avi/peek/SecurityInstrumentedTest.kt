@@ -3,6 +3,7 @@ package com.avi.peek
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.avi.peek.data.local.FieldCipher
 import com.avi.peek.data.local.SessionCookie
 import com.avi.peek.data.local.SessionStore
 import com.avi.peek.data.local.StoredSession
@@ -20,7 +21,7 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class SecurityInstrumentedTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val vault = VaultStore(context)
+    private val vault = VaultStore(context, requireUserAuth = false)
 
     @After
     fun cleanup() {
@@ -59,6 +60,15 @@ class SecurityInstrumentedTest {
         source.delete()
         sourceDir.delete()
         root.delete()
+    }
+
+    @Test
+    fun metadataFieldsAreEncryptedAtRest() {
+        val sealed = FieldCipher.encrypt("private caption")
+        assertNotNull(sealed)
+        assertTrue(sealed!!.startsWith("enc:v1:"))
+        assertFalse(sealed.contains("private caption"))
+        assertTrue(FieldCipher.decrypt(sealed) == "private caption")
     }
 
     @Test

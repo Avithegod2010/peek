@@ -75,6 +75,10 @@ class SettingsViewModel : ViewModel() {
     fun setPrivateDownloadPolicy(value: PrivateDownloadPolicy) =
         viewModelScope.launch { store.setPrivateDownloadPolicy(value) }
     fun setPrivateVault(value: Boolean) = viewModelScope.launch { store.setPrivateVault(value) }
+    fun setPrivateAutoLockMinutes(value: Int) = viewModelScope.launch {
+        store.setPrivateAutoLockMinutes(value)
+        PrivateAccess.setAutoLockMinutes(value)
+    }
     fun setCustomAccent(value: Long?) = viewModelScope.launch { store.setCustomAccent(value) }
     fun setAccentSaturation(value: Float) = viewModelScope.launch { store.setAccentSaturation(value) }
     fun setAccentValue(value: Float) = viewModelScope.launch { store.setAccentValue(value) }

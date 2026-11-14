@@ -43,7 +43,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.avi.peek.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -133,7 +135,7 @@ fun StoriesScreen(
                         Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(42.dp))
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "No viewable stories",
+                            stringResource(R.string.stories_no_stories),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
