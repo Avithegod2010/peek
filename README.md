@@ -199,6 +199,14 @@ This mode is additive. It is used only to request private profiles your own sess
 
 Following, likes, bookmarks, downloads and local search history never leave the device. Peek has no analytics, no crash reporting and no Peek server. Profile and media requests go to `instagram.com` / Instagram's CDN. Name discovery sends the search phrase to DuckDuckGo's public HTML endpoint, and then reads the discovered Instagram profile directly. If you use the optional signed-in mode, your Instagram session cookies are encrypted locally with the Android Keystore and are never sent anywhere except Instagram itself.
 
+## Security notes
+
+- Android cloud/adb backup is disabled (`android:allowBackup="false"`) because Peek stores follows, saved posts and downloads locally.
+- Private downloads are encrypted at rest with an Android Keystore AES-GCM vault. The Room metadata database (captions, URLs, dates) is app-private but not separately encrypted.
+- The GitHub APK assets up to v1.4.0 are **debug builds** signed with the standard debug key. Prefer an F-Droid or properly signed release build for production use.
+- The repository contains no signing keystores, API keys, session cookies or account credentials.
+- Name discovery sends the search phrase to DuckDuckGo's public HTML endpoint; profile and media requests go to Instagram. There is no Peek server.
+
 ## Downloads and fair use
 
 - Peek now walks Instagram’s logged-out timeline pagination, so you can browse a public profile’s full public grid. Instagram can still stop pagination or rate-limit guests at any time.
