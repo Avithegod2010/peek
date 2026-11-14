@@ -197,7 +197,7 @@ This mode is additive. It is used only to request private profiles your own sess
 
 ## Privacy
 
-Following, likes, bookmarks, downloads and search history never leave the device. Peek has no analytics, no crash reporting and no server. Network requests go only to `instagram.com` / Instagram's CDN. If you use the optional signed-in mode, your Instagram session cookies are encrypted locally with the Android Keystore and are never sent anywhere except Instagram itself.
+Following, likes, bookmarks, downloads and local search history never leave the device. Peek has no analytics, no crash reporting and no Peek server. Profile and media requests go to `instagram.com` / Instagram's CDN. Name discovery sends the search phrase to DuckDuckGo's public HTML endpoint, and then reads the discovered Instagram profile directly. If you use the optional signed-in mode, your Instagram session cookies are encrypted locally with the Android Keystore and are never sent anywhere except Instagram itself.
 
 ## Downloads and fair use
 
