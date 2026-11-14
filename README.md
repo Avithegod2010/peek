@@ -155,9 +155,9 @@ A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are 
 | --- | --- |
 | <img src="docs/screenshots/highlight.png" width="330" alt="Highlight viewer" /> | <img src="docs/screenshots/storage.png" width="330" alt="Profile storage" /> |
 
-| Optional Instagram account | Thirteen palettes |
-| --- | --- |
-| <img src="docs/screenshots/account.png" width="330" alt="Optional Instagram account" /> | <img src="docs/screenshots/themes.png" width="330" alt="Palette picker" /> |
+| Optional Instagram account |
+| --- |
+| <img src="docs/screenshots/account.png" width="330" alt="Optional Instagram account" /> |
 
 ## Build
 

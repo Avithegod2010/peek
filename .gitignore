@@ -19,3 +19,7 @@ kotlin-js-store/
 *.apk
 assemble-*.txt
 compile-*.txt
+package-*.txt
+history-audit.txt
+.agents/
+skills-lock.json

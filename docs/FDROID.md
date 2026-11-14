@@ -8,7 +8,7 @@ recipe.
 
 Requirements:
 
-- JDK 17 (`E:\Dev\jdk\jdk-17.0.20+8` on the development machine, any JDK 17 on CI)
+- JDK 17 (`JAVA_HOME` must point at any JDK 17 installation)
 - Android SDK 36
 - Gradle wrapper 8.14.3 (checked in)
 - Network access only for Gradle dependency resolution; the app itself reads
@@ -17,7 +17,7 @@ Requirements:
 Deterministic release build:
 
 ```powershell
-$env:JAVA_HOME = "E:\Dev\jdk\jdk-17.0.20+8"
+$env:JAVA_HOME = "$env:ProgramFiles\Java\jdk-17"
 .\gradlew.bat clean :app:assembleRelease --no-daemon --offline
 ```
 

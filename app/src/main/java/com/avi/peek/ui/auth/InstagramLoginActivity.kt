@@ -261,7 +261,7 @@ class InstagramLoginActivity : ComponentActivity() {
     companion object {
         const val EXTRA_COOKIES = "instagram_cookies"
         private const val MOBILE_USER_AGENT =
-            "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 " +
+            "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
     }
 }
