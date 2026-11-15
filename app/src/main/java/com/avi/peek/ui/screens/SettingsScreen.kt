@@ -77,7 +77,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -136,6 +138,7 @@ fun SettingsScreen(
     val haptics = LocalPeekHaptics.current
     val context = LocalContext.current
     var confirmWipe by remember { mutableStateOf(false) }
+    var settingsQuery by remember { mutableStateOf("") }
 
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -187,11 +190,23 @@ fun SettingsScreen(
             subtitle = "Tune the quiet",
             onBack = onBack,
         )
+        CompositionLocalProvider(LocalSettingsQuery provides settingsQuery) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            item(key = "settings-search") {
+                OutlinedTextField(
+                    value = settingsQuery,
+                    onValueChange = { settingsQuery = it.take(40) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search settings") },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                )
+            }
             item(key = "appearance") {
                 SettingsSection(stringResource(R.string.settings_appearance), Icons.Rounded.Palette) {
                     ThemeModePicker(settings.themeMode) {
@@ -657,6 +672,7 @@ fun SettingsScreen(
                 )
             }
         }
+        }
     }
 
     if (confirmWipe) {
@@ -756,6 +772,16 @@ private fun SettingsSection(
     }
 }
 
+private val LocalSettingsQuery = compositionLocalOf { "" }
+
+@Composable
+private fun matchesSettingsQuery(title: String, subtitle: String): Boolean {
+    val query = LocalSettingsQuery.current
+    return query.isBlank() ||
+        title.contains(query, ignoreCase = true) ||
+        subtitle.contains(query, ignoreCase = true)
+}
+
 @Composable
 private fun SettingsSwitch(
     icon: ImageVector,
@@ -764,6 +790,7 @@ private fun SettingsSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    if (!matchesSettingsQuery(title, subtitle)) return
     Row(
         Modifier
             .fillMaxWidth()
@@ -783,6 +810,7 @@ private fun SettingsSwitch(
 
 @Composable
 private fun SettingsInfoRow(icon: ImageVector, title: String, subtitle: String) {
+    if (!matchesSettingsQuery(title, subtitle)) return
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -804,6 +832,7 @@ private fun SettingsClickRow(
     destructive: Boolean = false,
     onClick: () -> Unit,
 ) {
+    if (!matchesSettingsQuery(title, subtitle)) return
     Row(
         Modifier
             .fillMaxWidth()
