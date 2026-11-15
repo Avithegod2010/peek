@@ -45,6 +45,36 @@ The script checks the signature, reads the package metadata and refuses a debugg
 
 Debug APKs up to v1.4.0 used the standard Android debug key, so Android will not install a release-signed APK over them. Uninstall the debug build first; local data is removed with it. Release-signed builds from v1.5.0 onward update each other in place.
 
+## GitHub Actions secrets
+
+The tag workflow `.github/workflows/release.yml` needs four repository secrets:
+
+| Secret | Value |
+| --- | --- |
+| `PEEK_KEYSTORE_BASE64` | Base64 of `%USERPROFILE%\.peek\peek-release.jks` |
+| `PEEK_KEYSTORE_PASSWORD` | keystore password |
+| `PEEK_KEY_ALIAS` | `peek-release` |
+| `PEEK_KEY_PASSWORD` | key password |
+
+Create the base64 value locally without writing it into the repository:
+
+```powershell
+[Convert]::ToBase64String(
+  [IO.File]::ReadAllBytes("$env:USERPROFILE\.peek\peek-release.jks")
+) | Set-Clipboard
+```
+
+Add the secrets under **Settings → Secrets and variables → Actions → New repository secret**. The workflow decodes the keystore into the runner workspace, builds `assembleRelease`, verifies the signature and non-debuggable badge, writes `SHA256SUMS.txt`, uploads the artifact and creates the GitHub release. The temporary keystore is deleted with an `always()` step.
+
+Push a matching tag to start it:
+
+```powershell
+git tag -a v1.6.0 -m "Peek 1.6.0"
+git push origin v1.6.0
+```
+
+The tag must equal `versionName` in `app/build.gradle.kts`. If `docs/releases/v1.6.0.md` exists, the release is published with those notes; otherwise the workflow generates notes from commits and creates a **draft** for review.
+
 ## GitHub releases
 
 Upload only the signed release APK and its `SHA256SUMS.txt`. Never attach the keystore, the properties file, or an unsigned/debug APK to a public release.
