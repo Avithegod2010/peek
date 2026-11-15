@@ -14,11 +14,12 @@ import javax.crypto.spec.GCMParameterSpec
  *
  * Sensitive strings (captions, media URLs, location, audio, profile text and
  * local file paths) are encrypted with an AES-256-GCM key that is generated in
- * and never leaves Android Keystore. Ciphertexts carry an `enc:v1:` prefix so
+ * and never leaves Android Keystore. Ciphertexts carry an `enc:vN:` prefix so
  * plaintext rows written by older versions can still be read and are sealed on
- * their next write. This key is intentionally not biometric-bound: it protects
- * data at rest, while private content visibility and the vault use their own
- * unlock flow.
+ * their next write. The prefix also allows key rotation without a destructive
+ * migration. This key is intentionally not biometric-bound: it protects data
+ * at rest, while private content visibility and the vault use their own unlock
+ * flow.
  */
 object FieldCipher {
     private const val BASE_ALIAS = "peek_metadata_key"
