@@ -46,3 +46,5 @@ These tests are written and compile, but have **not been run on hardware**:
 - Clipboard auto-clear after one minute
 - Download queue restoration after process death
 - Story pager, comment threads and video playback
+- Calm mode, settings search, saved-post notes, vault search/sort and the request timeline
+- Feed prefetch hit rate and player pause/resume across background/foreground
