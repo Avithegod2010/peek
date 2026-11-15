@@ -62,7 +62,7 @@ jobs:
       - name: Build signed release
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleRelease --no-daemon --stacktrace
 
       - name: Verify signature, package and debuggable state
         run: |
