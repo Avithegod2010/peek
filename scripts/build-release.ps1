@@ -31,13 +31,19 @@ PEEK_KEY_PASSWORD=$password
     Write-Host "Back up both files securely. Losing them means you cannot update the app in place."
 }
 
-$config = ConvertFrom-StringData (Get-Content $PropertiesPath -Raw)
+$config = @{}
+Get-Content $PropertiesPath | ForEach-Object {
+    $separator = $_.IndexOf("=")
+    if ($separator -gt 0) {
+        $config[$_.Substring(0, $separator).Trim()] = $_.Substring($separator + 1).Trim()
+    }
+}
 $env:PEEK_KEYSTORE = $config["PEEK_KEYSTORE"]
 $env:PEEK_KEYSTORE_PASSWORD = $config["PEEK_KEYSTORE_PASSWORD"]
 $env:PEEK_KEY_ALIAS = $config["PEEK_KEY_ALIAS"]
 $env:PEEK_KEY_PASSWORD = $config["PEEK_KEY_PASSWORD"]
 
-& $gradlew :app:assembleRelease --no-daemon --console=plain
+& $gradlew :app:assembleRelease --no-daemon --console=plain -Pkotlin.compiler.execution.strategy=in-process
 if ($LASTEXITCODE -ne 0) { throw "Release build failed." }
 
 $apk = Join-Path (Get-Location) "app\build\outputs\apk\release\app-release.apk"
@@ -49,6 +55,9 @@ $target = Join-Path $outputDir "peek-$Version-release.apk"
 Copy-Item $apk $target -Force
 $hash = (Get-FileHash $target -Algorithm SHA256).Hash.ToLowerInvariant()
 "$hash  peek-$Version-release.apk" | Set-Content (Join-Path $outputDir "SHA256SUMS.txt") -Encoding ASCII
+
+& (Join-Path (Get-Location) "scripts\verify-release.ps1") -Apk $target
+if ($LASTEXITCODE -ne 0) { throw "Release verification failed." }
 
 Write-Host ""
 Write-Host "Signed release ready:"
