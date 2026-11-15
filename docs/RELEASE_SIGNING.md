@@ -33,6 +33,18 @@ The script sets these from the local secrets file.
 
 The release build is non-debuggable and R8-minified. Do not publish `app-debug.apk` as a production artifact.
 
+Verify an APK before uploading it:
+
+```powershell
+.\scripts\verify-release.ps1 -Apk .\release\peek-1.5.0-release.apk
+```
+
+The script checks the signature, reads the package metadata and refuses a debuggable APK.
+
+## Upgrading from a debug build
+
+Debug APKs up to v1.4.0 used the standard Android debug key, so Android will not install a release-signed APK over them. Uninstall the debug build first; local data is removed with it. Release-signed builds from v1.5.0 onward update each other in place.
+
 ## GitHub releases
 
 Upload only the signed release APK and its `SHA256SUMS.txt`. Never attach the keystore, the properties file, or an unsigned/debug APK to a public release.

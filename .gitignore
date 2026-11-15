@@ -25,5 +25,6 @@ compile-*.txt
 package-*.txt
 history-audit.txt
 test-*.txt
+release-*.txt
 .agents/
 skills-lock.json

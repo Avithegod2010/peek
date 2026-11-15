@@ -84,8 +84,8 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - Reels tab with a vertically snapping player and action rail
 - Double-tap like, read-only comments sheet, share, bookmark, download
 - **Save to gallery** from a post or from the Offline library; photos go to `Pictures/Peek/<username>`, videos to `Movies/Peek/<username>`
-- **Read-only comments** with an Instagram session: author, avatar, text, date and like count, with no reply box
-- **Story-style highlight viewer** with segmented progress, previous/next controls, local seen marks and a session-aware API fallback
+- **Read-only comments** with an Instagram session: author, avatar, text, date, like count and threaded replies, cached for offline reading and refreshed only when you ask
+- **Story-style highlight and story viewer** with segmented progress, previous/next controls, local seen marks and a session-aware API fallback
 - Caption, date, location, like count, comment count and audio
 
 ### Library
@@ -95,7 +95,10 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Private circles** — local groups, close-friends labels and a combined cached timeline
 - **Private feed** — a separate local timeline of posts from private accounts you follow
 - **Panic mode** — hide private profiles, posts and downloads until biometric unlock; also available as a Quick Settings tile
-- **Encrypted private vault** — private downloads are sealed with Android Keystore AES-GCM at rest and only opened after biometric unlock
+- **Encrypted private vault** - private downloads are sealed with Android Keystore AES-GCM at rest, the data key is bound to biometric/device authentication, and the vault re-locks on a timer
+- **Security center** - see session state, cookie names, on-device sizes, network destinations and recent request outcomes, then wipe private data or sign out in one place
+- **Vault manager** - per-profile sealed sizes with open, seal and delete actions, plus passphrase-encrypted vault export/import
+- **Private-feed upgrades** - search, media-type filters, sorting, circles, "new since last visit", multi-select downloads and collections
 - **Private-safe downloads** — private media is never downloaded by default and never copied to the public gallery
 - **Request budget** — hourly caps, quiet hours, exponential backoff and pause-on-rate-limit controls
 - **Rate-limit dashboard** — recent profile/page/post outcomes, rate-limit count, pause-all downloads and background-sync control
@@ -105,15 +108,19 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Passphrase-encrypted backups** (AES-256-GCM + PBKDF2), with legacy JSON restore
 - **HTML and JSON archive export** of cached, saved and liked posts, plus per-profile and selected-post archives with incremental “only new since last export”
 - **Gallery albums** under `Pictures/Peek/<username>` and `Movies/Peek/<username>`, with optional JSON caption/date sidecars
-- Settings for theme, palette, custom accent hue, text scale, high contrast, haptics, motion, sync depth, Wi-Fi only, charge-only downloads, notifications and storage
-- **Backup/export privacy controls** — private content is excluded by default from backups and archives
+- Settings for theme, palette, custom accent hue/saturation/brightness/hex, text scale, high contrast, haptics, motion, sync depth, Wi-Fi only, charge-only downloads, notifications, cache limits, private auto-lock and storage
+- **Backup/export privacy controls** - private content is excluded by default from backups and archives
+- **Encrypted private backup v2** - private metadata and sealed vault files under a separate passphrase
 - Biometric / device-lock app lock, a private-vault biometric gate and a one-handed Home search action
+- App language picker for English, Hindi, Spanish, Portuguese, Arabic and Japanese, with RTL layouts
 - Adaptive navigation rail on tablets and foldables, bottom bar on phones, and a two-pane profile on wide screens
 
 ### Under the hood
 - Guest-access parsing of Instagram's server-rendered public pages
 - Name discovery through a public web search, then direct public-profile reading
 - Room database as the single source of truth; DataStore for settings, aliases and saved searches
+- Field-level AES-GCM encryption for sensitive Room metadata through secure DAO decorators, so captions and URLs are never stored as plaintext
+- Unit, instrumentation and CI checks for crypto round-trips, SSR parsing, the vault and private access
 - WorkManager background sync with optional new-post notifications
 - Coil image cache with stable cache keys, Media3 ExoPlayer video
 - Offline banner and graceful handling of rate limits / private accounts
@@ -123,7 +130,7 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 
 ## Roadmap
 
-A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are intentionally partial: Instagram does not expose comment text to guests, so Peek shows the public count and a read-only hand-off; video captions fall back to the post caption because no subtitle track is published. Full translation and a high-contrast runtime audit are still on the list.
+A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are intentionally partial: Instagram does not expose comment text to guests, so Peek shows the public count and a read-only hand-off; video captions fall back to the post caption because no subtitle track is published. The six supported languages cover navigation, settings, the security center, the vault and the private feed; the remaining screen copy is still English. A high-contrast runtime audit is still on the list.
 
 ## Screenshots
 
@@ -171,6 +178,8 @@ cd peek
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+Release builds use a keystore that lives outside the repository. See [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md) and run `./scripts/build-release.ps1 -Version <version>` to produce a signed, non-debuggable APK plus `SHA256SUMS.txt`. Never publish a debug APK as a production download.
+
 Minimum Android version: **8.0 (API 26)**. Material You dynamic colour is used on Android 12+; older devices get a hand-tuned fallback palette.
 
 ### F-Droid
@@ -202,8 +211,9 @@ Following, likes, bookmarks, downloads and local search history never leave the 
 ## Security notes
 
 - Android cloud/adb backup is disabled (`android:allowBackup="false"`) because Peek stores follows, saved posts and downloads locally.
-- Private downloads are encrypted at rest with an Android Keystore AES-GCM vault. The Room metadata database (captions, URLs, dates) is app-private but not separately encrypted.
-- The GitHub APK assets up to v1.4.0 are **debug builds** signed with the standard debug key. Prefer an F-Droid or properly signed release build for production use.
+- Private downloads are encrypted at rest with an Android Keystore AES-GCM vault. The vault key is bound to biometric/device authentication with a five-minute auth window and is invalidated when biometrics are re-enrolled.
+- Sensitive Room metadata (captions, profile text, media URLs, location, audio and local file paths) is field-level encrypted with a separate Android Keystore AES-GCM key. Older plaintext rows are re-sealed on their next write.
+- The GitHub APK assets up to v1.4.0 are **debug builds** signed with the standard debug key. Releases from v1.5.0 onward are signed, non-debuggable release builds with published SHA-256 checksums; prefer those or an F-Droid build for production use.
 - The repository contains no signing keystores, API keys, session cookies or account credentials.
 - Name discovery sends the search phrase to DuckDuckGo's public HTML endpoint; profile and media requests go to Instagram. There is no Peek server.
 
