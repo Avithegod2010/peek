@@ -18,7 +18,7 @@ jobs:
       - name: Unit tests, debug build and test compilation
         run: |
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug compileDebugAndroidTestKotlin lintDebug --no-daemon --stacktrace
+          ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest compileDebugAndroidTestKotlin lintDebug --no-daemon --stacktrace
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -39,4 +39,13 @@ jobs:
         with:
           name: room-schemas
           path: app/schemas
+          if-no-files-found: ignore
+      - name: Upload debug APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apks
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           if-no-files-found: ignore
