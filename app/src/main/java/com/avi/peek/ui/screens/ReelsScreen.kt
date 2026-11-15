@@ -1,5 +1,3 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
-
 package com.avi.peek.ui.screens
 
 import android.app.PictureInPictureParams
@@ -214,6 +212,7 @@ fun ReelsScreen(
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 private fun ReelPage(
     post: FeedPost,

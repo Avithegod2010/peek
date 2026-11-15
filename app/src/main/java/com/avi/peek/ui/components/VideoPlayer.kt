@@ -1,5 +1,3 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
-
 package com.avi.peek.ui.components
 
 import android.view.ViewGroup
@@ -141,6 +139,7 @@ fun rememberPeekPlayer(
     return state
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun PeekVideoSurface(
     state: PeekPlayerState?,
