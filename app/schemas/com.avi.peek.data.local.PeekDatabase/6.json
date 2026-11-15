@@ -1,0 +1,633 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 6,
+    "identityHash": "cea7234ed9276a7f68dd3161f45d6933",
+    "entities": [
+      {
+        "tableName": "profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`username` TEXT NOT NULL, `pk` TEXT, `userId` TEXT, `fullName` TEXT NOT NULL, `biography` TEXT NOT NULL, `profilePicUrl` TEXT, `isPrivate` INTEGER NOT NULL, `isVerified` INTEGER NOT NULL, `followerCount` INTEGER NOT NULL, `followingCount` INTEGER NOT NULL, `postCount` INTEGER NOT NULL, `hasMorePosts` INTEGER NOT NULL, `nextCursor` TEXT, `bioLinksJson` TEXT NOT NULL, `highlightsJson` TEXT NOT NULL, `hasClips` INTEGER NOT NULL, `latestReelMedia` INTEGER, `isFollowed` INTEGER NOT NULL, `followedAt` INTEGER, `isPinned` INTEGER NOT NULL, `addedAt` INTEGER NOT NULL, `lastFetchedAt` INTEGER NOT NULL, `lastViewedAt` INTEGER, `lastError` TEXT, `source` TEXT NOT NULL, PRIMARY KEY(`username`))",
+        "fields": [
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pk",
+            "columnName": "pk",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fullName",
+            "columnName": "fullName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "biography",
+            "columnName": "biography",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profilePicUrl",
+            "columnName": "profilePicUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isPrivate",
+            "columnName": "isPrivate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isVerified",
+            "columnName": "isVerified",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "followerCount",
+            "columnName": "followerCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "followingCount",
+            "columnName": "followingCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "postCount",
+            "columnName": "postCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasMorePosts",
+            "columnName": "hasMorePosts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextCursor",
+            "columnName": "nextCursor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "bioLinksJson",
+            "columnName": "bioLinksJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "highlightsJson",
+            "columnName": "highlightsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasClips",
+            "columnName": "hasClips",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latestReelMedia",
+            "columnName": "latestReelMedia",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isFollowed",
+            "columnName": "isFollowed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "followedAt",
+            "columnName": "followedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isPinned",
+            "columnName": "isPinned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "addedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastFetchedAt",
+            "columnName": "lastFetchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastViewedAt",
+            "columnName": "lastViewedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "lastError",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "username"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_profiles_isFollowed",
+            "unique": false,
+            "columnNames": [
+              "isFollowed"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_profiles_isFollowed` ON `${TABLE_NAME}` (`isFollowed`)"
+          },
+          {
+            "name": "index_profiles_lastFetchedAt",
+            "unique": false,
+            "columnNames": [
+              "lastFetchedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_profiles_lastFetchedAt` ON `${TABLE_NAME}` (`lastFetchedAt`)"
+          },
+          {
+            "name": "index_profiles_lastViewedAt",
+            "unique": false,
+            "columnNames": [
+              "lastViewedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_profiles_lastViewedAt` ON `${TABLE_NAME}` (`lastViewedAt`)"
+          },
+          {
+            "name": "index_profiles_isFollowed_isPinned_latestReelMedia",
+            "unique": false,
+            "columnNames": [
+              "isFollowed",
+              "isPinned",
+              "latestReelMedia"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_profiles_isFollowed_isPinned_latestReelMedia` ON `${TABLE_NAME}` (`isFollowed`, `isPinned`, `latestReelMedia`)"
+          }
+        ]
+      },
+      {
+        "tableName": "media",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`code` TEXT NOT NULL, `pk` TEXT, `username` TEXT NOT NULL, `userAvatar` TEXT, `userFullName` TEXT NOT NULL, `userVerified` INTEGER NOT NULL, `isPrivate` INTEGER NOT NULL, `mediaType` INTEGER NOT NULL, `productType` TEXT, `caption` TEXT, `displayUrl` TEXT, `videoUrl` TEXT, `likeCount` INTEGER, `commentCount` INTEGER, `takenAt` INTEGER, `fetchedAt` INTEGER NOT NULL, `detailFetchedAt` INTEGER, `carouselCount` INTEGER NOT NULL, `childrenJson` TEXT, `width` INTEGER, `height` INTEGER, `accessibilityCaption` TEXT, `locationName` TEXT, `audioTitle` TEXT, `audioArtist` TEXT, `isLiked` INTEGER NOT NULL, `isSaved` INTEGER NOT NULL, `savedAt` INTEGER, `isDownloaded` INTEGER NOT NULL, `downloadedAt` INTEGER, `localImagePathsJson` TEXT, `localVideoPath` TEXT, `sortIndex` INTEGER NOT NULL, PRIMARY KEY(`code`))",
+        "fields": [
+          {
+            "fieldPath": "code",
+            "columnName": "code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pk",
+            "columnName": "pk",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userAvatar",
+            "columnName": "userAvatar",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "userFullName",
+            "columnName": "userFullName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userVerified",
+            "columnName": "userVerified",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPrivate",
+            "columnName": "isPrivate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaType",
+            "columnName": "mediaType",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "productType",
+            "columnName": "productType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "caption",
+            "columnName": "caption",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "displayUrl",
+            "columnName": "displayUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "videoUrl",
+            "columnName": "videoUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "likeCount",
+            "columnName": "likeCount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "commentCount",
+            "columnName": "commentCount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "takenAt",
+            "columnName": "takenAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "fetchedAt",
+            "columnName": "fetchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detailFetchedAt",
+            "columnName": "detailFetchedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "carouselCount",
+            "columnName": "carouselCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childrenJson",
+            "columnName": "childrenJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "accessibilityCaption",
+            "columnName": "accessibilityCaption",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "locationName",
+            "columnName": "locationName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "audioTitle",
+            "columnName": "audioTitle",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "audioArtist",
+            "columnName": "audioArtist",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isLiked",
+            "columnName": "isLiked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSaved",
+            "columnName": "isSaved",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "savedAt",
+            "columnName": "savedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isDownloaded",
+            "columnName": "isDownloaded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "downloadedAt",
+            "columnName": "downloadedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "localImagePathsJson",
+            "columnName": "localImagePathsJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "localVideoPath",
+            "columnName": "localVideoPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sortIndex",
+            "columnName": "sortIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "code"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_media_username",
+            "unique": false,
+            "columnNames": [
+              "username"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_username` ON `${TABLE_NAME}` (`username`)"
+          },
+          {
+            "name": "index_media_takenAt",
+            "unique": false,
+            "columnNames": [
+              "takenAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_takenAt` ON `${TABLE_NAME}` (`takenAt`)"
+          },
+          {
+            "name": "index_media_isSaved",
+            "unique": false,
+            "columnNames": [
+              "isSaved"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_isSaved` ON `${TABLE_NAME}` (`isSaved`)"
+          },
+          {
+            "name": "index_media_isDownloaded",
+            "unique": false,
+            "columnNames": [
+              "isDownloaded"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_isDownloaded` ON `${TABLE_NAME}` (`isDownloaded`)"
+          },
+          {
+            "name": "index_media_isPrivate",
+            "unique": false,
+            "columnNames": [
+              "isPrivate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_isPrivate` ON `${TABLE_NAME}` (`isPrivate`)"
+          },
+          {
+            "name": "index_media_username_takenAt",
+            "unique": false,
+            "columnNames": [
+              "username",
+              "takenAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_username_takenAt` ON `${TABLE_NAME}` (`username`, `takenAt`)"
+          },
+          {
+            "name": "index_media_isLiked",
+            "unique": false,
+            "columnNames": [
+              "isLiked"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_isLiked` ON `${TABLE_NAME}` (`isLiked`)"
+          },
+          {
+            "name": "index_media_downloadedAt",
+            "unique": false,
+            "columnNames": [
+              "downloadedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_downloadedAt` ON `${TABLE_NAME}` (`downloadedAt`)"
+          },
+          {
+            "name": "index_media_isSaved_savedAt",
+            "unique": false,
+            "columnNames": [
+              "isSaved",
+              "savedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_isSaved_savedAt` ON `${TABLE_NAME}` (`isSaved`, `savedAt`)"
+          },
+          {
+            "name": "index_media_isPrivate_takenAt",
+            "unique": false,
+            "columnNames": [
+              "isPrivate",
+              "takenAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_isPrivate_takenAt` ON `${TABLE_NAME}` (`isPrivate`, `takenAt`)"
+          },
+          {
+            "name": "index_media_audioTitle",
+            "unique": false,
+            "columnNames": [
+              "audioTitle"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_audioTitle` ON `${TABLE_NAME}` (`audioTitle`)"
+          },
+          {
+            "name": "index_media_productType",
+            "unique": false,
+            "columnNames": [
+              "productType"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_media_productType` ON `${TABLE_NAME}` (`productType`)"
+          }
+        ]
+      },
+      {
+        "tableName": "searches",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`query` TEXT NOT NULL, `searchedAt` INTEGER NOT NULL, PRIMARY KEY(`query`))",
+        "fields": [
+          {
+            "fieldPath": "query",
+            "columnName": "query",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchedAt",
+            "columnName": "searchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "query"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_searches_searchedAt",
+            "unique": false,
+            "columnNames": [
+              "searchedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_searches_searchedAt` ON `${TABLE_NAME}` (`searchedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "comments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`pk` TEXT NOT NULL, `mediaCode` TEXT NOT NULL, `parentPk` TEXT, `username` TEXT NOT NULL, `avatarUrl` TEXT, `text` TEXT NOT NULL, `createdAt` INTEGER, `likeCount` INTEGER NOT NULL, `verified` INTEGER NOT NULL, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`pk`))",
+        "fields": [
+          {
+            "fieldPath": "pk",
+            "columnName": "pk",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaCode",
+            "columnName": "mediaCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentPk",
+            "columnName": "parentPk",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avatarUrl",
+            "columnName": "avatarUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "likeCount",
+            "columnName": "likeCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verified",
+            "columnName": "verified",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fetchedAt",
+            "columnName": "fetchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "pk"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_comments_mediaCode",
+            "unique": false,
+            "columnNames": [
+              "mediaCode"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_comments_mediaCode` ON `${TABLE_NAME}` (`mediaCode`)"
+          },
+          {
+            "name": "index_comments_parentPk",
+            "unique": false,
+            "columnNames": [
+              "parentPk"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_comments_parentPk` ON `${TABLE_NAME}` (`parentPk`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cea7234ed9276a7f68dd3161f45d6933')"
+    ]
+  }
+}
