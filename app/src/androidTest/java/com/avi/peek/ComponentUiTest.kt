@@ -9,7 +9,9 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -66,7 +68,10 @@ class ComponentUiTest {
                 SimpleTopBar(title = "Security center", onBack = { backed = true })
             }
         }
-        composeRule.onNodeWithContentDescription("Back").performClick()
+        val back = composeRule.onNodeWithContentDescription("Back")
+        back.assertWidthIsAtLeast(48.dp)
+        back.assertHeightIsAtLeast(48.dp)
+        back.performClick()
         assertTrue(backed)
     }
 

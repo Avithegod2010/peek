@@ -1,7 +1,9 @@
 package com.avi.peek.ui.screens
 
 import android.webkit.CookieManager
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -319,6 +321,12 @@ fun SecurityCenterScreen(
                 }
             }
 
+            if (events.isNotEmpty()) {
+                item(key = "events-timeline") {
+                    EventTimeline(events)
+                }
+            }
+
             if (events.isEmpty()) {
                 item(key = "events-empty") {
                     Text(
@@ -359,6 +367,30 @@ fun SecurityCenterScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EventTimeline(events: List<RequestEvent>) {
+    val recent = events.takeLast(24)
+    Row(
+        modifier = Modifier.fillMaxWidth().height(26.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        recent.forEach { event ->
+            val color = when {
+                event.rateLimited -> MaterialTheme.colorScheme.error
+                event.outcome.startsWith("ok", ignoreCase = true) -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.outlineVariant
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(if (event.rateLimited) 22.dp else 12.dp)
+                    .background(color, CircleShape),
+            )
         }
     }
 }

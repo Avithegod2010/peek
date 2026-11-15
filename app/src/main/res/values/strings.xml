@@ -37,4 +37,8 @@
     <string name="feed_mark_seen">Mark seen</string>
     <string name="stories_no_stories">No viewable stories</string>
     <string name="common_cancel">Cancel</string>
+    <string name="shortcut_security">Security center</string>
+    <string name="shortcut_security_long">Open the Peek security center</string>
+    <string name="shortcut_private">Private feed</string>
+    <string name="shortcut_private_long">Open your private feed</string>
 </resources>

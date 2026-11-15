@@ -57,6 +57,7 @@ data class PeekSettings(
     val muteVideos: Boolean = true,
     val dataSaver: Boolean = false,
     val hideLikeCounts: Boolean = false,
+    val calmMode: Boolean = false,
     val appLock: Boolean = false,
     val oneHanded: Boolean = false,
     val downloadChargingOnly: Boolean = false,
@@ -103,6 +104,7 @@ class SettingsStore(private val context: Context) {
         val MUTE = booleanPreferencesKey("mute_videos")
         val DATA_SAVER = booleanPreferencesKey("data_saver")
         val HIDE_LIKES = booleanPreferencesKey("hide_likes")
+        val CALM_MODE = booleanPreferencesKey("calm_mode")
         val APP_LOCK = booleanPreferencesKey("app_lock")
         val ONE_HANDED = booleanPreferencesKey("one_handed")
         val DOWNLOAD_CHARGING = booleanPreferencesKey("download_charging")
@@ -150,6 +152,7 @@ class SettingsStore(private val context: Context) {
                 muteVideos = prefs[Keys.MUTE] ?: true,
                 dataSaver = prefs[Keys.DATA_SAVER] ?: false,
                 hideLikeCounts = prefs[Keys.HIDE_LIKES] ?: false,
+                calmMode = prefs[Keys.CALM_MODE] ?: false,
                 appLock = prefs[Keys.APP_LOCK] ?: false,
                 oneHanded = prefs[Keys.ONE_HANDED] ?: false,
                 downloadChargingOnly = prefs[Keys.DOWNLOAD_CHARGING] ?: false,
@@ -198,6 +201,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setMuteVideos(value: Boolean) = edit { it[Keys.MUTE] = value }
     suspend fun setDataSaver(value: Boolean) = edit { it[Keys.DATA_SAVER] = value }
     suspend fun setHideLikeCounts(value: Boolean) = edit { it[Keys.HIDE_LIKES] = value }
+    suspend fun setCalmMode(value: Boolean) = edit { it[Keys.CALM_MODE] = value }
     suspend fun setAppLock(value: Boolean) = edit { it[Keys.APP_LOCK] = value }
     suspend fun setOneHanded(value: Boolean) = edit { it[Keys.ONE_HANDED] = value }
     suspend fun setDownloadChargingOnly(value: Boolean) = edit { it[Keys.DOWNLOAD_CHARGING] = value }

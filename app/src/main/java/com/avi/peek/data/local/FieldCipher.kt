@@ -3,7 +3,9 @@ package com.avi.peek.data.local
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.util.LruCache
 import java.security.KeyStore
+import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -32,6 +34,12 @@ object FieldCipher {
     @Volatile
     private var preferredVersion: Int? = null
 
+    // Keystore calls are IPC-heavy. Keep recently used keys and decrypted
+    // field values in memory so scrolling a cached feed does not re-decrypt
+    // the same captions and URLs for every flow emission.
+    private val keys = ConcurrentHashMap<Int, SecretKey>()
+    private val plaintext = object : LruCache<String, String>(2_048) {}
+
     fun encrypt(value: String?): String? {
         if (value.isNullOrEmpty() || sealedPrefix.containsMatchIn(value)) return value
         val version = writeVersion()
@@ -52,6 +60,7 @@ object FieldCipher {
         val match = sealedPrefix.find(value) ?: return value
         val version = match.groupValues[1].toIntOrNull() ?: return null
         if (version !in 1..MAX_VERSION) return null
+        plaintext.get(value)?.let { return it }
         return try {
             val payload = Base64.decode(value.substring(match.value.length), Base64.NO_WRAP)
             if (payload.size <= IV_BYTES) return null
@@ -65,10 +74,16 @@ object FieldCipher {
             String(
                 cipher.doFinal(payload, IV_BYTES, payload.size - IV_BYTES),
                 Charsets.UTF_8,
-            )
+            ).also { plaintext.put(value, it) }
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** Clears decrypted and key caches, e.g. when private content locks. */
+    fun clearCache() {
+        plaintext.evictAll()
+        keys.clear()
     }
 
     /**
@@ -81,6 +96,7 @@ object FieldCipher {
         val next = current + 1
         key(next)
         preferredVersion = next
+        plaintext.evictAll()
         return next
     }
 
@@ -95,9 +111,12 @@ object FieldCipher {
     }
 
     private fun existingKey(version: Int): SecretKey? {
+        keys[version]?.let { return it }
         val keyStore = keystore()
         if (!keyStore.containsAlias(alias(version))) return null
-        return (keyStore.getEntry(alias(version), null) as? KeyStore.SecretKeyEntry)?.secretKey
+        return (keyStore.getEntry(alias(version), null) as? KeyStore.SecretKeyEntry)
+            ?.secretKey
+            ?.also { keys[version] = it }
     }
 
     private fun key(version: Int): SecretKey {
@@ -117,7 +136,7 @@ object FieldCipher {
                 .setRandomizedEncryptionRequired(true)
                 .build(),
         )
-        return generator.generateKey()
+        return generator.generateKey().also { keys[version] = it }
     }
 
     private fun alias(version: Int): String =

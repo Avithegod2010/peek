@@ -65,6 +65,7 @@ class SettingsViewModel : ViewModel() {
     }
     fun setDataSaver(value: Boolean) = viewModelScope.launch { store.setDataSaver(value) }
     fun setHideLikeCounts(value: Boolean) = viewModelScope.launch { store.setHideLikeCounts(value) }
+    fun setCalmMode(value: Boolean) = viewModelScope.launch { store.setCalmMode(value) }
     fun setAppLock(value: Boolean) = viewModelScope.launch { store.setAppLock(value) }
     fun setOneHanded(value: Boolean) = viewModelScope.launch { store.setOneHanded(value) }
     fun setDownloadChargingOnly(value: Boolean) = viewModelScope.launch { store.setDownloadChargingOnly(value) }

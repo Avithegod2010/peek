@@ -1,5 +1,9 @@
 package com.avi.peek.ui.screens
 
+import android.app.Activity
+import android.app.LocaleManager
+import android.os.Build
+import android.os.LocaleList
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -36,6 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +50,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,6 +67,8 @@ fun OnboardingScreen(
 ) {
     val haptics = LocalPeekHaptics.current
     val reduceMotion = LocalReduceMotion.current
+    val context = LocalContext.current
+    var languageLabel by remember { mutableStateOf(applicationLanguageLabel(context)) }
     val transition = rememberInfiniteTransition(label = "onboarding")
     val pulse by transition.animateFloat(
         initialValue = 0.94f,
@@ -200,7 +210,26 @@ fun OnboardingScreen(
                 FeatureChip(Icons.Rounded.CloudOff, "Offline")
                 FeatureChip(Icons.Rounded.AutoAwesome, "Local")
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "No Peek account · no analytics · local-only",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            TextButton(
+                onClick = {
+                    haptics.tap()
+                    languageLabel = cycleApplicationLanguage(context)
+                },
+            ) {
+                Text(
+                    "Language · $languageLabel",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 CreatorDirectory.starter.take(5).forEach { creator ->
                     Box(
@@ -255,6 +284,39 @@ fun OnboardingScreen(
             Spacer(Modifier.height(8.dp))
         }
     }
+}
+
+private val onboardingLanguages = listOf(
+    "" to "System",
+    "en" to "English",
+    "hi" to "हिन्दी",
+    "es" to "Español",
+    "pt" to "Português",
+    "ar" to "العربية",
+    "ja" to "日本語",
+)
+
+private fun applicationLanguageLabel(context: android.content.Context): String {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return "System"
+    val manager = context.getSystemService(LocaleManager::class.java) ?: return "System"
+    val tag = manager.applicationLocales.get(0)?.language.orEmpty()
+    return onboardingLanguages.firstOrNull { it.first == tag }?.second ?: "System"
+}
+
+private fun cycleApplicationLanguage(context: android.content.Context): String {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return "System"
+    val manager = context.getSystemService(LocaleManager::class.java) ?: return "System"
+    val current = manager.applicationLocales.get(0)?.language.orEmpty()
+    val index = onboardingLanguages.indexOfFirst { it.first == current }
+        .let { if (it < 0) 0 else it }
+    val next = onboardingLanguages[(index + 1) % onboardingLanguages.size]
+    manager.applicationLocales = if (next.first.isBlank()) {
+        LocaleList.getEmptyLocaleList()
+    } else {
+        LocaleList.forLanguageTags(next.first)
+    }
+    (context as? Activity)?.recreate()
+    return next.second
 }
 
 @Composable

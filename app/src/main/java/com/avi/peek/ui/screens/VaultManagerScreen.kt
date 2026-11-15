@@ -22,7 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -158,7 +160,23 @@ fun VaultManagerScreen(
     var passphrase by remember { mutableStateOf("") }
     var pendingExport by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImport by remember { mutableStateOf<android.net.Uri?>(null) }
-    val grouped = entries.groupBy { it.username }
+    var query by remember { mutableStateOf("") }
+    var sortBySize by remember { mutableStateOf(false) }
+    val filtered = entries.filter { item ->
+        query.isBlank() ||
+            item.username.contains(query, ignoreCase = true) ||
+            item.code.contains(query, ignoreCase = true) ||
+            item.caption.orEmpty().contains(query, ignoreCase = true)
+    }
+    val grouped = filtered.groupBy { it.username }
+        .toList()
+        .sortedWith(
+            if (sortBySize) {
+                compareByDescending { (_, files) -> files.sumOf { it.bytes } }
+            } else {
+                compareBy { (username, _) -> username }
+            },
+        )
     val total = entries.sumOf { it.bytes }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream"),
@@ -193,6 +211,21 @@ fun VaultManagerScreen(
                     Icon(Icons.Rounded.Storage, contentDescription = "Refresh")
                 }
             },
+        )
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it.take(60) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            placeholder = { Text("Search the vault") },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+            trailingIcon = {
+                TextButton(onClick = { sortBySize = !sortBySize }) {
+                    Icon(Icons.Rounded.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(if (sortBySize) "Size" else "Name", style = MaterialTheme.typography.labelSmall)
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(18.dp),
         )
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -230,6 +263,19 @@ fun VaultManagerScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        } else if (grouped.isEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(18.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Text(
+                    "No vault entries match \"$query\".",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(18.dp),
+                )
             }
         } else {
             LazyColumn(

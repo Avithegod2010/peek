@@ -3,6 +3,7 @@ package com.avi.peek.di
 import android.content.Context
 import coil.ImageLoader
 import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.avi.peek.data.local.LibraryStore
 import com.avi.peek.data.local.PeekDatabase
 import com.avi.peek.data.local.SearchStore
@@ -107,6 +108,11 @@ object ServiceLocator {
         ImageLoader.Builder(appContext)
             .crossfade(true)
             .okHttpClient(okHttp)
+            .memoryCache {
+                MemoryCache.Builder(appContext)
+                    .maxSizePercent(0.20)
+                    .build()
+            }
             .diskCache {
                 DiskCache.Builder()
                     .directory(File(appContext.cacheDir, "image_cache"))

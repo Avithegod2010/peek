@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -58,6 +62,9 @@ fun rememberPeekPlayer(
         it.isNotBlank() && com.avi.peek.data.remote.NetworkAllowlist.isAllowedUrl(it)
     }
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val latestActive by rememberUpdatedState(active)
+    val latestAutoPlay by rememberUpdatedState(autoPlay)
     val state = remember(safeUrl) {
         if (safeUrl == null) {
             null
@@ -90,7 +97,18 @@ fun rememberPeekPlayer(
                 }
             }
             state.player.addListener(listener)
+            val lifecycleObserver = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> state.player.pause()
+                    Lifecycle.Event.ON_START -> if (latestActive && latestAutoPlay) {
+                        state.player.play()
+                    }
+                    else -> Unit
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
             onDispose {
+                lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
                 state.player.removeListener(listener)
                 state.player.release()
             }

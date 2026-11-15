@@ -730,12 +730,7 @@ fun PostScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             items(comments, key = { it.pk }) { comment ->
-                                Column {
-                                    CommentLine(comment)
-                                    comment.replies.forEach { reply ->
-                                        CommentLine(reply, indent = true)
-                                    }
-                                }
+                                CommentLine(comment)
                             }
                             if (commentsHasMore) {
                                 item(key = "more-comments") {
@@ -767,40 +762,71 @@ private fun CommentLine(
     comment: ScrapedComment,
     indent: Boolean = false,
 ) {
-    Row(
-        modifier = Modifier.padding(start = if (indent) 30.dp else 0.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Avatar(
-            url = comment.avatarUrl,
-            username = comment.username,
-            size = if (indent) 27.dp else 32.dp,
-        )
-        Spacer(Modifier.width(9.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    comment.username,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (comment.verified) {
-                    Spacer(Modifier.width(3.dp))
-                    VerifiedBadge(size = 12.dp)
+    val context = LocalContext.current
+    val haptics = LocalPeekHaptics.current
+    var showAllReplies by remember(comment.pk) { mutableStateOf(false) }
+    val replies = if (showAllReplies) comment.replies else comment.replies.take(2)
+    Column {
+        Row(
+            modifier = Modifier
+                .padding(start = if (indent) 30.dp else 0.dp)
+                .pointerInput(comment.pk) {
+                    detectTapGestures(
+                        onLongPress = {
+                            context.copyText(comment.text)
+                            haptics.confirm()
+                        },
+                    )
+                },
+            verticalAlignment = Alignment.Top,
+        ) {
+            Avatar(
+                url = comment.avatarUrl,
+                username = comment.username,
+                size = if (indent) 27.dp else 32.dp,
+            )
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        comment.username,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (comment.verified) {
+                        Spacer(Modifier.width(3.dp))
+                        VerifiedBadge(size = 12.dp)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        comment.createdAt?.let { it.relativeTime() } ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    comment.createdAt?.let { it.relativeTime() } ?: "",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(comment.text, style = MaterialTheme.typography.bodySmall)
+                if (comment.likeCount > 0L) {
+                    Text(
+                        "${comment.likeCount.compactCount()} likes",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            Text(comment.text, style = MaterialTheme.typography.bodySmall)
-            if (comment.likeCount > 0L) {
+        }
+        replies.forEach { reply -> CommentLine(reply, indent = true) }
+        if (comment.replies.size > 2) {
+            TextButton(
+                onClick = { showAllReplies = !showAllReplies },
+                modifier = Modifier.padding(start = if (indent) 30.dp else 0.dp),
+            ) {
                 Text(
-                    "${comment.likeCount.compactCount()} likes",
+                    if (showAllReplies) {
+                        "Show fewer replies"
+                    } else {
+                        "View all ${comment.replies.size} replies"
+                    },
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

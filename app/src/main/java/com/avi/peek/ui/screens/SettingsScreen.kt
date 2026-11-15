@@ -441,6 +441,13 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setHideLikeCounts(it) },
                     )
                     SettingsSwitch(
+                        icon = Icons.Rounded.VisibilityOff,
+                        title = "Calm mode",
+                        subtitle = "Hide counts and stop reels from autoplaying",
+                        checked = settings.calmMode,
+                        onCheckedChange = { viewModel.setCalmMode(it) },
+                    )
+                    SettingsSwitch(
                         icon = Icons.Rounded.Fingerprint,
                         title = "Biometric app lock",
                         subtitle = "Require a biometric or screen lock next time Peek opens",

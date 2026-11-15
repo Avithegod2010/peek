@@ -275,6 +275,8 @@ private fun MainScaffold(
                 "search" -> openSearch()
                 "saved" -> navController.navigate("saved")
                 "downloads" -> navController.navigate("downloads")
+                "security" -> navController.navigate("security")
+                "private" -> navController.navigate("private-feed")
                 "share" -> uri.getQueryParameter("text")?.let { shared ->
                     openSearch(shared)
                 }

@@ -1,5 +1,6 @@
 package com.avi.peek.util
 
+import com.avi.peek.data.local.FieldCipher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,7 +57,10 @@ object PrivateAccess {
         lockJob = null
         val wasRevealed = _revealed.value
         _revealed.value = false
-        if (wasRevealed) onLocked?.invoke()
+        if (wasRevealed) {
+            FieldCipher.clearCache()
+            onLocked?.invoke()
+        }
     }
 
     fun isRevealed(): Boolean = _revealed.value

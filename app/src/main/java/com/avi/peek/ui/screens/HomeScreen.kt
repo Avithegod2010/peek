@@ -60,10 +60,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.request.ImageRequest
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.data.local.ProfileEntity
 import com.avi.peek.data.repo.FeedPost
 import com.avi.peek.data.repo.SyncState
+import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.Avatar
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.FeedPostCard
@@ -101,6 +103,20 @@ fun HomeScreen(
     val feed by viewModel.feed.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val downloads by viewModel.downloadProgress.collectAsStateWithLifecycle()
+
+    LaunchedEffect(feed) {
+        // Warm the next screenful of covers so scrolling feels instant on a
+        // cold cache without downloading full-resolution originals.
+        feed.take(12).forEach { post ->
+            val url = post.media.displayUrl ?: return@forEach
+            ServiceLocator.imageLoader.enqueue(
+                ImageRequest.Builder(context)
+                    .data(url)
+                    .diskCacheKey("cover_${post.media.code}")
+                    .build(),
+            )
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -222,7 +238,7 @@ fun HomeScreen(
                 items(feed, key = { it.media.code }) { post ->
                     FeedPostCard(
                         post = post,
-                        hideLikeCounts = settings.hideLikeCounts,
+                        hideLikeCounts = settings.hideLikeCounts || settings.calmMode,
                         downloadProgress = downloads[post.media.code],
                         modifier = Modifier
                             .padding(horizontal = 12.dp)

@@ -36,4 +36,28 @@
             android:targetClass="com.avi.peek.MainActivity"
             android:targetPackage="com.avi.peek" />
     </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="security"
+        android:shortcutLongLabel="@string/shortcut_security_long"
+        android:shortcutShortLabel="@string/shortcut_security">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="peek://security"
+            android:targetClass="com.avi.peek.MainActivity"
+            android:targetPackage="com.avi.peek" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="private"
+        android:shortcutLongLabel="@string/shortcut_private_long"
+        android:shortcutShortLabel="@string/shortcut_private">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="peek://private"
+            android:targetClass="com.avi.peek.MainActivity"
+            android:targetPackage="com.avi.peek" />
+    </shortcut>
 </shortcuts>

@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SearchHistoryEntity::class,
         CommentEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class PeekDatabase : RoomDatabase() {
@@ -75,11 +75,28 @@ abstract class PeekDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_profiles_lastViewedAt ON profiles(lastViewedAt)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_profiles_isFollowed_isPinned_latestReelMedia " +
+                        "ON profiles(isFollowed, isPinned, latestReelMedia)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_media_isLiked ON media(isLiked)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_media_downloadedAt ON media(downloadedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_media_isSaved_savedAt ON media(isSaved, savedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_media_isPrivate_takenAt ON media(isPrivate, takenAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_media_audioTitle ON media(audioTitle)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_media_productType ON media(productType)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_searches_searchedAt ON searches(searchedAt)")
+            }
+        }
+
         fun build(context: Context): PeekDatabase = Room.databaseBuilder(
             context.applicationContext,
             PeekDatabase::class.java,
             "peek.db",
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
     }
 }

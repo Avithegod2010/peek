@@ -14,7 +14,12 @@ private val localJson = Json { ignoreUnknownKeys = true }
 
 @Entity(
     tableName = "profiles",
-    indices = [Index("isFollowed"), Index("lastFetchedAt")],
+    indices = [
+        Index("isFollowed"),
+        Index("lastFetchedAt"),
+        Index("lastViewedAt"),
+        Index("isFollowed", "isPinned", "latestReelMedia"),
+    ],
 )
 data class ProfileEntity(
     @PrimaryKey val username: String,
@@ -61,6 +66,12 @@ data class ProfileEntity(
         Index("isDownloaded"),
         Index("isPrivate"),
         Index("username", "takenAt"),
+        Index("isLiked"),
+        Index("downloadedAt"),
+        Index("isSaved", "savedAt"),
+        Index("isPrivate", "takenAt"),
+        Index("audioTitle"),
+        Index("productType"),
     ],
 )
 data class MediaEntity(
@@ -135,7 +146,7 @@ data class CommentEntity(
     val fetchedAt: Long = System.currentTimeMillis(),
 )
 
-@Entity(tableName = "searches")
+@Entity(tableName = "searches", indices = [Index("searchedAt")])
 data class SearchHistoryEntity(
     @PrimaryKey val query: String,
     val searchedAt: Long,

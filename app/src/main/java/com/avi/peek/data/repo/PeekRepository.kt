@@ -1092,6 +1092,7 @@ class PeekRepository(
     }
 
     suspend fun clearEverything() = withContext(Dispatchers.IO) {
+        com.avi.peek.data.local.FieldCipher.clearCache()
         db.clearAllTables()
         downloads.root.deleteRecursively()
         downloads.root.mkdirs()

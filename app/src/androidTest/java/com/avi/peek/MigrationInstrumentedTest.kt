@@ -102,6 +102,7 @@ class MigrationInstrumentedTest {
             PeekDatabase.MIGRATION_2_3.migrate(db)
             PeekDatabase.MIGRATION_3_4.migrate(db)
             PeekDatabase.MIGRATION_4_5.migrate(db)
+            PeekDatabase.MIGRATION_5_6.migrate(db)
 
             assertTrue("postCount" in columns(db, "profiles"))
             assertTrue("nextCursor" in columns(db, "profiles"))
@@ -122,6 +123,10 @@ class MigrationInstrumentedTest {
             val mediaIndices = indices(db, "media")
             assertTrue("index_media_isPrivate" in mediaIndices)
             assertTrue("index_media_username_takenAt" in mediaIndices)
+            assertTrue("index_media_isLiked" in mediaIndices)
+            assertTrue("index_media_isPrivate_takenAt" in mediaIndices)
+            val profileIndices = indices(db, "profiles")
+            assertTrue("index_profiles_lastViewedAt" in profileIndices)
             val commentIndices = indices(db, "comments")
             assertTrue("index_comments_mediaCode" in commentIndices)
             assertTrue("index_comments_parentPk" in commentIndices)
