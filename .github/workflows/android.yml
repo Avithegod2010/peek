@@ -21,21 +21,21 @@ jobs:
           ./gradlew testDebugUnitTest assembleDebug compileDebugAndroidTestKotlin lintDebug --no-daemon --stacktrace
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: app/build/reports/tests
           if-no-files-found: ignore
       - name: Upload lint reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-reports
           path: app/build/reports/lint-results-*.html
           if-no-files-found: ignore
       - name: Upload Room schemas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: room-schemas
           path: app/schemas
