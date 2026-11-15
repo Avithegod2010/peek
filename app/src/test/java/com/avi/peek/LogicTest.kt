@@ -113,11 +113,11 @@ class LogicTest {
                 "following_count":12,"media_count":7,"latest_reel_media":1700000000,
                 "has_any_clips":true,
                 "bio_links":[{"title":"Site","url":"https://nasa.gov"}],
-                "lox_highlights_connection":{"edges":[{"node":{"id":"h1","title":"Launch","cover_media_cropped_thumbnail_url":"https://cdn/h.jpg"}}]}
-              },
-              "polaris_ordered_timeline_connection":{
-                "edges":[{"node":{"code":"abc","pk":"9","media_type":1,"display_uri":"https://cdn/p.jpg","caption":{"text":"hello"},"carousel_media_count":2}}],
-                "page_info":{"has_next_page":true,"end_cursor":"next-page"}
+                "lox_highlights_connection":{"edges":[{"node":{"id":"h1","title":"Launch","cover_media_cropped_thumbnail_url":"https://cdn/h.jpg"}}]},
+                "polaris_ordered_timeline_connection":{
+                  "edges":[{"node":{"code":"abc","pk":"9","media_type":1,"display_uri":"https://cdn/p.jpg","caption":{"text":"hello"},"carousel_media_count":2}}],
+                  "page_info":{"has_next_page":true,"end_cursor":"next-page"}
+                }
               }
             }}}
         """.trimIndent()

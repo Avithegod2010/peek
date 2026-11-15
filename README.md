@@ -214,6 +214,7 @@ Following, likes, bookmarks, downloads and local search history never leave the 
 - Private downloads are encrypted at rest with an Android Keystore AES-GCM vault. The vault key is bound to biometric/device authentication with a five-minute auth window and is invalidated when biometrics are re-enrolled.
 - Sensitive Room metadata (captions, profile text, media URLs, location, audio and local file paths) is field-level encrypted with a separate Android Keystore AES-GCM key. Comment text, search history and saved searches are encrypted too. Older plaintext rows are re-sealed on their next write.
 - Metadata writes fail closed: Peek will not silently store plaintext if Keystore encryption is unavailable.
+- The security center can rotate the metadata key; each ciphertext carries its key version so old rows stay readable during a partial rotation.
 - API, image and video requests are restricted to Instagram, its CDN and DuckDuckGo; lookalike hosts, redirects and cleartext URLs are rejected.
 - Private surfaces set `FLAG_SECURE` to block screenshots and recents thumbnails. Copied text is marked sensitive and cleared after one minute.
 - Optional shake-to-hide locks private content without deleting anything.

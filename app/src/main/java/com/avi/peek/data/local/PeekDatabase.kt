@@ -24,7 +24,7 @@ abstract class PeekDatabase : RoomDatabase() {
     abstract fun comments(): CommentDao
 
     companion object {
-        internal val MIGRATION_1_2 = object : Migration(1, 2) {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE profiles ADD COLUMN postCount INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE profiles ADD COLUMN hasMorePosts INTEGER NOT NULL DEFAULT 0")
@@ -32,7 +32,7 @@ abstract class PeekDatabase : RoomDatabase() {
             }
         }
 
-        internal val MIGRATION_2_3 = object : Migration(2, 3) {
+        val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE media ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0")
                 db.execSQL(
@@ -42,7 +42,7 @@ abstract class PeekDatabase : RoomDatabase() {
             }
         }
 
-        internal val MIGRATION_3_4 = object : Migration(3, 4) {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     """
@@ -65,7 +65,7 @@ abstract class PeekDatabase : RoomDatabase() {
             }
         }
 
-        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+        val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_media_isPrivate ON media(isPrivate)")
                 db.execSQL(

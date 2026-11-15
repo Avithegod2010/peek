@@ -72,6 +72,19 @@ class SecurityInstrumentedTest {
     }
 
     @Test
+    fun metadataKeyRotationKeepsOldCiphertextReadable() {
+        val first = FieldCipher.encrypt("rotation payload")
+        assertNotNull(first)
+        val version = FieldCipher.rotateToNextVersion()
+        assertTrue(version >= 1)
+        val second = FieldCipher.encrypt("rotation payload")
+        assertNotNull(second)
+        assertTrue(second!!.startsWith("enc:v$version:"))
+        assertTrue(FieldCipher.decrypt(first) == "rotation payload")
+        assertTrue(FieldCipher.decrypt(second) == "rotation payload")
+    }
+
+    @Test
     fun privateAccessLocksAndReveals() {
         PrivateAccess.hide()
         assertFalse(PrivateAccess.isRevealed())

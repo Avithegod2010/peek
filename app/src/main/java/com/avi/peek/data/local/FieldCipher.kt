@@ -21,19 +21,24 @@ import javax.crypto.spec.GCMParameterSpec
  * unlock flow.
  */
 object FieldCipher {
-    private const val ALIAS = "peek_metadata_key"
+    private const val BASE_ALIAS = "peek_metadata_key"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
-    private const val PREFIX = "enc:v1:"
     private const val IV_BYTES = 12
     private const val TAG_BITS = 128
+    private const val MAX_VERSION = 9
+    private val sealedPrefix = Regex("^enc:v([1-9][0-9]*):")
+
+    @Volatile
+    private var preferredVersion: Int? = null
 
     fun encrypt(value: String?): String? {
-        if (value.isNullOrEmpty() || value.startsWith(PREFIX)) return value
+        if (value.isNullOrEmpty() || sealedPrefix.containsMatchIn(value)) return value
+        val version = writeVersion()
         return try {
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, key())
+            cipher.init(Cipher.ENCRYPT_MODE, key(version))
             val payload = cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8))
-            PREFIX + Base64.encodeToString(payload, Base64.NO_WRAP)
+            "enc:v$version:" + Base64.encodeToString(payload, Base64.NO_WRAP)
         } catch (e: Exception) {
             // Never silently write plaintext metadata. If the Keystore is
             // unavailable the write must fail and the caller must surface it.
@@ -42,14 +47,18 @@ object FieldCipher {
     }
 
     fun decrypt(value: String?): String? {
-        if (value.isNullOrEmpty() || !value.startsWith(PREFIX)) return value
+        if (value.isNullOrEmpty()) return value
+        val match = sealedPrefix.find(value) ?: return value
+        val version = match.groupValues[1].toIntOrNull() ?: return null
+        if (version !in 1..MAX_VERSION) return null
         return try {
-            val payload = Base64.decode(value.removePrefix(PREFIX), Base64.NO_WRAP)
+            val payload = Base64.decode(value.substring(match.value.length), Base64.NO_WRAP)
             if (payload.size <= IV_BYTES) return null
+            val existing = existingKey(version) ?: return null
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(
                 Cipher.DECRYPT_MODE,
-                key(),
+                existing,
                 GCMParameterSpec(TAG_BITS, payload, 0, IV_BYTES),
             )
             String(
@@ -61,16 +70,44 @@ object FieldCipher {
         }
     }
 
-    private fun key(): SecretKey {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (keyStore.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey?.let { return it }
+    /**
+     * Creates the next metadata key version and makes it the write key.
+     * Existing ciphertexts remain readable through their version prefix.
+     */
+    fun rotateToNextVersion(): Int {
+        val current = writeVersion()
+        if (current >= MAX_VERSION) return current
+        val next = current + 1
+        key(next)
+        preferredVersion = next
+        return next
+    }
+
+    fun currentVersion(): Int = writeVersion()
+
+    private fun writeVersion(): Int {
+        preferredVersion?.let { return it }
+        val keyStore = keystore()
+        val detected = (MAX_VERSION downTo 1).firstOrNull { keyStore.containsAlias(alias(it)) } ?: 1
+        preferredVersion = detected
+        return detected
+    }
+
+    private fun existingKey(version: Int): SecretKey? {
+        val keyStore = keystore()
+        if (!keyStore.containsAlias(alias(version))) return null
+        return (keyStore.getEntry(alias(version), null) as? KeyStore.SecretKeyEntry)?.secretKey
+    }
+
+    private fun key(version: Int): SecretKey {
+        existingKey(version)?.let { return it }
         val generator = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
             "AndroidKeyStore",
         )
         generator.init(
             KeyGenParameterSpec.Builder(
-                ALIAS,
+                alias(version),
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
             )
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -81,6 +118,12 @@ object FieldCipher {
         )
         return generator.generateKey()
     }
+
+    private fun alias(version: Int): String =
+        if (version == 1) BASE_ALIAS else "${BASE_ALIAS}_v$version"
+
+    private fun keystore(): KeyStore =
+        KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 }
 
 fun MediaEntity.sealMetadata(): MediaEntity = copy(

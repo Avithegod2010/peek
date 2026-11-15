@@ -947,6 +947,28 @@ class PeekRepository(
 
     suspend fun privateVaultSize(): Long = withContext(Dispatchers.IO) { vault.sizeBytes() }
 
+    /**
+     * Re-encrypts every cached metadata field with a new Keystore key version.
+     * Old rows stay readable through their version prefix if the process dies
+     * halfway through.
+     */
+    suspend fun rotateMetadataEncryption(): Int = withContext(Dispatchers.IO) {
+        val media = secureMedia.allOnce()
+        val profiles = secureProfiles.allOnce()
+        val comments = secureComments.allOnce()
+        val searches = secureSearches.allOnce()
+        val version = com.avi.peek.data.local.FieldCipher.rotateToNextVersion()
+        if (media.isNotEmpty()) secureMedia.upsertAll(media)
+        profiles.forEach { secureProfiles.upsert(it) }
+        if (comments.isNotEmpty()) secureComments.upsertAll(comments)
+        searches.forEach { secureSearches.add(it) }
+        media.size + profiles.size + comments.size + searches.size
+    }
+
+    suspend fun metadataKeyVersion(): Int = withContext(Dispatchers.IO) {
+        com.avi.peek.data.local.FieldCipher.currentVersion()
+    }
+
     suspend fun databaseSize(): Long = withContext(Dispatchers.IO) {
         val db = context.getDatabasePath("peek.db")
         listOf(db, File(db.path + "-wal"), File(db.path + "-shm"))

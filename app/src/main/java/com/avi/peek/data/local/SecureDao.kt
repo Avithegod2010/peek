@@ -47,6 +47,7 @@ class SecureMediaDao(private val dao: MediaDao) {
         dao.allPrivateMedia().map { it.unsealMetadata() }
     suspend fun allSaved(): List<MediaEntity> = dao.allSaved().map { it.unsealMetadata() }
     suspend fun allLiked(): List<MediaEntity> = dao.allLiked().map { it.unsealMetadata() }
+    suspend fun allOnce(): List<MediaEntity> = dao.allOnce().map { it.unsealMetadata() }
 
     suspend fun searchCached(query: String): List<MediaEntity> = dao.allOnce()
         .map { it.unsealMetadata() }
@@ -110,6 +111,8 @@ class SecureCommentDao(private val dao: CommentDao) {
     suspend fun upsertAll(comments: List<CommentEntity>) =
         dao.upsertAll(comments.map { it.sealMetadata() })
 
+    suspend fun allOnce(): List<CommentEntity> = dao.allOnce().map { it.unsealMetadata() }
+
     suspend fun clearForMedia(mediaCode: String) = dao.clearForMedia(mediaCode)
 }
 
@@ -128,6 +131,8 @@ class SecureSearchDao(private val dao: SearchDao) {
     }
 
     suspend fun clear() = dao.clear()
+
+    suspend fun allOnce(): List<SearchHistoryEntity> = dao.allOnce().map { it.unsealMetadata() }
 
     suspend fun remove(query: String) {
         dao.allOnce()
@@ -150,6 +155,7 @@ class SecureProfileDao(private val dao: ProfileDao) {
 
     suspend fun get(username: String): ProfileEntity? = dao.get(username)?.unsealMetadata()
     suspend fun following(): List<ProfileEntity> = dao.following().map { it.unsealMetadata() }
+    suspend fun allOnce(): List<ProfileEntity> = dao.allOnce().map { it.unsealMetadata() }
 
     suspend fun searchCached(query: String): List<ProfileEntity> = dao.allOnce()
         .map { it.unsealMetadata() }

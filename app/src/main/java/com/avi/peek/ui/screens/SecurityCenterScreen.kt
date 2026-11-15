@@ -78,6 +78,7 @@ data class SecuritySnapshot(
     val privateDownloads: Int = 0,
     val appLock: Boolean = false,
     val panicMode: Boolean = false,
+    val metadataKeyVersion: Int = 0,
 )
 
 class SecurityCenterViewModel : ViewModel() {
@@ -111,6 +112,7 @@ class SecurityCenterViewModel : ViewModel() {
                 privateDownloads = counts.second,
                 appLock = settings?.appLock == true,
                 panicMode = settings?.privateContentHidden == true,
+                metadataKeyVersion = runCatching { repo.metadataKeyVersion() }.getOrDefault(0),
             )
         }
     }
@@ -143,6 +145,15 @@ class SecurityCenterViewModel : ViewModel() {
     fun clearLog() {
         ServiceLocator.requestLog.clear()
         refresh()
+    }
+
+    fun rotateMetadataKey() {
+        viewModelScope.launch {
+            runCatching { repo.rotateMetadataEncryption() }
+                .onSuccess { _messages.emit("Re-encrypted $it metadata rows with a new key version") }
+                .onFailure { _messages.emit(it.userMessage()) }
+            refresh()
+        }
     }
 }
 
@@ -245,6 +256,7 @@ fun SecurityCenterScreen(
                         SecurityLine("Private media rows", "${snapshot.privateMedia} · ${snapshot.privateDownloads} offline")
                         SecurityLine("App lock", if (snapshot.appLock) "On" else "Off")
                         SecurityLine("Panic mode", if (snapshot.panicMode) "Private content hidden" else "Off")
+                        SecurityLine("Metadata key", "Version ${snapshot.metadataKeyVersion}")
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = onOpenVault, shape = RoundedCornerShape(16.dp)) {
@@ -293,6 +305,9 @@ fun SecurityCenterScreen(
                     Icon(Icons.Rounded.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(5.dp))
                     Text(stringResource(R.string.security_clear_log))
+                }
+                TextButton(onClick = viewModel::rotateMetadataKey, modifier = Modifier.fillMaxWidth()) {
+                    Text("Rotate local encryption key")
                 }
             }
 

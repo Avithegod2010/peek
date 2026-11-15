@@ -227,6 +227,9 @@ interface CommentDao {
     @Upsert
     suspend fun upsertAll(comments: List<CommentEntity>)
 
+    @Query("SELECT * FROM comments")
+    suspend fun allOnce(): List<CommentEntity>
+
     @Query("DELETE FROM comments WHERE mediaCode = :mediaCode")
     suspend fun clearForMedia(mediaCode: String)
 }
