@@ -9,16 +9,16 @@ updates:
     labels:
       - dependencies
     groups:
-      gradle-minor-and-patch:
+      gradle-patch:
         patterns:
           - "*"
         update-types:
-          - minor
           - patch
     ignore:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+          - version-update:semver-minor
 
   - package-ecosystem: github-actions
     directory: "/"
@@ -29,13 +29,13 @@ updates:
     labels:
       - dependencies
     groups:
-      actions-minor-and-patch:
+      actions-patch:
         patterns:
           - "*"
         update-types:
-          - minor
           - patch
     ignore:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+          - version-update:semver-minor
