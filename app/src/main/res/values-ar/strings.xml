@@ -37,4 +37,9 @@
     <string name="feed_mark_seen">وضع علامة مقروء</string>
     <string name="stories_no_stories">لا توجد قصص قابلة للعرض</string>
     <string name="common_cancel">إلغاء</string>
+    <string name="app_name">Peek</string>
+    <string name="shortcut_security">مركز الأمان</string>
+    <string name="shortcut_security_long">فتح مركز أمان Peek</string>
+    <string name="shortcut_private">الخلاصة الخاصة</string>
+    <string name="shortcut_private_long">افتح خلاصتك الخاصة</string>
 </resources>

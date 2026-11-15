@@ -65,6 +65,7 @@ class PeekPanicTileService : TileService() {
         tile.updateTile()
     }
 
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     private fun openApp() {
         val intent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)

@@ -37,4 +37,9 @@
     <string name="feed_mark_seen">既読にする</string>
     <string name="stories_no_stories">表示できるストーリーがありません</string>
     <string name="common_cancel">キャンセル</string>
+    <string name="app_name">Peek</string>
+    <string name="shortcut_security">セキュリティセンター</string>
+    <string name="shortcut_security_long">Peekのセキュリティセンターを開く</string>
+    <string name="shortcut_private">プライベートフィード</string>
+    <string name="shortcut_private_long">プライベートフィードを開く</string>
 </resources>

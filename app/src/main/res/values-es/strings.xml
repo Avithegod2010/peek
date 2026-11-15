@@ -37,4 +37,9 @@
     <string name="feed_mark_seen">Marcar como visto</string>
     <string name="stories_no_stories">No hay historias visibles</string>
     <string name="common_cancel">Cancelar</string>
+    <string name="app_name">Peek</string>
+    <string name="shortcut_security">Centro de seguridad</string>
+    <string name="shortcut_security_long">Abrir el centro de seguridad de Peek</string>
+    <string name="shortcut_private">Feed privado</string>
+    <string name="shortcut_private_long">Abre tu feed privado</string>
 </resources>
