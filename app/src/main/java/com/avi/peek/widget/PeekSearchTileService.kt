@@ -8,6 +8,7 @@ import android.service.quicksettings.TileService
 import com.avi.peek.MainActivity
 
 class PeekSearchTileService : TileService() {
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     override fun onClick() {
         val intent = Intent(this, MainActivity::class.java).apply {
             data = Uri.parse("peek://search")

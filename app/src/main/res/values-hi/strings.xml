@@ -42,4 +42,16 @@
     <string name="shortcut_security_long">पीक सुरक्षा केंद्र खोलें</string>
     <string name="shortcut_private">निजी फ़ीड</string>
     <string name="shortcut_private_long">अपनी निजी फ़ीड खोलें</string>
+    <string name="shortcut_search">लोगों को खोजें</string>
+    <string name="shortcut_search_long">नाम से लोगों को खोजें</string>
+    <string name="shortcut_saved">सहेजी गई पोस्ट</string>
+    <string name="shortcut_saved_long">सहेजी गई पोस्ट खोलें</string>
+    <string name="shortcut_downloads">डाउनलोड</string>
+    <string name="shortcut_downloads_long">ऑफ़लाइन डाउनलोड खोलें</string>
+    <string name="widget_description">Peek से त्वरित खोज, सहेजी गई पोस्ट और आपका सर्कल।</string>
+    <string name="widget_title">Peek</string>
+    <string name="widget_subtitle">अनुसरण करने का शांत तरीका</string>
+    <string name="widget_search">खोजें</string>
+    <string name="widget_saved">सहेजे गए</string>
+    <string name="widget_circle">होम</string>
 </resources>

@@ -42,4 +42,16 @@
     <string name="shortcut_security_long">Peekのセキュリティセンターを開く</string>
     <string name="shortcut_private">プライベートフィード</string>
     <string name="shortcut_private_long">プライベートフィードを開く</string>
+    <string name="shortcut_search">人物を検索</string>
+    <string name="shortcut_search_long">名前で人物を検索</string>
+    <string name="shortcut_saved">保存した投稿</string>
+    <string name="shortcut_saved_long">保存した投稿を開く</string>
+    <string name="shortcut_downloads">ダウンロード</string>
+    <string name="shortcut_downloads_long">オフラインのダウンロードを開く</string>
+    <string name="widget_description">Peek からすばやく検索、保存した投稿、サークルにアクセス。</string>
+    <string name="widget_title">Peek</string>
+    <string name="widget_subtitle">もっと静かにフォローする方法</string>
+    <string name="widget_search">検索</string>
+    <string name="widget_saved">保存済み</string>
+    <string name="widget_circle">ホーム</string>
 </resources>

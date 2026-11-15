@@ -42,4 +42,16 @@
     <string name="shortcut_security_long">فتح مركز أمان Peek</string>
     <string name="shortcut_private">الخلاصة الخاصة</string>
     <string name="shortcut_private_long">افتح خلاصتك الخاصة</string>
+    <string name="shortcut_search">البحث عن أشخاص</string>
+    <string name="shortcut_search_long">البحث عن أشخاص بالاسم</string>
+    <string name="shortcut_saved">المنشورات المحفوظة</string>
+    <string name="shortcut_saved_long">فتح المنشورات المحفوظة</string>
+    <string name="shortcut_downloads">التنزيلات</string>
+    <string name="shortcut_downloads_long">فتح التنزيلات دون اتصال</string>
+    <string name="widget_description">بحث سريع ومنشورات محفوظة ودائرتك من Peek.</string>
+    <string name="widget_title">Peek</string>
+    <string name="widget_subtitle">طريقة أهدأ للمتابعة</string>
+    <string name="widget_search">بحث</string>
+    <string name="widget_saved">المحفوظات</string>
+    <string name="widget_circle">الرئيسية</string>
 </resources>

@@ -42,4 +42,16 @@
     <string name="shortcut_security_long">Abrir el centro de seguridad de Peek</string>
     <string name="shortcut_private">Feed privado</string>
     <string name="shortcut_private_long">Abre tu feed privado</string>
+    <string name="shortcut_search">Buscar personas</string>
+    <string name="shortcut_search_long">Buscar personas por nombre</string>
+    <string name="shortcut_saved">Publicaciones guardadas</string>
+    <string name="shortcut_saved_long">Abrir publicaciones guardadas</string>
+    <string name="shortcut_downloads">Descargas</string>
+    <string name="shortcut_downloads_long">Abrir descargas sin conexión</string>
+    <string name="widget_description">Búsqueda rápida, publicaciones guardadas y tu círculo desde Peek.</string>
+    <string name="widget_title">Peek</string>
+    <string name="widget_subtitle">Una forma más tranquila de seguir</string>
+    <string name="widget_search">Buscar</string>
+    <string name="widget_saved">Guardados</string>
+    <string name="widget_circle">Inicio</string>
 </resources>
