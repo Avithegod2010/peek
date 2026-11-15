@@ -74,10 +74,10 @@ android {
     }
 
     lint {
-        // Release builds are reproducible without downloading the lint toolchain.
-        // Run `./gradlew lint` separately when the full lint jars are available.
+        // Lint runs as its own CI gate; release assembly stays reproducible.
         checkReleaseBuilds = false
-        abortOnError = false
+        abortOnError = true
+        warningsAsErrors = false
     }
 }
 
