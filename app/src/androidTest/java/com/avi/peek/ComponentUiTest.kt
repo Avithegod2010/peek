@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.SecureScreen
@@ -17,11 +18,13 @@ import com.avi.peek.ui.theme.PeekTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 
 /**
  * Compose UI tests for reusable surface pieces. Requires a device/emulator
  * (`connectedDebugAndroidTest`).
  */
+@RunWith(AndroidJUnit4::class)
 class ComponentUiTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
@@ -67,6 +70,6 @@ class ComponentUiTest {
         }
         composeRule.waitForIdle()
         val flags = composeRule.activity.window.attributes.flags
-        assertTrue(flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+        assertTrue((flags and WindowManager.LayoutParams.FLAG_SECURE) != 0)
     }
 }

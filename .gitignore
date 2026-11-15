@@ -26,5 +26,6 @@ package-*.txt
 history-audit.txt
 test-*.txt
 release-*.txt
+local-*.txt
 .agents/
 skills-lock.json
