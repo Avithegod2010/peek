@@ -211,7 +211,7 @@ Following, likes, bookmarks, downloads and local search history never leave the 
 ## Security notes
 
 - Android cloud/adb backup is disabled (`android:allowBackup="false"`) because Peek stores follows, saved posts and downloads locally.
-- Private downloads are encrypted at rest with an Android Keystore AES-GCM vault. The vault key is bound to biometric/device authentication with a five-minute auth window and is invalidated when biometrics are re-enrolled.
+- Private downloads are encrypted at rest with an Android Keystore AES-GCM vault. The vault key is bound to biometric/device authentication with a 30-minute auth window and is invalidated when biometrics are re-enrolled.
 - Sensitive Room metadata (captions, profile text, media URLs, location, audio and local file paths) is field-level encrypted with a separate Android Keystore AES-GCM key. Comment text, search history and saved searches are encrypted too. Older plaintext rows are re-sealed on their next write.
 - Metadata writes fail closed: Peek will not silently store plaintext if Keystore encryption is unavailable.
 - The security center can rotate the metadata key; each ciphertext carries its key version so old rows stay readable during a partial rotation.

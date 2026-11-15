@@ -38,7 +38,7 @@ These tests are written and compile, but have **not been run on hardware**:
 
 ## What still needs hardware verification
 
-- Biometric-bound vault key creation and the five-minute auth window
+- Biometric-bound vault key creation and the 30-minute auth window
 - Auto-lock sealing and shake-to-hide
 - Screenshot blocking on private screens
 - Clipboard auto-clear after one minute

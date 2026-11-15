@@ -2,13 +2,22 @@ package com.avi.peek
 
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.ui.components.EmptyState
@@ -59,6 +68,37 @@ class ComponentUiTest {
         }
         composeRule.onNodeWithContentDescription("Back").performClick()
         assertTrue(backed)
+    }
+
+    @Test
+    fun componentTreeCapturesToAnImage() {
+        composeRule.setContent {
+            PeekTheme(PeekSettings(dynamicColor = false)) {
+                Box(Modifier.size(width = 360.dp, height = 240.dp)) {
+                    EmptyState(
+                        title = "Private vault",
+                        message = "Sealed on this device.",
+                        icon = Icons.Rounded.Lock,
+                    )
+                }
+            }
+        }
+        val image = composeRule.onRoot().captureToImage()
+        assertTrue(image.width > 0)
+        assertTrue(image.height > 0)
+    }
+
+    @Test
+    fun topBarRendersInRtl() {
+        composeRule.setContent {
+            PeekTheme(PeekSettings(dynamicColor = false)) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    SimpleTopBar(title = "مركز الأمان", subtitle = "الخصوصية", onBack = {})
+                }
+            }
+        }
+        composeRule.onNodeWithText("مركز الأمان").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Back").assertIsDisplayed()
     }
 
     @Test

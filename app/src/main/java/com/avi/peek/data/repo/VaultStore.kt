@@ -28,8 +28,9 @@ class VaultLockedException(message: String, cause: Throwable? = null) : Exceptio
  *
  * The data key lives in Android Keystore and is bound to user authentication:
  * on Android 11+ it can only be used after a biometric or device-credential
- * check, and it is invalidated when biometrics are re-enrolled. The app keeps
- * the unlock window short and re-locks private content on a timer.
+ * check, it is unusable while the device is locked, and it is invalidated when
+ * biometrics are re-enrolled. Private content re-locks on a timer; the key
+ * window is long enough for the background seal to finish.
  */
 class VaultStore(
     context: Context,
@@ -197,6 +198,8 @@ class VaultStore(
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
         const val TAG_BITS = 128
-        const val AUTH_WINDOW_SECONDS = 300
+        // Long enough to cover the largest auto-lock interval (15 minutes) so
+        // background sealing still works after the UI has re-locked.
+        const val AUTH_WINDOW_SECONDS = 1_800
     }
 }
