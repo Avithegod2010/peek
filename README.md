@@ -185,6 +185,8 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 Release builds use a keystore that lives outside the repository. See [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md) and run `./scripts/build-release.ps1 -Version <version>` to produce a signed, non-debuggable APK plus `SHA256SUMS.txt`. Never publish a debug APK as a production download.
 
+Pushing a matching `v*` tag runs the signed release workflow. It requires four repository secrets: `PEEK_KEYSTORE_BASE64`, `PEEK_KEYSTORE_PASSWORD`, `PEEK_KEY_ALIAS` and `PEEK_KEY_PASSWORD`. The workflow verifies the signature, rejects debuggable APKs and publishes checksums.
+
 Minimum Android version: **8.0 (API 26)**. Material You dynamic colour is used on Android 12+; older devices get a hand-tuned fallback palette.
 
 ### F-Droid
