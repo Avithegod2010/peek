@@ -25,6 +25,13 @@ object PrivateAccess {
     @Volatile
     private var autoLockMillis: Long = DEFAULT_AUTO_LOCK_MINUTES * 60_000L
 
+    /**
+     * Invoked when revealed content becomes hidden again (timer, background or
+     * panic action). PeekApp uses this to re-seal open private downloads.
+     */
+    @Volatile
+    var onLocked: (() -> Unit)? = null
+
     fun setAutoLockMinutes(minutes: Int) {
         autoLockMillis = minutes.coerceIn(0, 60) * 60_000L
         if (_revealed.value && autoLockMillis == 0L) {
@@ -47,7 +54,9 @@ object PrivateAccess {
     fun hide() {
         lockJob?.cancel()
         lockJob = null
+        val wasRevealed = _revealed.value
         _revealed.value = false
+        if (wasRevealed) onLocked?.invoke()
     }
 
     fun isRevealed(): Boolean = _revealed.value

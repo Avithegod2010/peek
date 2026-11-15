@@ -53,6 +53,7 @@ import com.avi.peek.data.repo.SessionAudit
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.LocalSnackbarHostState
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.fileSize
 import com.avi.peek.util.relativeTime
@@ -146,6 +147,7 @@ fun SessionAuditScreen(
         factory = SimpleViewModelFactory { SessionAuditViewModel() },
     ),
 ) {
+    SecureScreen()
     val audit by viewModel.audit.collectAsStateWithLifecycle()
     val vaultBytes by viewModel.vaultBytes.collectAsStateWithLifecycle()
     val events by viewModel.events.collectAsStateWithLifecycle()

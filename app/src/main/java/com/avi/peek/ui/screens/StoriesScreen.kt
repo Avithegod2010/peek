@@ -58,6 +58,7 @@ import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.PeekImage
 import com.avi.peek.ui.components.PeekVideoSurface
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.ui.components.rememberPeekPlayer
 import com.avi.peek.util.openInstagram
@@ -104,6 +105,7 @@ fun StoriesScreen(
         factory = SimpleViewModelFactory { StoriesViewModel(username) },
     ),
 ) {
+    SecureScreen()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val items by viewModel.items.collectAsStateWithLifecycle()

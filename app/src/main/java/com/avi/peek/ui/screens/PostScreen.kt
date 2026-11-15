@@ -107,6 +107,7 @@ import com.avi.peek.ui.components.HeartBurst
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.PeekPlayerState
 import com.avi.peek.ui.components.PeekVideoSurface
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.VerifiedBadge
 import com.avi.peek.ui.components.ZoomablePeekImage
 import com.avi.peek.ui.components.rememberPeekPlayer
@@ -140,6 +141,7 @@ fun PostScreen(
     val snackbar = LocalSnackbarHostState.current
     val haptics = LocalPeekHaptics.current
     val media by viewModel.media.collectAsStateWithLifecycle()
+    SecureScreen(enabled = media?.isPrivate == true)
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val comments by viewModel.comments.collectAsStateWithLifecycle()

@@ -476,6 +476,13 @@ fun SettingsScreen(
                         checked = settings.privateVault,
                         onCheckedChange = { viewModel.setPrivateVault(it) },
                     )
+                    SettingsSwitch(
+                        icon = Icons.Rounded.Vibration,
+                        title = "Shake to hide private content",
+                        subtitle = "A quick shake locks private surfaces without deleting anything",
+                        checked = settings.panicShake,
+                        onCheckedChange = { viewModel.setPanicShake(it) },
+                    )
                     SettingsClickRow(
                         icon = Icons.Rounded.Timer,
                         title = "Private auto-lock",

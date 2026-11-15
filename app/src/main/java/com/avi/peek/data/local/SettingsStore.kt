@@ -66,6 +66,7 @@ data class PeekSettings(
     val privateVault: Boolean = true,
     val privateContentHidden: Boolean = false,
     val privateAutoLockMinutes: Int = 2,
+    val panicShake: Boolean = false,
     val customAccent: Long? = null,
     val accentSaturation: Float = 0.62f,
     val accentValue: Float = 0.78f,
@@ -110,6 +111,7 @@ class SettingsStore(private val context: Context) {
         val PRIVATE_DOWNLOAD_POLICY = stringPreferencesKey("private_download_policy")
         val PRIVATE_VAULT = booleanPreferencesKey("private_vault")
         val PRIVATE_AUTO_LOCK = intPreferencesKey("private_auto_lock")
+        val PANIC_SHAKE = booleanPreferencesKey("panic_shake")
         val PRIVATE_CONTENT_HIDDEN = booleanPreferencesKey("private_content_hidden")
         val CUSTOM_ACCENT = stringPreferencesKey("custom_accent")
         val ACCENT_SATURATION = stringPreferencesKey("accent_saturation")
@@ -161,6 +163,7 @@ class SettingsStore(private val context: Context) {
                 privateVault = prefs[Keys.PRIVATE_VAULT] ?: true,
                 privateContentHidden = prefs[Keys.PRIVATE_CONTENT_HIDDEN] ?: false,
                 privateAutoLockMinutes = (prefs[Keys.PRIVATE_AUTO_LOCK] ?: 2).coerceIn(0, 60),
+                panicShake = prefs[Keys.PANIC_SHAKE] ?: false,
                 customAccent = prefs[Keys.CUSTOM_ACCENT]?.toLongOrNull(),
                 accentSaturation = (prefs[Keys.ACCENT_SATURATION]?.toFloatOrNull() ?: 0.62f).coerceIn(0.15f, 1f),
                 accentValue = (prefs[Keys.ACCENT_VALUE]?.toFloatOrNull() ?: 0.78f).coerceIn(0.25f, 1f),
@@ -206,6 +209,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setPrivateVault(value: Boolean) = edit { it[Keys.PRIVATE_VAULT] = value }
     suspend fun setPrivateAutoLockMinutes(value: Int) =
         edit { it[Keys.PRIVATE_AUTO_LOCK] = value.coerceIn(0, 60) }
+    suspend fun setPanicShake(value: Boolean) = edit { it[Keys.PANIC_SHAKE] = value }
     suspend fun setPrivateContentHidden(value: Boolean) = edit { it[Keys.PRIVATE_CONTENT_HIDDEN] = value }
     suspend fun setCustomAccent(value: Long?) = edit {
         if (value == null) it.remove(Keys.CUSTOM_ACCENT) else it[Keys.CUSTOM_ACCENT] = value.toString()

@@ -34,8 +34,10 @@ object FieldCipher {
             cipher.init(Cipher.ENCRYPT_MODE, key())
             val payload = cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8))
             PREFIX + Base64.encodeToString(payload, Base64.NO_WRAP)
-        } catch (_: Exception) {
-            value
+        } catch (e: Exception) {
+            // Never silently write plaintext metadata. If the Keystore is
+            // unavailable the write must fail and the caller must surface it.
+            throw IllegalStateException("Peek could not encrypt local metadata", e)
         }
     }
 
@@ -125,4 +127,24 @@ fun ProfileEntity.unsealMetadata(): ProfileEntity = copy(
     profilePicUrl = FieldCipher.decrypt(profilePicUrl),
     bioLinksJson = FieldCipher.decrypt(bioLinksJson) ?: bioLinksJson,
     highlightsJson = FieldCipher.decrypt(highlightsJson) ?: highlightsJson,
+)
+
+fun CommentEntity.sealMetadata(): CommentEntity = copy(
+    username = FieldCipher.encrypt(username) ?: username,
+    avatarUrl = FieldCipher.encrypt(avatarUrl),
+    text = FieldCipher.encrypt(text) ?: text,
+)
+
+fun CommentEntity.unsealMetadata(): CommentEntity = copy(
+    username = FieldCipher.decrypt(username) ?: username,
+    avatarUrl = FieldCipher.decrypt(avatarUrl),
+    text = FieldCipher.decrypt(text) ?: text,
+)
+
+fun SearchHistoryEntity.sealMetadata(): SearchHistoryEntity = copy(
+    query = FieldCipher.encrypt(query) ?: query,
+)
+
+fun SearchHistoryEntity.unsealMetadata(): SearchHistoryEntity = copy(
+    query = FieldCipher.decrypt(query) ?: query,
 )

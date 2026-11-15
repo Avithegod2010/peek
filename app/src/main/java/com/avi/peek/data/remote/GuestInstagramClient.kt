@@ -530,6 +530,8 @@ class GuestInstagramClient(
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .cookieJar(cookieJar)
+            .addInterceptor(NetworkAllowlistInterceptor())
+            .addNetworkInterceptor(NetworkAllowlistInterceptor())
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(35, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS)

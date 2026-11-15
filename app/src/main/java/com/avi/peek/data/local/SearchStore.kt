@@ -29,7 +29,8 @@ class SearchStore(private val context: Context) {
     val saved: Flow<List<SavedSearch>> = context.peekSearchData.data
         .catch { emit(androidx.datastore.preferences.core.emptyPreferences()) }
         .map { prefs ->
-            prefs[key]?.let { raw ->
+            prefs[key]?.let { stored ->
+                val raw = FieldCipher.decrypt(stored) ?: return@map emptyList()
                 runCatching { json.decodeFromString(ListSerializer(SavedSearch.serializer()), raw) }
                     .getOrDefault(emptyList())
             } ?: emptyList()
@@ -39,10 +40,7 @@ class SearchStore(private val context: Context) {
         val clean = query.trim()
         if (clean.isBlank()) return
         context.peekSearchData.edit { prefs ->
-            val current = prefs[key]?.let {
-                runCatching { json.decodeFromString(ListSerializer(SavedSearch.serializer()), it) }
-                    .getOrDefault(emptyList())
-            } ?: emptyList()
+            val current = decode(prefs[key])
             val entry = SavedSearch(
                 query = clean,
                 targetUsername = targetUsername,
@@ -50,20 +48,29 @@ class SearchStore(private val context: Context) {
             )
             val next = (listOf(entry) + current.filterNot { it.query.equals(clean, ignoreCase = true) })
                 .take(24)
-            prefs[key] = json.encodeToString(ListSerializer(SavedSearch.serializer()), next)
+            prefs[key] = encode(next)
         }
     }
 
     suspend fun remove(query: String) {
         context.peekSearchData.edit { prefs ->
-            val current = prefs[key]?.let {
-                runCatching { json.decodeFromString(ListSerializer(SavedSearch.serializer()), it) }
-                    .getOrDefault(emptyList())
-            } ?: emptyList()
-            prefs[key] = json.encodeToString(
-                ListSerializer(SavedSearch.serializer()),
+            val current = decode(prefs[key])
+            prefs[key] = encode(
                 current.filterNot { it.query.equals(query, ignoreCase = true) },
             )
         }
+    }
+
+    private fun decode(stored: String?): List<SavedSearch> {
+        if (stored == null) return emptyList()
+        val raw = FieldCipher.decrypt(stored) ?: return emptyList()
+        return runCatching {
+            json.decodeFromString(ListSerializer(SavedSearch.serializer()), raw)
+        }.getOrDefault(emptyList())
+    }
+
+    private fun encode(entries: List<SavedSearch>): String {
+        val raw = json.encodeToString(ListSerializer(SavedSearch.serializer()), entries)
+        return FieldCipher.encrypt(raw) ?: error("Could not encrypt saved searches")
     }
 }

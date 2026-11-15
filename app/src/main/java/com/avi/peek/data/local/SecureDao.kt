@@ -99,6 +99,43 @@ class SecureMediaDao(private val dao: MediaDao) {
         map { items -> items.map { it.unsealMetadata() } }
 }
 
+class SecureCommentDao(private val dao: CommentDao) {
+
+    fun observeForMedia(mediaCode: String): Flow<List<CommentEntity>> =
+        dao.observeForMedia(mediaCode).map { rows -> rows.map { it.unsealMetadata() } }
+
+    suspend fun forMedia(mediaCode: String): List<CommentEntity> =
+        dao.forMedia(mediaCode).map { it.unsealMetadata() }
+
+    suspend fun upsertAll(comments: List<CommentEntity>) =
+        dao.upsertAll(comments.map { it.sealMetadata() })
+
+    suspend fun clearForMedia(mediaCode: String) = dao.clearForMedia(mediaCode)
+}
+
+class SecureSearchDao(private val dao: SearchDao) {
+
+    fun observeRecent(): Flow<List<SearchHistoryEntity>> =
+        dao.observeRecent().map { rows -> rows.map { it.unsealMetadata() } }
+
+    suspend fun add(entry: SearchHistoryEntity) {
+        // Ciphertexts use a random IV, so the same query produces a different
+        // primary key each time. Remove any previous sealed row first.
+        dao.allOnce()
+            .filter { it.unsealMetadata().query.equals(entry.query, ignoreCase = true) }
+            .forEach { dao.remove(it.query) }
+        dao.add(entry.sealMetadata())
+    }
+
+    suspend fun clear() = dao.clear()
+
+    suspend fun remove(query: String) {
+        dao.allOnce()
+            .filter { it.unsealMetadata().query.equals(query, ignoreCase = true) }
+            .forEach { dao.remove(it.query) }
+    }
+}
+
 class SecureProfileDao(private val dao: ProfileDao) {
 
     fun observeFollowing(): Flow<List<ProfileEntity>> = dao.observeFollowing().unsealed()

@@ -54,7 +54,9 @@ fun rememberPeekPlayer(
     autoPlay: Boolean = true,
     loop: Boolean = true,
 ): PeekPlayerState? {
-    val safeUrl = url?.takeIf { it.isNotBlank() }
+    val safeUrl = url?.takeIf {
+        it.isNotBlank() && com.avi.peek.data.remote.NetworkAllowlist.isAllowed(it)
+    }
     val context = LocalContext.current
     val state = remember(safeUrl) {
         if (safeUrl == null) {

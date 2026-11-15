@@ -6,8 +6,10 @@ import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.PeekDatabase
 import com.avi.peek.data.local.ProfileEntity
 import com.avi.peek.data.local.ProfileWithMedia
+import com.avi.peek.data.local.SecureCommentDao
 import com.avi.peek.data.local.SecureMediaDao
 import com.avi.peek.data.local.SecureProfileDao
+import com.avi.peek.data.local.SecureSearchDao
 import com.avi.peek.data.local.SettingsStore
 import com.avi.peek.data.remote.GuestErrorKind
 import com.avi.peek.data.remote.GuestException
@@ -69,6 +71,8 @@ class PeekRepository(
 
     private val secureMedia = SecureMediaDao(db.media())
     private val secureProfiles = SecureProfileDao(db.profiles())
+    private val secureComments = SecureCommentDao(db.comments())
+    private val secureSearches = SecureSearchDao(db.searches())
     private val json = Json { ignoreUnknownKeys = true }
     private val childSerializer = ListSerializer(MediaChild.serializer())
     private val stringListSerializer = ListSerializer(String.serializer())
@@ -130,7 +134,7 @@ class PeekRepository(
         privateVisible,
     ) { items, visible -> if (visible) items else emptyList() }
     val recentlyViewed: Flow<List<ProfileEntity>> = secureProfiles.observeRecentlyViewed()
-    val recentSearches = db.searches().observeRecent()
+    val recentSearches = secureSearches.observeRecent()
 
     fun mediaByCodes(codes: List<String>): Flow<List<MediaEntity>> =
         secureMedia.observeByCodes(codes).visibleOnly()
@@ -217,7 +221,7 @@ class PeekRepository(
     }
 
     suspend fun cachedComments(code: String): CommentPage? = withContext(Dispatchers.IO) {
-        val rows = db.comments().forMedia(code)
+        val rows = secureComments.forMedia(code)
         if (rows.isEmpty()) null else {
             val replies = rows.filter { it.parentPk != null }.groupBy { it.parentPk }
             val roots = rows.filter { it.parentPk == null }.map { row ->
@@ -246,8 +250,8 @@ class PeekRepository(
             val rows = page.comments.flatMap { comment ->
                 listOf(comment.toEntity(code)) + comment.replies.map { it.toEntity(code) }
             }
-            if (after == null) db.comments().clearForMedia(code)
-            db.comments().upsertAll(rows)
+            if (after == null) secureComments.clearForMedia(code)
+            secureComments.upsertAll(rows)
             page
         } catch (e: GuestException) {
             if (cached != null) cached else throw e
@@ -762,7 +766,7 @@ class PeekRepository(
     }
 
     suspend fun saveProfileLinkToHistory(query: String) {
-        db.searches().add(
+        secureSearches.add(
             com.avi.peek.data.local.SearchHistoryEntity(
                 query = query,
                 searchedAt = System.currentTimeMillis(),
@@ -770,7 +774,7 @@ class PeekRepository(
         )
     }
 
-    suspend fun clearSearchHistory() = db.searches().clear()
+    suspend fun clearSearchHistory() = secureSearches.clear()
 
     suspend fun privateProfileBlock(username: String): String? = withContext(Dispatchers.IO) {
         val profile = secureProfiles.get(username) ?: return@withContext null

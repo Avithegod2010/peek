@@ -1,0 +1,72 @@
+package com.avi.peek
+
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.ui.components.EmptyState
+import com.avi.peek.ui.components.SecureScreen
+import com.avi.peek.ui.components.SimpleTopBar
+import com.avi.peek.ui.theme.PeekTheme
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+
+/**
+ * Compose UI tests for reusable surface pieces. Requires a device/emulator
+ * (`connectedDebugAndroidTest`).
+ */
+class ComponentUiTest {
+    @get:Rule
+    val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun emptyStateShowsTitleMessageAndAction() {
+        var clicked = false
+        composeRule.setContent {
+            PeekTheme(PeekSettings(dynamicColor = false)) {
+                EmptyState(
+                    title = "No private posts yet",
+                    message = "Follow an account to fill this space.",
+                    icon = Icons.Rounded.Lock,
+                    actionLabel = "Find profiles",
+                    onAction = { clicked = true },
+                )
+            }
+        }
+        composeRule.onNodeWithText("No private posts yet").assertIsDisplayed()
+        composeRule.onNodeWithText("Follow an account to fill this space.").assertIsDisplayed()
+        composeRule.onNodeWithText("Find profiles").performClick()
+        assertTrue(clicked)
+    }
+
+    @Test
+    fun topBarBackButtonCallsBack() {
+        var backed = false
+        composeRule.setContent {
+            PeekTheme(PeekSettings(dynamicColor = false)) {
+                SimpleTopBar(title = "Security center", onBack = { backed = true })
+            }
+        }
+        composeRule.onNodeWithContentDescription("Back").performClick()
+        assertTrue(backed)
+    }
+
+    @Test
+    fun secureScreenAddsFlagSecure() {
+        composeRule.setContent {
+            PeekTheme(PeekSettings(dynamicColor = false)) {
+                SecureScreen()
+            }
+        }
+        composeRule.waitForIdle()
+        val flags = composeRule.activity.window.attributes.flags
+        assertTrue(flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+    }
+}

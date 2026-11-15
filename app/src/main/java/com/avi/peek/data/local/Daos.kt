@@ -244,5 +244,8 @@ interface SearchDao {
 
     @Query("DELETE FROM searches WHERE query = :query")
     suspend fun remove(query: String)
+
+    @Query("SELECT * FROM searches")
+    suspend fun allOnce(): List<SearchHistoryEntity>
 }
 

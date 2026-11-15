@@ -79,6 +79,7 @@ class SettingsViewModel : ViewModel() {
         store.setPrivateAutoLockMinutes(value)
         PrivateAccess.setAutoLockMinutes(value)
     }
+    fun setPanicShake(value: Boolean) = viewModelScope.launch { store.setPanicShake(value) }
     fun setCustomAccent(value: Long?) = viewModelScope.launch { store.setCustomAccent(value) }
     fun setAccentSaturation(value: Float) = viewModelScope.launch { store.setAccentSaturation(value) }
     fun setAccentValue(value: Float) = viewModelScope.launch { store.setAccentValue(value) }
@@ -177,6 +178,7 @@ class SettingsViewModel : ViewModel() {
                 CookieManager.getInstance().removeAllCookies(null)
                 CookieManager.getInstance().flush()
             }
+            ServiceLocator.downloadQueue.clearPersistentQueue()
             repo.clearEverything()
             store.setLastFullSync(0L)
             store.setOnboarded(false)

@@ -97,6 +97,7 @@ import com.avi.peek.data.repo.SyncEvent
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.LocalReduceMotion
 import com.avi.peek.ui.components.LocalSnackbarHostState
+import com.avi.peek.ui.components.PanicShakeDetector
 import com.avi.peek.ui.screens.AccountScreen
 import com.avi.peek.ui.screens.AudioScreen
 import com.avi.peek.ui.screens.CircleFeedScreen
@@ -201,6 +202,19 @@ private fun MainScaffold(
     }
     val activeDownloads = downloadQueue.count { it.status != com.avi.peek.data.repo.DownloadStatus.DONE }
     val scope = rememberCoroutineScope()
+
+    PanicShakeDetector(enabled = settings.panicShake) {
+        com.avi.peek.util.PrivateAccess.hide()
+        scope.launch {
+            ServiceLocator.settings.setPrivateContentHidden(true)
+            snackbar.showSnackbar("Private content hidden")
+        }
+        navController.navigate("home") {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     fun navigateTab(route: String) {
         if (currentRoute == route) return

@@ -60,6 +60,7 @@ import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.MediaGridItem
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.ui.rememberPrivateUnlock
 import com.avi.peek.util.PrivateAccess
@@ -215,6 +216,7 @@ fun PrivateFeedScreen(
         factory = SimpleViewModelFactory { PrivateFeedViewModel() },
     ),
 ) {
+    SecureScreen()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val revealed by PrivateAccess.revealed.collectAsStateWithLifecycle()
     val media by viewModel.media.collectAsStateWithLifecycle()

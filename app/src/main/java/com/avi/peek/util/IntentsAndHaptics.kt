@@ -39,9 +39,36 @@ fun Context.shareText(text: String, title: String = "Share") {
 }
 
 fun Context.copyText(text: String) {
-    val clipboard = getSystemService(android.content.ClipboardManager::class.java)
-    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Peek", text))
+    val clipboard = getSystemService(android.content.ClipboardManager::class.java) ?: return
+    val clip = android.content.ClipData.newPlainText("Peek", text).apply {
+        description.extras = android.os.PersistableBundle().apply {
+            // Same key as ClipDescription.EXTRA_IS_SENSITIVE, available from
+            // API 33; setting it on older versions is harmless.
+            putBoolean("android.content.extra.IS_SENSITIVE", true)
+        }
+    }
+    clipboard.setPrimaryClip(clip)
+    clearSensitiveClipboardLater(clipboard, text)
 }
+
+private fun clearSensitiveClipboardLater(
+    clipboard: android.content.ClipboardManager,
+    copied: String,
+) {
+    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        val current = clipboard.primaryClip?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)?.text?.toString()
+        if (current == copied) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                clipboard.clearPrimaryClip()
+            } else {
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("", ""))
+            }
+        }
+    }, SENSITIVE_CLIPBOARD_MILLIS)
+}
+
+private const val SENSITIVE_CLIPBOARD_MILLIS = 60_000L
 
 class PeekHaptics(
     private val context: Context,

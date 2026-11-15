@@ -55,6 +55,7 @@ import com.avi.peek.data.repo.VaultEntry
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.LocalSnackbarHostState
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.ui.rememberPrivateUnlock
 import com.avi.peek.util.PrivateAccess
@@ -147,6 +148,7 @@ fun VaultManagerScreen(
     onBack: () -> Unit,
     viewModel: VaultViewModel = viewModel(factory = SimpleViewModelFactory { VaultViewModel() }),
 ) {
+    SecureScreen()
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current

@@ -27,12 +27,14 @@ class PeekApp : Application(), Configuration.Provider, ImageLoaderFactory {
         super.onCreate()
         ServiceLocator.init(this)
         PeekNotifications.createChannel(this)
+        PrivateAccess.onLocked = {
+            appScope.launch {
+                runCatching { ServiceLocator.repository.sealPrivateVault() }
+            }
+        }
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
                 PrivateAccess.hide()
-                appScope.launch {
-                    runCatching { ServiceLocator.repository.sealPrivateVault() }
-                }
             }
         })
         appScope.launch {

@@ -106,6 +106,7 @@ object ServiceLocator {
         }
         ImageLoader.Builder(appContext)
             .crossfade(true)
+            .okHttpClient(okHttp)
             .diskCache {
                 DiskCache.Builder()
                     .directory(File(appContext.cacheDir, "image_cache"))

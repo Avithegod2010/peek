@@ -69,6 +69,7 @@ import com.avi.peek.util.PrivateAccess
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.auth.InstagramLoginActivity
 import com.avi.peek.ui.components.LocalSnackbarHostState
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.openUrl
 import com.avi.peek.util.relativeTime
@@ -213,6 +214,7 @@ fun AccountScreen(
     onOpenAudit: () -> Unit,
     viewModel: AccountViewModel = viewModel(factory = SimpleViewModelFactory { AccountViewModel() }),
 ) {
+    SecureScreen()
     val context = LocalContext.current
     val account by viewModel.account.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()

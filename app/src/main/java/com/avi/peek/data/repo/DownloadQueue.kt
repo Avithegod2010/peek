@@ -3,6 +3,7 @@ package com.avi.peek.data.repo
 import android.content.Context
 import android.os.BatteryManager
 import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.data.local.PendingDownloadsStore
 import com.avi.peek.data.local.SettingsStore
 import com.avi.peek.util.NetworkMonitor
 import kotlinx.coroutines.CancellationException
@@ -11,6 +12,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -31,6 +33,7 @@ class DownloadQueue(
     private val settings: SettingsStore,
     private val network: NetworkMonitor,
     private val context: Context,
+    private val pendingStore: PendingDownloadsStore = PendingDownloadsStore(context),
 ) {
     private val _tasks = MutableStateFlow<List<DownloadTask>>(emptyList())
     val tasks: StateFlow<List<DownloadTask>> = _tasks.asStateFlow()
@@ -46,6 +49,20 @@ class DownloadQueue(
     init {
         scope.launch {
             settings.settings.collect { latestSettings = it }
+        }
+        scope.launch {
+            latestSettings = settings.settings.first()
+            val pending = pendingStore.pending.first()
+            if (pending.isNotEmpty()) {
+                _tasks.update { current ->
+                    val known = current.map { it.code }.toSet()
+                    current + pending.filterNot { it in known }
+                        .map { DownloadTask(it, DownloadStatus.PAUSED) }
+                }
+                if (blockReason() == null) {
+                    pending.forEach(::resume)
+                }
+            }
         }
         scope.launch {
             repository.downloadProgress.collect { progress ->
@@ -88,7 +105,10 @@ class DownloadQueue(
         _tasks.update { current ->
             current.filterNot { it.code == code } + DownloadTask(code, DownloadStatus.QUEUED)
         }
-        start(code)
+        scope.launch {
+            pendingStore.add(code)
+            start(code)
+        }
         return null
     }
 
@@ -138,10 +158,17 @@ class DownloadQueue(
         jobs[code]?.cancel()
         jobs.remove(code)
         _tasks.update { it.filterNot { task -> task.code == code } }
+        scope.launch { pendingStore.remove(code) }
     }
 
     fun clearFinished() {
+        val done = _tasks.value.filter { it.status == DownloadStatus.DONE }.map { it.code }
         _tasks.update { it.filterNot { task -> task.status == DownloadStatus.DONE } }
+        scope.launch { done.forEach { pendingStore.remove(it) } }
+    }
+
+    fun clearPersistentQueue() {
+        scope.launch { pendingStore.clear() }
     }
 
     private fun start(code: String) {
@@ -151,6 +178,7 @@ class DownloadQueue(
                 _tasks.update { list -> list.map { if (it.code == code) it.copy(status = DownloadStatus.RUNNING, error = null) else it } }
                 try {
                     repository.download(code)
+                    pendingStore.remove(code)
                     _tasks.update { list -> list.map { if (it.code == code) it.copy(status = DownloadStatus.DONE, fraction = 1f) else it } }
                 } catch (e: CancellationException) {
                     _tasks.update { list ->

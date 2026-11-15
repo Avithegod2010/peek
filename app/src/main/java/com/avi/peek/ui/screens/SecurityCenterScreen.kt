@@ -54,6 +54,7 @@ import com.avi.peek.data.repo.SessionAudit
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.LocalSnackbarHostState
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.fileSize
@@ -155,6 +156,7 @@ fun SecurityCenterScreen(
         factory = SimpleViewModelFactory { SecurityCenterViewModel() },
     ),
 ) {
+    SecureScreen()
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val events by viewModel.events.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current

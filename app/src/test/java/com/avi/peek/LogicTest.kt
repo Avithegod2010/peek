@@ -1,11 +1,13 @@
 package com.avi.peek
 
 import com.avi.peek.data.remote.GuestInstagramClient
+import com.avi.peek.data.remote.NetworkAllowlist
 import com.avi.peek.data.remote.SsrParser
 import com.avi.peek.data.repo.BackupCrypto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -25,6 +27,42 @@ class LogicTest {
     fun backupCryptoRejectsWrongPassphrase() {
         val encrypted = BackupCrypto.encrypt("secret".toByteArray(), "right".toCharArray())
         BackupCrypto.decrypt(encrypted, "wrong".toCharArray())
+    }
+
+    @Test
+    fun backupCryptoRejectsTruncatedAndTamperedData() {
+        val encrypted = BackupCrypto.encrypt("secret".toByteArray(), "passphrase".toCharArray())
+        assertTrue(runCatching { BackupCrypto.decrypt(encrypted.copyOfRange(0, 20), "passphrase".toCharArray()) }.isFailure)
+
+        val tampered = encrypted.copyOf()
+        tampered[tampered.lastIndex] = (tampered.last().toInt() xor 1).toByte()
+        assertTrue(runCatching { BackupCrypto.decrypt(tampered, "passphrase".toCharArray()) }.isFailure)
+        assertFalse(BackupCrypto.isEncrypted("not a backup".toByteArray()))
+    }
+
+    @Test
+    fun backupCryptoHandlesEmptyPayload() {
+        val encrypted = BackupCrypto.encrypt(ByteArray(0), "passphrase".toCharArray())
+        assertTrue(encrypted.size > 33)
+        assertTrue(BackupCrypto.decrypt(encrypted, "passphrase".toCharArray()).isEmpty())
+    }
+
+    @Test
+    fun allowlistAcceptsOnlyPeekNetworkHosts() {
+        assertTrue(NetworkAllowlist.isAllowed("https://www.instagram.com/p/abc/"))
+        assertTrue(NetworkAllowlist.isAllowed("https://i.instagram.com/api/v1/media/1/info/"))
+        assertTrue(NetworkAllowlist.isAllowed("https://scontent-arn2-1.cdninstagram.com/v/t51/x.jpg"))
+        assertTrue(NetworkAllowlist.isAllowed("https://instagram.fbcdn.net/v/t51/x.jpg"))
+        assertTrue(NetworkAllowlist.isAllowed("https://html.duckduckgo.com/html/"))
+    }
+
+    @Test
+    fun allowlistRejectsLookalikeAndCleartextHosts() {
+        assertFalse(NetworkAllowlist.isAllowed("https://instagram.com.evil.example/p/abc/"))
+        assertFalse(NetworkAllowlist.isAllowed("https://evilinstagram.com/p/abc/"))
+        assertFalse(NetworkAllowlist.isAllowed("https://cdninstagram.com.evil.example/x.jpg"))
+        assertFalse(NetworkAllowlist.isAllowed("http://www.instagram.com/p/abc/"))
+        assertFalse(NetworkAllowlist.isAllowed("https://example.com/"))
     }
 
     @Test
@@ -51,6 +89,84 @@ class LogicTest {
         assertEquals("abc", page.nodes[0].code)
         assertTrue(page.hasNextPage)
         assertEquals("next", page.endCursor)
+    }
+
+    @Test
+    fun parsesProfilePayloadWithMediaLinksAndHighlights() {
+        val payload = """
+            {"data":{"user":{
+              "xig_user_by_username":{
+                "pk":"42","id":"42","username":"NASA","full_name":"NASA",
+                "biography":"Space","profile_pic_url":"https://cdn/avatar.jpg",
+                "is_private":false,"is_verified":true,"follower_count":1000,
+                "following_count":12,"media_count":7,"latest_reel_media":1700000000,
+                "has_any_clips":true,
+                "bio_links":[{"title":"Site","url":"https://nasa.gov"}],
+                "lox_highlights_connection":{"edges":[{"node":{"id":"h1","title":"Launch","cover_media_cropped_thumbnail_url":"https://cdn/h.jpg"}}]}
+              },
+              "polaris_ordered_timeline_connection":{
+                "edges":[{"node":{"code":"abc","pk":"9","media_type":1,"display_uri":"https://cdn/p.jpg","caption":{"text":"hello"},"carousel_media_count":2}}],
+                "page_info":{"has_next_page":true,"end_cursor":"next-page"}
+              }
+            }}}
+        """.trimIndent()
+        val html = """<script type="application/json" data-sjs>$payload</script>"""
+        val profile = SsrParser().parseProfile(html, "nasa")
+        assertNotNull(profile)
+        assertEquals("NASA", profile!!.username)
+        assertEquals("NASA", profile.fullName)
+        assertTrue(profile.isVerified)
+        assertEquals(1000L, profile.followerCount)
+        assertEquals(1, profile.bioLinks.size)
+        assertEquals("https://nasa.gov", profile.bioLinks[0].url)
+        assertEquals(1, profile.highlights.size)
+        assertEquals("Launch", profile.highlights[0].title)
+        assertEquals(1, profile.media.size)
+        assertEquals("hello", profile.media[0].caption)
+        assertEquals(2, profile.media[0].carouselCount)
+        assertTrue(profile.hasNextPage)
+        assertEquals("next-page", profile.endCursor)
+    }
+
+    @Test
+    fun parsesRelayPostsPageAndApiPost() {
+        val pageJson = """
+            {"data":{"node":{"polaris_ordered_timeline_connection":{
+              "edges":[{"node":{"code":"p1","pk":"11","media_type":8,"display_uri":"https://cdn/a.jpg","carousel_media_count":3}}],
+              "page_info":{"has_next_page":true,"end_cursor":"cursor-2"}
+            }}}}
+        """.trimIndent()
+        val page = SsrParser().parseProfilePostsPage(pageJson)
+        assertNotNull(page)
+        assertEquals(1, page!!.nodes.size)
+        assertEquals("p1", page.nodes[0].code)
+        assertEquals(3, page.nodes[0].carouselCount)
+        assertTrue(page.hasNextPage)
+
+        val postJson = """
+            {"items":[{"code":"p2","pk":"22","media_type":2,"taken_at":1700000000,
+              "caption":{"text":"clip"},"like_count":5,"comment_count":2,
+              "user":{"username":"nasa","is_verified":true},
+              "video_versions":[{"url":"https://cdn/v.mp4","width":720,"height":1280}],
+              "image_versions2":{"candidates":[{"url":"https://cdn/c.jpg","width":720,"height":1280}]}}]}
+        """.trimIndent()
+        val post = SsrParser().parseApiPost(postJson)
+        assertNotNull(post)
+        assertEquals("p2", post!!.code)
+        assertEquals("nasa", post.username)
+        assertEquals("clip", post.caption)
+        assertEquals(5L, post.likeCount)
+        assertTrue(post.children.any { it.videoUrl == "https://cdn/v.mp4" })
+    }
+
+    @Test
+    fun malformedPayloadsFailClosed() {
+        val parser = SsrParser()
+        assertNull(parser.parseProfile("<html>not json</html>", "nasa"))
+        assertNull(parser.parseProfilePostsPage("{broken"))
+        assertNull(parser.parseUserFeed("[]"))
+        assertNull(parser.parseApiPost("{}"))
+        assertTrue(parser.parseComments("{\"comments\":[]}")!!.comments.isEmpty())
     }
 
     @Test
