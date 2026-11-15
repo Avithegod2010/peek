@@ -29,3 +29,7 @@ release-*.txt
 local-*.txt
 .agents/
 skills-lock.json
+
+# device-verification artifacts (kept in E:\Opencode CLIackups)
+verification/
+verification-build.log
