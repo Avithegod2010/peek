@@ -34,7 +34,8 @@ These tests are written and compile, but have **not been run on hardware**:
 - `SecurityInstrumentedTest` — session cookie encryption, vault seal/open, metadata cipher, private access
 - `SecureDaoInstrumentedTest` — media/profile/comment/search ciphertext at rest, search dedupe, lock callback
 - `MigrationInstrumentedTest` — Room 1→5 migrations, private-state propagation, comment table and indices
-- `ComponentUiTest` — Compose empty state, top-bar back action and `FLAG_SECURE`
+- `RepositoryVisibilityInstrumentedTest` — private feed and media filtering through the real repository
+- `ComponentUiTest` — Compose empty state, top-bar back action, image capture, RTL rendering and `FLAG_SECURE`
 
 ## What still needs hardware verification
 

@@ -118,6 +118,7 @@ import com.avi.peek.ui.components.MediaGridItem
 import com.avi.peek.ui.rememberPrivateUnlock
 import com.avi.peek.ui.components.MiniCreatorCard
 import com.avi.peek.ui.components.PeekImage
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SectionHeader
 import com.avi.peek.ui.components.ShimmerBox
 import com.avi.peek.ui.components.VerifiedBadge
@@ -264,6 +265,7 @@ fun ProfileScreen(
     }
 
     val profile = data?.profile
+    SecureScreen(enabled = profile?.isPrivate == true)
     val lastVisibleIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
     LaunchedEffect(lastVisibleIndex, profile?.hasMorePosts, loadingMore) {
         val total = gridState.layoutInfo.totalItemsCount
