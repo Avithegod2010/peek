@@ -47,3 +47,17 @@ Device-verification output (APKs, logs, screenshots, UI dumps from 2026-11-16) i
 - Golden-image screenshot baselines, MockWebServer pagination suite.
 - Localisation: ~193 hardcoded `Text("…")` calls remain outside the translated surfaces.
 - New release not cut since `v1.5.0`; the release workflow needs the four `PEEK_*` secrets added in GitHub before tagging.
+
+## Session history and operating lessons
+
+Built 2026-11-15/16 across several long OpenCode CLI sessions, driven by a Hermes agent that relayed prompts and independently verified results. Now worked natively in Hermes (one Telegram topic per project); OpenCode is no longer in the loop.
+
+Lessons that cost real time — apply them:
+
+- **Never run long agent jobs as children of the Hermes gateway.** A `hermes gateway restart` on 2026-11-16 01:55 killed every background child, including this project's device-verification run mid-pass. Launch detached, or use `C:\Users\Anish\bin\oc-notify.ps1`.
+- **One Gradle build at a time on this 8 GB machine.** Concurrent daemons thrash and get OOM-killed.
+- **Verify claims with commands.** `git log`, `git status`, `gh run list --repo AviTheGod2010/peek`. One earlier commit (`0993482`) failed Android checks and the failure was not reported — the missing settings-search icon import was only fixed by `100e1e7`.
+- **The run that "died silently" had actually asked a question**: it was waiting on a biometric vault unlock on the phone. If a device run stalls, screenshot the phone before assuming a hang.
+- **The phone is shared with the Aura Camera project.** One agent on it at a time, and ask before touching it.
+- **`gradle.properties` heap is currently 900m** from that shared-machine run — raise to 1536m when building alone.
+
