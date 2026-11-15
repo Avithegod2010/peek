@@ -35,6 +35,7 @@ These tests are written and compile, but have **not been run on hardware**:
 - `SecureDaoInstrumentedTest` — media/profile/comment/search ciphertext at rest, search dedupe, lock callback
 - `MigrationInstrumentedTest` — Room 1→5 migrations, private-state propagation, comment table and indices
 - `RepositoryVisibilityInstrumentedTest` — private feed and media filtering through the real repository
+- `LargeProfileStressInstrumentedTest` — 10k-post profile query and index plan
 - `ComponentUiTest` — Compose empty state, top-bar back action, image capture, RTL rendering and `FLAG_SECURE`
 
 ## What still needs hardware verification

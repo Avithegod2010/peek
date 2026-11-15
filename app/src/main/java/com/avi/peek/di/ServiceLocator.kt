@@ -82,6 +82,7 @@ object ServiceLocator {
             accountManager = accountManager,
             requestBudget = requestBudget,
             vault = vault,
+            noteForCode = { code -> libraryStore.noteFor(code) },
         )
     }
 

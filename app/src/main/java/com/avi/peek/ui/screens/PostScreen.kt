@@ -58,6 +58,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -66,6 +67,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -153,6 +155,10 @@ fun PostScreen(
     var muted by remember { mutableStateOf(settings.muteVideos) }
     var burst by remember(code) { mutableIntStateOf(0) }
     var showComments by remember { mutableStateOf(false) }
+    var showNoteEditor by remember { mutableStateOf(false) }
+    var noteDraft by remember(code) { mutableStateOf("") }
+    val notes by ServiceLocator.libraryStore.notes.collectAsStateWithLifecycle(emptyMap())
+    val note = notes[code].orEmpty()
     val dragOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val privateRevealed by PrivateAccess.revealed.collectAsStateWithLifecycle()
@@ -639,11 +645,60 @@ fun PostScreen(
                         }) {
                             Text("Copy link")
                         }
+                        TextButton(onClick = {
+                            noteDraft = note
+                            showNoteEditor = true
+                        }) {
+                            Text(if (note.isBlank()) "Add note" else "Edit note")
+                        }
+                    }
+                    if (note.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                        ) {
+                            Text(
+                                "Your note · $note",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                            )
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                 }
             }
         }
+    }
+
+    if (showNoteEditor) {
+        AlertDialog(
+            onDismissRequest = { showNoteEditor = false },
+            title = { Text("Private note") },
+            text = {
+                OutlinedTextField(
+                    value = noteDraft,
+                    onValueChange = { noteDraft = it.take(500) },
+                    placeholder = { Text("Why did you save this?") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    shape = RoundedCornerShape(16.dp),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNoteEditor = false
+                    scope.launch {
+                        ServiceLocator.libraryStore.setNote(code, noteDraft)
+                        viewModel.encouragingMessage(if (noteDraft.isBlank()) "Note removed" else "Note saved")
+                    }
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoteEditor = false }) { Text("Cancel") }
+            },
+        )
     }
 
     if (showComments) {

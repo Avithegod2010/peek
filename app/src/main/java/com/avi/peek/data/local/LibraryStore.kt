@@ -49,9 +49,11 @@ class LibraryStore(private val context: Context) {
     private val visitsKey = stringPreferencesKey("visits")
     private val archivesKey = stringPreferencesKey("archives")
     private val seenHighlightsKey = stringPreferencesKey("seen_highlights")
+    private val notesKey = stringPreferencesKey("notes")
     private val collectionSerializer = ListSerializer(LocalCollection.serializer())
     private val circleSerializer = ListSerializer(LocalCircle.serializer())
     private val mapSerializer = MapSerializer(String.serializer(), Long.serializer())
+    private val notesSerializer = MapSerializer(String.serializer(), String.serializer())
     private val stringListSerializer = ListSerializer(String.serializer())
 
     private val prefs = context.peekLibraryData.data
@@ -65,6 +67,26 @@ class LibraryStore(private val context: Context) {
                 json.decodeFromString(stringListSerializer, it).toSet()
             } ?: emptySet()
         }.getOrDefault(emptySet())
+    }
+
+    val notes: Flow<Map<String, String>> = prefs.map { preferences ->
+        val raw = FieldCipher.decrypt(preferences[notesKey]) ?: return@map emptyMap()
+        runCatching { json.decodeFromString(notesSerializer, raw) }.getOrDefault(emptyMap())
+    }
+
+    suspend fun noteFor(code: String): String? = notes.first()[code]
+
+    suspend fun setNote(code: String, note: String) {
+        val clean = note.trim().take(500)
+        context.peekLibraryData.edit { prefs ->
+            val current = runCatching {
+                val raw = FieldCipher.decrypt(prefs[notesKey]) ?: return@runCatching emptyMap()
+                json.decodeFromString(notesSerializer, raw)
+            }.getOrDefault(emptyMap())
+            val next = if (clean.isBlank()) current - code else current + (code to clean)
+            val encoded = json.encodeToString(notesSerializer, next)
+            FieldCipher.encrypt(encoded)?.let { prefs[notesKey] = it }
+        }
     }
 
     suspend fun createCollection(name: String, codes: List<String>): String? {

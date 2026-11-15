@@ -99,6 +99,10 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Security center** - see session state, cookie names, on-device sizes, network destinations and recent request outcomes, then wipe private data or sign out in one place
 - **Vault manager** - per-profile sealed sizes with open, seal and delete actions, plus passphrase-encrypted vault export/import
 - **Private-feed upgrades** - search, media-type filters, sorting, circles, "new since last visit", multi-select downloads and collections
+- **Vault search and sort** - find a sealed profile or file by caption/code and sort by name or size
+- **Request timeline** - a compact outcome strip in the security center, with rate-limit spikes highlighted
+- **Calm mode** - hides counts and stops reels from autoplaying
+- **Private post notes** - attach a local, encrypted note to any saved post; offline search includes notes
 - **Private-safe downloads** — private media is never downloaded by default and never copied to the public gallery
 - **Request budget** — hourly caps, quiet hours, exponential backoff and pause-on-rate-limit controls
 - **Rate-limit dashboard** — recent profile/page/post outcomes, rate-limit count, pause-all downloads and background-sync control
@@ -112,7 +116,8 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - **Backup/export privacy controls** - private content is excluded by default from backups and archives
 - **Encrypted private backup v2** - private metadata and sealed vault files under a separate passphrase
 - Biometric / device-lock app lock, a private-vault biometric gate and a one-handed Home search action
-- App language picker for English, Hindi, Spanish, Portuguese, Arabic and Japanese, with RTL layouts
+- App language picker for English, Hindi, Spanish, Portuguese, Arabic and Japanese, with RTL layouts and an onboarding language shortcut
+- Launcher shortcuts for Search, Saved, Downloads, Security center and the private feed
 - Adaptive navigation rail on tablets and foldables, bottom bar on phones, and a two-pane profile on wide screens
 
 ### Under the hood

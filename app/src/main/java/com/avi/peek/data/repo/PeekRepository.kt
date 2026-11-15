@@ -67,6 +67,7 @@ class PeekRepository(
     private val accountManager: AccountManager,
     private val requestBudget: RequestBudget,
     private val vault: VaultStore,
+    private val noteForCode: suspend (String) -> String? = { null },
 ) {
 
     private val secureMedia = SecureMediaDao(db.media())
@@ -185,8 +186,21 @@ class PeekRepository(
     suspend fun searchCachedMedia(query: String): List<MediaEntity> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
         val visible = privateVisible.first()
-        secureMedia.searchCached(query.trim())
+        val term = query.trim()
+        val visibleItems = secureMedia.allOnce()
             .filter { VisibilityPolicy.canShow(it.isPrivate, visible) }
+        val matches = ArrayList<MediaEntity>()
+        for (item in visibleItems) {
+            val basicMatch = listOfNotNull(
+                item.caption,
+                item.username,
+                item.locationName,
+                item.audioTitle,
+            ).any { it.contains(term, ignoreCase = true) }
+            val noteMatch = noteForCode(item.code)?.contains(term, ignoreCase = true) == true
+            if (basicMatch || noteMatch) matches += item
+        }
+        matches.sortedByDescending { it.takenAt ?: 0L }.take(30)
     }
 
     fun extractPostShortcode(raw: String): String? {
