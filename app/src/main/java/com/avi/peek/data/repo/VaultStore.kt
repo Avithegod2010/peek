@@ -173,6 +173,11 @@ class VaultStore(
                 builder.setUserAuthenticationValidityDurationSeconds(AUTH_WINDOW_SECONDS)
             }
             builder.setInvalidatedByBiometricEnrollment(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                // The vault key is unusable while the device is locked, even if
+                // the five-minute authentication window has not expired.
+                builder.setUnlockedDeviceRequired(true)
+            }
         }
         generator.init(builder.build())
         return generator.generateKey()

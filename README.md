@@ -120,7 +120,7 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - Name discovery through a public web search, then direct public-profile reading
 - Room database as the single source of truth; DataStore for settings, aliases and saved searches
 - Field-level AES-GCM encryption for sensitive Room metadata through secure DAO decorators, so captions and URLs are never stored as plaintext
-- Unit, instrumentation and CI checks for crypto round-trips, SSR parsing, the vault and private access
+- Unit, instrumentation and CI checks for crypto round-trips, SSR parsing, migrations, secure DAOs, Compose surfaces and private access; see [docs/TESTING.md](docs/TESTING.md) for what needs a phone
 - WorkManager background sync with optional new-post notifications
 - Coil image cache with stable cache keys, Media3 ExoPlayer video
 - Offline banner and graceful handling of rate limits / private accounts
@@ -212,7 +212,12 @@ Following, likes, bookmarks, downloads and local search history never leave the 
 
 - Android cloud/adb backup is disabled (`android:allowBackup="false"`) because Peek stores follows, saved posts and downloads locally.
 - Private downloads are encrypted at rest with an Android Keystore AES-GCM vault. The vault key is bound to biometric/device authentication with a five-minute auth window and is invalidated when biometrics are re-enrolled.
-- Sensitive Room metadata (captions, profile text, media URLs, location, audio and local file paths) is field-level encrypted with a separate Android Keystore AES-GCM key. Older plaintext rows are re-sealed on their next write.
+- Sensitive Room metadata (captions, profile text, media URLs, location, audio and local file paths) is field-level encrypted with a separate Android Keystore AES-GCM key. Comment text, search history and saved searches are encrypted too. Older plaintext rows are re-sealed on their next write.
+- Metadata writes fail closed: Peek will not silently store plaintext if Keystore encryption is unavailable.
+- API, image and video requests are restricted to Instagram, its CDN and DuckDuckGo; lookalike hosts, redirects and cleartext URLs are rejected.
+- Private surfaces set `FLAG_SECURE` to block screenshots and recents thumbnails. Copied text is marked sensitive and cleared after one minute.
+- Optional shake-to-hide locks private content without deleting anything.
+- The download queue is persisted so pending posts return after a process death.
 - The GitHub APK assets up to v1.4.0 are **debug builds** signed with the standard debug key. Releases from v1.5.0 onward are signed, non-debuggable release builds with published SHA-256 checksums; prefer those or an F-Droid build for production use.
 - The repository contains no signing keystores, API keys, session cookies or account credentials.
 - Name discovery sends the search phrase to DuckDuckGo's public HTML endpoint; profile and media requests go to Instagram. There is no Peek server.

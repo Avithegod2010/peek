@@ -118,7 +118,7 @@ class PeekRepository(
 
     private fun Flow<List<MediaEntity>>.visibleOnly(): Flow<List<MediaEntity>> =
         combine(this, privateVisible) { items, visible ->
-            if (visible) items else items.filterNot { it.isPrivate }
+            items.filter { VisibilityPolicy.canShow(it.isPrivate, visible) }
         }
 
     val following: Flow<List<ProfileEntity>> = secureProfiles.observeFollowing()
@@ -132,7 +132,9 @@ class PeekRepository(
     val privateFeed: Flow<List<MediaEntity>> = combine(
         secureMedia.observePrivateFeed(),
         privateVisible,
-    ) { items, visible -> if (visible) items else emptyList() }
+    ) { items, visible ->
+        if (VisibilityPolicy.privateFeedVisible(visible)) items else emptyList()
+    }
     val recentlyViewed: Flow<List<ProfileEntity>> = secureProfiles.observeRecentlyViewed()
     val recentSearches = secureSearches.observeRecent()
 
@@ -183,7 +185,8 @@ class PeekRepository(
     suspend fun searchCachedMedia(query: String): List<MediaEntity> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
         val visible = privateVisible.first()
-        secureMedia.searchCached(query.trim()).filter { visible || !it.isPrivate }
+        secureMedia.searchCached(query.trim())
+            .filter { VisibilityPolicy.canShow(it.isPrivate, visible) }
     }
 
     fun extractPostShortcode(raw: String): String? {

@@ -1,9 +1,11 @@
 package com.avi.peek
 
+import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.remote.GuestInstagramClient
 import com.avi.peek.data.remote.NetworkAllowlist
 import com.avi.peek.data.remote.SsrParser
 import com.avi.peek.data.repo.BackupCrypto
+import com.avi.peek.data.repo.VisibilityPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -49,20 +51,29 @@ class LogicTest {
 
     @Test
     fun allowlistAcceptsOnlyPeekNetworkHosts() {
-        assertTrue(NetworkAllowlist.isAllowed("https://www.instagram.com/p/abc/"))
-        assertTrue(NetworkAllowlist.isAllowed("https://i.instagram.com/api/v1/media/1/info/"))
-        assertTrue(NetworkAllowlist.isAllowed("https://scontent-arn2-1.cdninstagram.com/v/t51/x.jpg"))
-        assertTrue(NetworkAllowlist.isAllowed("https://instagram.fbcdn.net/v/t51/x.jpg"))
-        assertTrue(NetworkAllowlist.isAllowed("https://html.duckduckgo.com/html/"))
+        assertTrue(NetworkAllowlist.isAllowedUrl("https://www.instagram.com/p/abc/"))
+        assertTrue(NetworkAllowlist.isAllowedUrl("https://i.instagram.com/api/v1/media/1/info/"))
+        assertTrue(NetworkAllowlist.isAllowedUrl("https://scontent-arn2-1.cdninstagram.com/v/t51/x.jpg"))
+        assertTrue(NetworkAllowlist.isAllowedUrl("https://instagram.fbcdn.net/v/t51/x.jpg"))
+        assertTrue(NetworkAllowlist.isAllowedUrl("https://html.duckduckgo.com/html/"))
     }
 
     @Test
     fun allowlistRejectsLookalikeAndCleartextHosts() {
-        assertFalse(NetworkAllowlist.isAllowed("https://instagram.com.evil.example/p/abc/"))
-        assertFalse(NetworkAllowlist.isAllowed("https://evilinstagram.com/p/abc/"))
-        assertFalse(NetworkAllowlist.isAllowed("https://cdninstagram.com.evil.example/x.jpg"))
-        assertFalse(NetworkAllowlist.isAllowed("http://www.instagram.com/p/abc/"))
-        assertFalse(NetworkAllowlist.isAllowed("https://example.com/"))
+        assertFalse(NetworkAllowlist.isAllowedUrl("https://instagram.com.evil.example/p/abc/"))
+        assertFalse(NetworkAllowlist.isAllowedUrl("https://evilinstagram.com/p/abc/"))
+        assertFalse(NetworkAllowlist.isAllowedUrl("https://cdninstagram.com.evil.example/x.jpg"))
+        assertFalse(NetworkAllowlist.isAllowedUrl("http://www.instagram.com/p/abc/"))
+        assertFalse(NetworkAllowlist.isAllowedUrl("https://example.com/"))
+    }
+
+    @Test
+    fun privateVisibilityPolicyFailsClosed() {
+        assertTrue(VisibilityPolicy.canShow(isPrivate = false, privateContentRevealed = false))
+        assertFalse(VisibilityPolicy.canShow(isPrivate = true, privateContentRevealed = false))
+        assertTrue(VisibilityPolicy.canShow(isPrivate = true, privateContentRevealed = true))
+        assertFalse(VisibilityPolicy.privateFeedVisible(false))
+        assertTrue(VisibilityPolicy.privateFeedVisible(true))
     }
 
     @Test
@@ -167,6 +178,25 @@ class LogicTest {
         assertNull(parser.parseUserFeed("[]"))
         assertNull(parser.parseApiPost("{}"))
         assertTrue(parser.parseComments("{\"comments\":[]}")!!.comments.isEmpty())
+    }
+
+    @Test
+    fun mediaHelpersTolerateMissingOrMalformedJson() {
+        val empty = MediaEntity(code = "m1", username = "nasa")
+        assertTrue(empty.children().isEmpty())
+        assertTrue(empty.localImages().isEmpty())
+
+        val malformed = empty.copy(childrenJson = "{not json", localImagePathsJson = "nope")
+        assertTrue(malformed.children().isEmpty())
+        assertTrue(malformed.localImages().isEmpty())
+
+        val valid = empty.copy(
+            childrenJson = """[{"index":1,"mediaType":2,"videoUrl":"https://cdn/v.mp4"}]""",
+            localImagePathsJson = """["/data/user/0/peek/files/downloads/m1/image_0.jpg"]""",
+        )
+        assertEquals(1, valid.children().size)
+        assertEquals("https://cdn/v.mp4", valid.children()[0].videoUrl)
+        assertEquals(1, valid.localImages().size)
     }
 
     @Test

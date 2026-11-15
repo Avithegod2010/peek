@@ -39,7 +39,7 @@ object NetworkAllowlist {
 
     fun isAllowed(url: HttpUrl): Boolean = url.isHttps && isAllowed(url.host)
 
-    fun isAllowed(rawUrl: String): Boolean {
+    fun isAllowedUrl(rawUrl: String): Boolean {
         val url = rawUrl.toHttpUrlOrNull() ?: return false
         return isAllowed(url)
     }
