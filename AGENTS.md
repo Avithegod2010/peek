@@ -27,7 +27,7 @@ $env:JAVA_HOME = "E:\Dev\jdk\jdk-17.0.20+8"
 .\gradlew.bat connectedDebugAndroidTest   # needs the phone
 ```
 
-`gradle.properties` currently uses `-Xmx900m` (lowered for a shared-machine device run). Raise it back to 1536m when building alone.
+`gradle.properties` uses `-Xmx1536m` (metaspace 512m). That is the solo-build setting — do not leave it lower, and do not run two Android builds at once.
 
 ## Device
 

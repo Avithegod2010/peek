@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.avi.peek.data.local.CommentEntity
+import com.avi.peek.data.local.FieldCipher
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.PeekDatabase
 import com.avi.peek.data.local.ProfileEntity
@@ -35,6 +36,11 @@ class SecureDaoInstrumentedTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private lateinit var db: PeekDatabase
 
+    // The write key version is persisted, so it advances when
+    // metadataKeyRotationKeepsOldCiphertextReadable() runs on the same install.
+    // Assert the versioned format, not a literal v1.
+    private val cipherPrefix: String get() = "enc:v${FieldCipher.currentVersion()}:"
+
     @Before
     fun setUp() {
         db = Room.inMemoryDatabaseBuilder(context, PeekDatabase::class.java)
@@ -61,8 +67,8 @@ class SecureDaoInstrumentedTest {
             ),
         )
         val raw = db.media().get("media-1")!!
-        assertTrue(raw.caption!!.startsWith("enc:v1:"))
-        assertTrue(raw.displayUrl!!.startsWith("enc:v1:"))
+        assertTrue(raw.caption!!.startsWith(cipherPrefix))
+        assertTrue(raw.displayUrl!!.startsWith(cipherPrefix))
         assertFalse(raw.caption!!.contains("private caption"))
         assertFalse(raw.displayUrl!!.contains("cdn.example"))
 
@@ -84,8 +90,8 @@ class SecureDaoInstrumentedTest {
             ),
         )
         val raw = db.profiles().get("tester")!!
-        assertTrue(raw.fullName.startsWith("enc:v1:"))
-        assertTrue(raw.biography.startsWith("enc:v1:"))
+        assertTrue(raw.fullName.startsWith(cipherPrefix))
+        assertTrue(raw.biography.startsWith(cipherPrefix))
         assertFalse(raw.biography.contains("private bio"))
 
         val read = secure.get("tester")!!
@@ -103,7 +109,7 @@ class SecureDaoInstrumentedTest {
             ),
         )
         val raw = db.comments().forMedia("m1")
-        assertTrue(raw.all { it.text.startsWith("enc:v1:") })
+        assertTrue(raw.all { it.text.startsWith(cipherPrefix) })
         assertFalse(raw.any { it.text.contains("top secret") })
 
         val read = secure.forMedia("m1")
@@ -120,7 +126,7 @@ class SecureDaoInstrumentedTest {
 
         val raw = db.searches().allOnce()
         assertEquals(1, raw.size)
-        assertTrue(raw[0].query.startsWith("enc:v1:"))
+        assertTrue(raw[0].query.startsWith(cipherPrefix))
         assertFalse(raw[0].query.contains("NASA", ignoreCase = true))
 
         val read = secure.observeRecent().first()

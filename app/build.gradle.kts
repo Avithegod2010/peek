@@ -139,6 +139,10 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    // Compose UI testing still declares espresso-core 3.5.x transitively, whose
+    // InputManagerEventInjectionStrategy reflects on InputManager.getInstance() --
+    // a hidden API removed in Android 16/17. 3.7.0 uses getSystemService instead.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:core:1.6.1")
 }

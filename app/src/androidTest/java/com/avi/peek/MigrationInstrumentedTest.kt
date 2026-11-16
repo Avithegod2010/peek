@@ -77,6 +77,11 @@ class MigrationInstrumentedTest {
                             """.trimIndent(),
                         )
                         db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS searches (" +
+                                "query TEXT NOT NULL PRIMARY KEY, " +
+                                "searchedAt INTEGER NOT NULL)",
+                        )
+                        db.execSQL(
                             "INSERT INTO profiles (username, fullName, biography, isPrivate, " +
                                 "isVerified, followerCount, followingCount, bioLinksJson, " +
                                 "highlightsJson, hasClips, isFollowed, isPinned, addedAt, " +

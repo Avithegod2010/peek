@@ -29,7 +29,7 @@ class SecurityInstrumentedTest {
     }
 
     @Test
-    fun sessionCookiesAreEncryptedAndRestored() = runBlocking {
+    fun sessionCookiesAreEncryptedAndRestored(): Unit = runBlocking {
         val store = SessionStore(context)
         store.clear()
         store.save(
@@ -45,7 +45,7 @@ class SecurityInstrumentedTest {
     }
 
     @Test
-    fun vaultSealsAndOpensAFile() = runBlocking {
+    fun vaultSealsAndOpensAFile(): Unit = runBlocking {
         val code = "instrumented-test"
         val root = File(context.cacheDir, "vault-downloads").apply { mkdirs() }
         val sourceDir = File(root, code).apply { mkdirs() }
@@ -66,7 +66,7 @@ class SecurityInstrumentedTest {
     fun metadataFieldsAreEncryptedAtRest() {
         val sealed = FieldCipher.encrypt("private caption")
         assertNotNull(sealed)
-        assertTrue(sealed!!.startsWith("enc:v1:"))
+        assertTrue(sealed!!.startsWith("enc:v${FieldCipher.currentVersion()}:"))
         assertFalse(sealed.contains("private caption"))
         assertTrue(FieldCipher.decrypt(sealed) == "private caption")
     }
