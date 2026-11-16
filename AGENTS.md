@@ -5,8 +5,9 @@ Private Instagram client for Android ("offline guest client"). Kotlin + Compose,
 
 ## Current state (verified 2026-11-16)
 
-- Version `1.5.0` / versionCode 8 (published release), `main` is past it at `d377891`.
+- Version `1.5.0` / versionCode 8 (published release), `main` is several commits past the tag (latest `74229cb`).
 - Working tree clean and pushed. `v1.5.0` is the first properly signed release (non-debuggable, R8-minified, v2 signature, SHA256SUMS).
+- Instrumented suite green on the phone: **18/18, run twice back-to-back on the same install**, SM-S942B / API 37 (2026-11-16). Evidence in `verification/2026-11-16/harness-fix/`.
 - CI: `.github/workflows/android.yml` (unit tests + debug build + lint), `release.yml` (tag-triggered, verifies signature, publishes), `security-metadata.yml` (dependency verification).
 
 ## Architecture / security model
@@ -42,7 +43,7 @@ Device-verification output (APKs, logs, screenshots, UI dumps from 2026-11-16) i
 
 ## Outstanding
 
-- Full device pass: `connectedDebugAndroidTest` + biometric vault unlock, 30-min auth window, enrollment invalidation, auto-lock sealing, shake-to-hide, FLAG_SECURE, clipboard clearing, queue restore after process kill.
+- Automated instrumented suite passes (18/18, twice). What remains from the device pass is the **manual** checklist: biometric vault unlock, 30-min auth window, enrollment invalidation, auto-lock sealing, shake-to-hide, FLAG_SECURE screenshots, clipboard clearing, queue restore after process kill.
 - Per-operation `BiometricPrompt` + `CryptoObject` for the vault key (not done).
 - Golden-image screenshot baselines, MockWebServer pagination suite.
 - Localisation: ~193 hardcoded `Text("…")` calls remain outside the translated surfaces.
