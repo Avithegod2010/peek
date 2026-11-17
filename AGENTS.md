@@ -5,15 +5,15 @@ Private Instagram client for Android ("offline guest client"). Kotlin + Compose,
 
 ## Current state (verified 2026-11-16)
 
-- Version `1.5.0` / versionCode 8 (published release), `main` is several commits past the tag (latest `74229cb`).
-- Working tree clean and pushed. `v1.5.0` is the first properly signed release (non-debuggable, R8-minified, v2 signature, SHA256SUMS).
+- Version `1.6.0` / versionCode 9 (published release, tag `v1.6.0`). Everything up to `2767ba4` is in it; `v1.5.0` was the first properly signed release.
+- Working tree clean and pushed. This release is non-debuggable, R8-minified, v2-signed, with `SHA256SUMS.txt` attached.
 - Instrumented suite green on the phone: **18/18, run twice back-to-back on the same install**, SM-S942B / API 37 (2026-11-16). Evidence in `verification/2026-11-16/harness-fix/`.
 - CI: `.github/workflows/android.yml` (unit tests + debug build + lint), `release.yml` (tag-triggered, verifies signature, publishes), `security-metadata.yml` (dependency verification).
 
 ## Architecture / security model
 
 - Field-level AES-GCM for captions, profile text, URLs, location, audio, local paths, comments and search history. Ciphertexts are versioned (`enc:vN:`); key rotation is exposed in the Security Center.
-- Vault key lives in the Android Keystore bound to user authentication, with a legacy-file fallback. Auto-lock seals the vault; optional shake-to-hide panic gesture.
+- Vault key lives in the Android Keystore bound to user authentication, with a legacy-file fallback. The auth window governs how long that key can be reused for background sealing — it does **not** gate whether the prompt appears, so a second unlock prompts again. Auto-lock seals the vault; optional shake-to-hide panic gesture.
 - Networking goes through an OkHttp host allowlist (Instagram/CDN/DuckDuckGo), redirects included.
 - `FLAG_SECURE` on private surfaces; sensitive clipboard text auto-clears after 60s.
 - Private visibility is centralised in `VisibilityPolicy` and covered by tests.
@@ -43,7 +43,8 @@ Device-verification output (APKs, logs, screenshots, UI dumps from 2026-11-16) i
 
 ## Outstanding
 
-- Automated instrumented suite passes (18/18, twice). What remains from the device pass is the **manual** checklist: biometric vault unlock, 30-min auth window, enrollment invalidation, auto-lock sealing, shake-to-hide, FLAG_SECURE screenshots, clipboard clearing, queue restore after process kill.
+- Manual device pass (2026-11-18, SM-S942B): **verified** — biometric vault unlock (real `BiometricPrompt`, `onAuthenticationSucceeded`), `FLAG_SECURE` (A/B: secure flag set and screenshot blank on Session audit, capturable on Settings), 60-second clipboard clear (paste at 49s worked, at 97s empty). Evidence: `verification/2026-11-18/manual/RESULTS.md` (git-ignored).
+- **Not verified, and deliberately left unverified**: everything that needs a signed-in Instagram session or a non-empty vault — sealing/re-opening real vault files, auto-lock re-hiding, panic mode, shake-to-hide, enrollment invalidation, queue restore after a process kill. The Instagram login on the test device was declined (it would put a session cookie on the phone). Do not sign in on that device without asking.
 - Per-operation `BiometricPrompt` + `CryptoObject` for the vault key (not done).
 - Golden-image screenshot baselines, MockWebServer pagination suite.
 - Localisation: ~193 hardcoded `Text("…")` calls remain outside the translated surfaces.
