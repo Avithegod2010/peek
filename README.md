@@ -1,13 +1,29 @@
-# Peek
+<div align="center">
 
-Browse public Instagram profiles in a quiet Android app. Save profiles locally and revisit cached posts, bookmarks and downloads offline.
+<h1>Peek</h1>
 
-**[Download APK](https://github.com/Avithegod2010/peek/releases/download/v1.6.0/peek-1.6.0-release.apk)** · [Build Peek](#build) · [Privacy](#privacy)
+<p><strong>Find public Instagram profiles and revisit saved posts in a quiet Android app.</strong></p>
 
-| Find a profile | Profile | Library |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/search.png" alt="Search for a profile by name" width="225" /> | <img src="docs/screenshots/profile.png" alt="Peek profile view showing a public account" width="225" /> | <img src="docs/screenshots/library.png" alt="Peek library for saved media" width="225" /> |
+<p><strong><a href="https://github.com/Avithegod2010/peek/releases/download/v1.6.0/peek-1.6.0-release.apk">⬇️ Download APK v1.6.0</a></strong> · <a href="#screenshots">📸 See the app</a> · <a href="#privacy">🔒 Privacy</a></p>
 
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="readme-hero.png" />
+  <img src="readme-hero.gif" width="820" alt="An illustrated magnifying glass over a profile and its photo grid" />
+</picture>
+
+</div>
+
+## 🔎 Search, browse and save
+
+<p align="center">
+  <a href="docs/screenshots/search.png"><img src="docs/screenshots/search.png" width="29%" alt="Search for a profile by name" /></a>
+  <a href="docs/screenshots/profile.png"><img src="docs/screenshots/profile.png" width="29%" alt="Peek profile with a public account’s posts" /></a>
+  <a href="docs/screenshots/library.png"><img src="docs/screenshots/library.png" width="29%" alt="Peek library with saved media" /></a>
+</p>
+
+<p align="center"><sub>Find a profile · Browse their posts · Revisit your library</sub></p>
+
+> [!NOTE]
 > Peek is an unofficial client. Public browsing needs no account. To view private accounts you already follow, you can optionally connect your own Instagram web session.
 
 ## Why
@@ -20,7 +36,9 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 - Thoughtful **haptics** and spring animations
 - No Peek account, no tracking, no ads; an **optional** Instagram sign-in only for private accounts you follow
 
-## Features
+<a name="features"></a>
+
+## ✨ Features
 
 ### Following
 - Add by username, `@handle`, or a full `instagram.com/...` link
@@ -141,7 +159,12 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 
 A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are intentionally partial: Instagram does not expose comment text to guests, so Peek shows the public count and a read-only hand-off; video captions fall back to the post caption because no subtitle track is published. The six supported languages cover navigation, settings, the security center, the vault and the private feed; the remaining screen copy is still English. A high-contrast runtime audit is still on the list.
 
-## Screenshots
+<a name="screenshots"></a>
+
+## 📸 Screenshots
+
+<details>
+<summary>See the full app gallery</summary>
 
 | Home | Explore |
 | --- | --- |
@@ -171,7 +194,11 @@ A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are 
 | --- |
 | <img src="docs/screenshots/account.png" width="330" alt="Optional Instagram account" /> |
 
-## Build
+</details>
+
+<a name="build"></a>
+
+## 🛠️ Build
 
 Requirements: Android Studio or a JDK 17 + Android SDK 36 setup.
 
@@ -211,7 +238,9 @@ Settings → Instagram account opens Instagram's own web login inside Peek. Peek
 
 This mode is additive. It is used only to request private profiles your own session already follows, and it can be removed at any time with **Sign out**, which clears both the saved cookies and the WebView session. Instagram may still challenge or block web sign-in, and automated access can conflict with Instagram's terms. Peek does not promise that any particular private account will be readable.
 
-## Privacy
+<a name="privacy"></a>
+
+## 🔒 Privacy
 
 Following, likes, bookmarks, downloads and local search history never leave the device. Peek has no analytics, no crash reporting and no Peek server. Profile and media requests go to `instagram.com` / Instagram's CDN. Name discovery sends the search phrase to DuckDuckGo's public HTML endpoint, and then reads the discovered Instagram profile directly. If you use the optional signed-in mode, your Instagram session cookies are encrypted locally with the Android Keystore and are never sent anywhere except Instagram itself.
 
