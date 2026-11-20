@@ -1,10 +1,14 @@
 # Peek
 
-**Instagram, without Instagram.**
+Browse public Instagram profiles in a quiet Android app. Save profiles locally and revisit cached posts, bookmarks and downloads offline.
 
-Peek is a quiet, offline-first viewer for **public** Instagram profiles. Add a username or paste a link, follow that account **locally**, and see their posts and reels in a calm Material You interface. Public browsing needs no account. If you want to see private accounts you already follow, you can optionally connect your own Instagram web session in Settings. There are no likes sent to Instagram, no algorithm and no feed suggestions.
+**[Download APK](https://github.com/Avithegod2010/peek/releases/download/v1.6.0/peek-1.6.0-release.apk)** · [Build Peek](#build) · [Privacy](#privacy)
 
-> Peek is an unofficial client. It is not affiliated with Instagram or Meta. Public pages are read by default; the optional signed-in mode reuses only your own Instagram session. All media belongs to its respective owners.
+| Find a profile | Profile | Library |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/search.png" alt="Search for a profile by name" width="225" /> | <img src="docs/screenshots/profile.png" alt="Peek profile view showing a public account" width="225" /> | <img src="docs/screenshots/library.png" alt="Peek library for saved media" width="225" /> |
+
+> Peek is an unofficial client. Public browsing needs no account. To view private accounts you already follow, you can optionally connect your own Instagram web session.
 
 ## Why
 
@@ -138,10 +142,6 @@ Sometimes you just want to see what a few public accounts are sharing, without s
 A large, opinionated idea list lives in [IDEAS.md](IDEAS.md). Features that are intentionally partial: Instagram does not expose comment text to guests, so Peek shows the public count and a read-only hand-off; video captions fall back to the post caption because no subtitle track is published. The six supported languages cover navigation, settings, the security center, the vault and the private feed; the remaining screen copy is still English. A high-contrast runtime audit is still on the list.
 
 ## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/onboarding.png" width="260" alt="Peek onboarding" />
-</p>
 
 | Home | Explore |
 | --- | --- |
