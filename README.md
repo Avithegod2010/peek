@@ -6,20 +6,25 @@
 
 <p><strong><a href="https://github.com/Avithegod2010/peek/releases/download/v1.6.0/peek-1.6.0-release.apk">⬇️ Download APK v1.6.0</a></strong> · <a href="#screenshots">📸 See the app</a> · <a href="#privacy">🔒 Privacy</a></p>
 
-<picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="readme-hero.png" />
-  <img src="readme-hero.gif" width="820" alt="An illustrated magnifying glass over a profile and its photo grid" />
-</picture>
-
 </div>
 
 ## 🔎 Search, browse and save
 
 <p align="center">
-  <a href="docs/screenshots/search.png"><img src="docs/screenshots/search.png" width="29%" alt="Search for a profile by name" /></a>
-  <a href="docs/screenshots/profile.png"><img src="docs/screenshots/profile.png" width="29%" alt="Peek profile with a public account’s posts" /></a>
-  <a href="docs/screenshots/library.png"><img src="docs/screenshots/library.png" width="29%" alt="Peek library with saved media" /></a>
+  <a href="docs/screenshots/profile.png"><img src="docs/screenshots/profile.png" width="42%" alt="Peek profile with a public account’s posts" /></a>
+  <a href="docs/screenshots/search.png"><img src="docs/screenshots/search.png" width="24%" alt="Search for a profile by name" /></a>
+  <a href="docs/screenshots/library.png"><img src="docs/screenshots/library.png" width="24%" alt="Peek library with saved media" /></a>
 </p>
+
+<details>
+<summary>Project illustration</summary>
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="readme-hero.png" />
+  <img src="readme-hero.gif" width="820" alt="An illustrated magnifying glass over a profile and its photo grid" />
+</picture>
+
+</details>
 
 <p align="center"><sub>Find a profile · Browse their posts · Revisit your library</sub></p>
 
