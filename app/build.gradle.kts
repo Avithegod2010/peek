@@ -79,6 +79,19 @@ android {
         abortOnError = true
         warningsAsErrors = false
     }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged manifest and real resources on the
+            // JVM test classpath.
+            isIncludeAndroidResources = true
+            // Robolectric loads the Android framework in-process; the default
+            // 512 MB unit-test heap is not enough for it.
+            all {
+                it.maxHeapSize = "1g"
+            }
+        }
+    }
 }
 
 kotlin {
@@ -135,6 +148,11 @@ dependencies {
     implementation("androidx.media3:media3-datasource-okhttp:1.6.1")
 
     testImplementation("junit:junit:4.13.2")
+    // Runs the real Android framework on the JVM (SQLite, ConnectivityManager,
+    // Resources), so framework coverage no longer needs a device.
+    testImplementation("org.robolectric:robolectric:4.18.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
