@@ -1,26 +1,25 @@
 package com.avi.peek.data.repo
 
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The fail-closed matrix for [VisibilityPolicy].
+ * [VisibilityPolicy] is one rule -- `!isPrivate || revealed` -- so the useful
+ * test is its truth table plus the promise that its entry points agree. Keep
+ * this file small on purpose; anything larger would only restate the
+ * implementation.
  *
- * Private state reaches the UI as one boolean (`privateContentRevealed`). Every
- * way of *not* being revealed -- a locked private profile, a private media row,
- * panic mode hiding everything, or an unlock that has not been confirmed yet --
- * must land on the same "hidden" answer, and a missing flag must never be read
- * as "revealed".
+ * Panic mode (`privateContentHidden`) is deliberately NOT owned by this policy
+ * today: it is applied in the repository query and recomputed independently in
+ * `PostScreen`, `PrivateFeedScreen`, `ProfileViewModel` and `ExtraScreens`.
+ * Cases here must not assume otherwise until that is unified.
  */
 class VisibilityPolicyTest {
 
     @Test
     fun privateProfileStaysHiddenUntilItIsRevealed() {
         // Private profile, nothing unlocked yet: hidden.
-        assertFalse(VisibilityPolicy.canShow(isPrivate = true, privateContentRevealed = false))
-        // Private profile with panic mode / lock override in force: still hidden.
         assertFalse(VisibilityPolicy.canShow(isPrivate = true, privateContentRevealed = false))
         // Public content does not depend on the reveal flag at all.
         assertTrue(VisibilityPolicy.canShow(isPrivate = false, privateContentRevealed = false))
@@ -46,30 +45,10 @@ class VisibilityPolicyTest {
     }
 
     @Test
-    fun privateFeedFlagFailsClosedAndDoesNotLatch() {
+    fun privateFeedGatePassesThroughTheRevealFlag() {
+        // A gate, not a rule: the caller decides the flag, the policy only
+        // refuses to invent one.
         assertFalse(VisibilityPolicy.privateFeedVisible(false))
         assertTrue(VisibilityPolicy.privateFeedVisible(true))
-
-        // Panic mode repeatedly asking for a private row must never flip to
-        // visible: the policy holds no reveal state of its own.
-        repeat(5) {
-            assertFalse(VisibilityPolicy.canShow(isPrivate = true, privateContentRevealed = false))
-            assertFalse(VisibilityPolicy.filterMedia(isPrivate = true, visible = false))
-        }
-    }
-
-    @Test
-    fun missingFlagsCannotBeReadAsRevealed() {
-        val method = VisibilityPolicy::class.java.getMethod(
-            "canShow",
-            java.lang.Boolean.TYPE,
-            java.lang.Boolean.TYPE,
-        )
-        val failure = runCatching { method.invoke(VisibilityPolicy, null, null) }.exceptionOrNull()
-        assertNotNull("a null flag must be rejected, never treated as revealed", failure)
-        assertTrue(
-            "unexpected failure type ${failure!!::class.java.name}",
-            failure is IllegalArgumentException || failure is NullPointerException,
-        )
     }
 }
