@@ -105,6 +105,19 @@ class PrivateBackupManager(
         media.size
     }
 
+    /**
+     * A backup file is untrusted input: `code` and `name` come straight from its
+     * JSON and were used to build File paths, so a `../` in either escaped the
+     * vault directory and wrote anywhere the app can reach. Only plain path
+     * segments are accepted; anything else is skipped rather than renamed, so a
+     * crafted backup cannot silently move files around.
+     */
+    private fun safeSegment(raw: String, fallback: String): String {
+        val candidate = raw.substringAfterLast('/').substringAfterLast('\\').trim()
+        if (candidate.isEmpty() || candidate == "." || candidate == "..") return fallback
+        return if (candidate.matches(Regex("^[A-Za-z0-9._-]{1,64}$"))) candidate else fallback
+    }
+
     suspend fun importFrom(uri: Uri, passphrase: String): Int = withContext(Dispatchers.IO) {
         require(passphrase.isNotBlank()) { "Enter the backup passphrase" }
         val raw = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -116,17 +129,30 @@ class PrivateBackupManager(
         if (data.app != "Peek" || data.kind != "private-vault") {
             throw IllegalArgumentException("That is not a Peek private vault backup")
         }
-        val filesByCode = data.files.groupBy { it.code }
+        val filesByCode = data.files
+            .mapNotNull { file ->
+                val code = safeSegment(file.code, "")
+                val name = safeSegment(file.name, "")
+                if (code.isEmpty() || name.isEmpty()) null else Triple(code, name, file)
+            }
+            .groupBy({ it.first }, { it.third.copy(name = it.second) })
         data.media.forEach { record ->
-            val destination = File(vaultRoot, record.code).apply { mkdirs() }
-            filesByCode[record.code].orEmpty().forEach { file ->
+            val code = safeSegment(record.code, "")
+            if (code.isEmpty()) return@forEach
+            val destination = File(vaultRoot, code).apply { mkdirs() }
+            filesByCode[code].orEmpty().forEach { file ->
                 val target = File(destination, file.name)
+                // safeSegment already rejects separators and dot-only names; this
+                // is the belt-and-braces check that the resolved path stays inside.
+                if (!target.canonicalPath.startsWith(destination.canonicalPath + File.separator)) {
+                    return@forEach
+                }
                 target.writeBytes(Base64.getDecoder().decode(file.dataBase64))
             }
-            val imageNames = filesByCode[record.code].orEmpty()
+            val imageNames = filesByCode[code].orEmpty()
                 .filter { it.name.startsWith("image_") }
                 .map { it.name.removeSuffix(".vault") }
-            val videoName = filesByCode[record.code].orEmpty()
+            val videoName = filesByCode[code].orEmpty()
                 .firstOrNull { it.name.startsWith("video_") }
                 ?.name
                 ?.removeSuffix(".vault")
