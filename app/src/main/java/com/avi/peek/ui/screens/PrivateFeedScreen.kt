@@ -55,6 +55,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.data.local.LocalCircle
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.PeekSettings
+import com.avi.peek.data.repo.VisibilityPolicy
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.EmptyState
@@ -231,7 +232,7 @@ fun PrivateFeedScreen(
     var showCollections by remember { mutableStateOf(false) }
     var newCollection by remember { mutableStateOf("") }
     val collections by ServiceLocator.libraryStore.collections.collectAsStateWithLifecycle(emptyList())
-    val hidden = settings.privateContentHidden && !revealed
+    val hidden = VisibilityPolicy.panicLocksPrivate(settings.privateContentHidden, revealed)
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
