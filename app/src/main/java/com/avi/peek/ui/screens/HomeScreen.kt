@@ -337,14 +337,14 @@ private fun HomeHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = onAdd) {
+            IconButton(onClick = onAdd, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Rounded.Add,
                     contentDescription = "Add profile",
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
-            IconButton(onClick = onRefresh, enabled = !syncState.running) {
+            IconButton(onClick = onRefresh, enabled = !syncState.running, modifier = Modifier.size(48.dp)) {
                 if (syncState.running) {
                     CircularProgressIndicator(
                         strokeWidth = 2.dp,

@@ -337,12 +337,12 @@ private fun DownloadQueueRow(
                     )
                 }
                 when (task.status) {
-                    DownloadStatus.RUNNING -> IconButton(onClick = onPause) { Icon(Icons.Rounded.Pause, contentDescription = "Pause") }
-                    DownloadStatus.PAUSED -> IconButton(onClick = onResume) { Icon(Icons.Rounded.PlayArrow, contentDescription = "Resume") }
-                    DownloadStatus.FAILED -> IconButton(onClick = onRetry) { Icon(Icons.Rounded.Refresh, contentDescription = "Retry") }
+                    DownloadStatus.RUNNING -> IconButton(onClick = onPause, modifier = Modifier.size(48.dp)) { Icon(Icons.Rounded.Pause, contentDescription = "Pause") }
+                    DownloadStatus.PAUSED -> IconButton(onClick = onResume, modifier = Modifier.size(48.dp)) { Icon(Icons.Rounded.PlayArrow, contentDescription = "Resume") }
+                    DownloadStatus.FAILED -> IconButton(onClick = onRetry, modifier = Modifier.size(48.dp)) { Icon(Icons.Rounded.Refresh, contentDescription = "Retry") }
                     else -> Unit
                 }
-                IconButton(onClick = onRemove) {
+                IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.DeleteOutline, contentDescription = "Remove from queue", modifier = Modifier.size(19.dp))
                 }
             }
@@ -412,17 +412,17 @@ private fun DownloadRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 )
             }
-            IconButton(onClick = onSaveToGallery) {
+            IconButton(onClick = onSaveToGallery, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Rounded.PhotoLibrary,
                     contentDescription = "Save to gallery",
                     modifier = Modifier.size(20.dp),
                 )
             }
-            IconButton(onClick = onOpenInstagram) {
+            IconButton(onClick = onOpenInstagram, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.Rounded.OpenInNew, contentDescription = "Open on Instagram", modifier = Modifier.size(19.dp))
             }
-            IconButton(onClick = onDelete) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.Rounded.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
             }
         }

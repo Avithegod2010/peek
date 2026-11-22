@@ -92,6 +92,7 @@ fun HighlightScreen(
             actions = {
                 IconButton(
                     onClick = { context.openInstagram("stories/highlights/$highlightId/") },
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(Icons.Rounded.OpenInNew, contentDescription = "Open on Instagram")
                 }
@@ -258,6 +259,7 @@ fun HighlightScreen(
                                         pager.animateScrollToPage((pager.currentPage - 1).coerceAtLeast(0))
                                     }
                                 },
+                                modifier = Modifier.size(48.dp),
                             ) {
                                 Icon(Icons.Rounded.ChevronLeft, contentDescription = "Previous", tint = Color.White)
                             }
@@ -284,6 +286,7 @@ fun HighlightScreen(
                                         )
                                     }
                                 },
+                                modifier = Modifier.size(48.dp),
                             ) {
                                 Icon(Icons.Rounded.ChevronRight, contentDescription = "Next", tint = Color.White)
                             }

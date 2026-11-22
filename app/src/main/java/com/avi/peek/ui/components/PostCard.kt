@@ -153,7 +153,7 @@ fun FeedPostCard(
                     IconButton(onClick = {
                         haptics.tap()
                         menuOpen = true
-                    }) {
+                    }, modifier = Modifier.size(48.dp)) {
                         Icon(
                             Icons.Rounded.MoreVert,
                             contentDescription = "More",
@@ -306,7 +306,7 @@ fun FeedPostCard(
                     .padding(start = 8.dp, end = 8.dp, top = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = { onToggleLike(); haptics.toggle() }) {
+                IconButton(onClick = { onToggleLike(); haptics.toggle() }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         imageVector = if (media.isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                         contentDescription = if (media.isLiked) "Unlike" else "Like",
@@ -316,7 +316,7 @@ fun FeedPostCard(
                             .graphicsLayer { scaleX = likeScale; scaleY = likeScale },
                     )
                 }
-                IconButton(onClick = onOpenPost) {
+                IconButton(onClick = onOpenPost, modifier = Modifier.size(48.dp)) {
                     Icon(
                         Icons.Rounded.ChatBubbleOutline,
                         contentDescription = "Comments",
@@ -324,7 +324,7 @@ fun FeedPostCard(
                         modifier = Modifier.size(23.dp),
                     )
                 }
-                IconButton(onClick = { onShare(); haptics.tap() }) {
+                IconButton(onClick = { onShare(); haptics.tap() }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         Icons.Rounded.Share,
                         contentDescription = "Share",
@@ -333,7 +333,7 @@ fun FeedPostCard(
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { onDownload(); haptics.tap() }) {
+                IconButton(onClick = { onDownload(); haptics.tap() }, modifier = Modifier.size(48.dp)) {
                     if (downloadProgress != null) {
                         CircularProgressIndicator(
                             progress = { downloadProgress.fraction },
@@ -349,7 +349,7 @@ fun FeedPostCard(
                         )
                     }
                 }
-                IconButton(onClick = { onToggleSave(); haptics.toggle() }) {
+                IconButton(onClick = { onToggleSave(); haptics.toggle() }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         imageVector = if (media.isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                         contentDescription = if (media.isSaved) "Remove bookmark" else "Bookmark",

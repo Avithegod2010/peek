@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -79,7 +80,7 @@ fun PackScreen(
                         "Peek pack: ${viewModel.pack.title}\n\n${viewModel.pack.usernames.joinToString("\n") { "@$it" }}\n\n$json\n\nOpen in Peek: $link",
                         "Share Peek pack",
                     )
-                }) {
+                }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Share, contentDescription = "Share pack")
                 }
             },

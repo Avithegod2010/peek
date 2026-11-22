@@ -108,7 +108,7 @@ fun FollowingScreen(
             onBack = onBack,
             actions = {
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
-                    IconButton(onClick = onOpenDiscover) {
+                    IconButton(onClick = onOpenDiscover, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.Add, contentDescription = "Add profile", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
@@ -193,7 +193,7 @@ fun FollowingScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
-                            IconButton(onClick = { viewModel.togglePin(profile); haptics.tap() }) {
+                            IconButton(onClick = { viewModel.togglePin(profile); haptics.tap() }, modifier = Modifier.size(48.dp)) {
                                 Icon(
                                     Icons.Rounded.PushPin,
                                     contentDescription = "Pin",
@@ -201,7 +201,7 @@ fun FollowingScreen(
                                     modifier = Modifier.size(19.dp),
                                 )
                             }
-                            IconButton(onClick = { viewModel.unfollow(profile.username); haptics.confirm() }) {
+                            IconButton(onClick = { viewModel.unfollow(profile.username); haptics.confirm() }, modifier = Modifier.size(48.dp)) {
                                 Icon(
                                     Icons.Rounded.PersonRemove,
                                     contentDescription = "Unfollow",

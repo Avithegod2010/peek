@@ -347,7 +347,7 @@ fun PrivateFeedScreen(
                     Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = { selectedCodes = emptySet() }) {
+                    IconButton(onClick = { selectedCodes = emptySet() }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.Close, contentDescription = "Clear selection")
                     }
                     Text("${selectedCodes.size} selected", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)

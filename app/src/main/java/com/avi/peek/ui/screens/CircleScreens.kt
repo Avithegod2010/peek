@@ -87,7 +87,7 @@ fun CirclesScreen(
                 IconButton(onClick = {
                     editorCircle = null
                     showEditor = true
-                }) {
+                }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Add, contentDescription = "New circle")
                 }
             },
@@ -207,8 +207,8 @@ private fun CircleRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = onEdit) { Icon(Icons.Rounded.Edit, contentDescription = "Edit circle", modifier = Modifier.size(19.dp)) }
-            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, contentDescription = "Delete circle", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(19.dp)) }
+            IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) { Icon(Icons.Rounded.Edit, contentDescription = "Edit circle", modifier = Modifier.size(19.dp)) }
+            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) { Icon(Icons.Rounded.DeleteOutline, contentDescription = "Delete circle", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(19.dp)) }
         }
     }
 }

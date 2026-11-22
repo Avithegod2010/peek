@@ -80,7 +80,7 @@ fun CollectionsScreen(
             subtitle = "${collections.size} private ${if (collections.size == 1) "collection" else "collections"}",
             onBack = onBack,
             actions = {
-                IconButton(onClick = { showCreate = true }) {
+                IconButton(onClick = { showCreate = true }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.LibraryAdd, contentDescription = "New collection")
                 }
             },
@@ -224,10 +224,10 @@ fun CollectionDetailScreen(
             subtitle = "${ordered.size} private ${if (ordered.size == 1) "post" else "posts"}",
             onBack = onBack,
             actions = {
-                IconButton(onClick = { rename = collection?.name.orEmpty(); showRename = true }) {
+                IconButton(onClick = { rename = collection?.name.orEmpty(); showRename = true }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Edit, contentDescription = "Rename")
                 }
-                IconButton(onClick = { confirmDelete = true }) {
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.DeleteOutline, contentDescription = "Delete collection", tint = MaterialTheme.colorScheme.error)
                 }
             },

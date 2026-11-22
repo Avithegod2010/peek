@@ -146,7 +146,7 @@ fun SearchScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainer) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
                 }
             }
@@ -202,7 +202,7 @@ fun SearchScreen(
                                 viewModel.updateQuery("")
                                 focusRequester.requestFocus()
                             },
-                            modifier = Modifier.size(32.dp),
+                            modifier = Modifier.size(48.dp),
                         ) {
                             Icon(Icons.Rounded.Close, contentDescription = "Clear", modifier = Modifier.size(19.dp))
                         }
@@ -211,7 +211,7 @@ fun SearchScreen(
             }
             Spacer(Modifier.width(4.dp))
             Box {
-                IconButton(onClick = { showFilters = true }) {
+                IconButton(onClick = { showFilters = true }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         Icons.Rounded.Tune,
                         contentDescription = "Search filters",
@@ -520,7 +520,7 @@ private fun SavedSearchChip(saved: SavedSearch, onClick: () -> Unit, onRemove: (
                     Text("@${saved.targetUsername}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f))
                 }
             }
-            IconButton(onClick = onRemove, modifier = Modifier.size(30.dp)) {
+            IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.Rounded.Close, contentDescription = "Remove saved search", modifier = Modifier.size(14.dp))
             }
         }
@@ -600,7 +600,7 @@ private fun SearchResultCard(
                     }
                 }
                 Spacer(Modifier.width(4.dp))
-                IconButton(onClick = onSaveAlias, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = onSaveAlias, modifier = Modifier.size(48.dp)) {
                     Icon(
                         if (savedAlias) Icons.Rounded.BookmarkAdded else Icons.Rounded.BookmarkAdd,
                         contentDescription = if (savedAlias) "Alias saved" else "Save alias",

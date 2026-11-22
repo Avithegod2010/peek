@@ -365,7 +365,7 @@ fun AccountScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        IconButton(onClick = { showManual = !showManual }) {
+                        IconButton(onClick = { showManual = !showManual }, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Rounded.Key, contentDescription = "Toggle manual session")
                         }
                     }

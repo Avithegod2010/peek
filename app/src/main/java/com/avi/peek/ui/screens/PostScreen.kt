@@ -211,7 +211,7 @@ fun PostScreen(
             CircularProgressIndicator(color = Color.White)
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(8.dp),
+                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(8.dp).size(48.dp),
             ) {
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
@@ -226,7 +226,7 @@ fun PostScreen(
         ) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(8.dp),
+                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(8.dp).size(48.dp),
             ) {
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
@@ -405,7 +405,7 @@ fun PostScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.34f)) {
-                        IconButton(onClick = onBack) {
+                        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
                     }
@@ -444,7 +444,7 @@ fun PostScreen(
                     }
                     if (children.any { it.videoUrl != null } || value.videoUrl != null) {
                         Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.34f)) {
-                            IconButton(onClick = { muted = !muted; haptics.tap() }) {
+                            IconButton(onClick = { muted = !muted; haptics.tap() }, modifier = Modifier.size(48.dp)) {
                                 Icon(
                                     if (muted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
                                     contentDescription = if (muted) "Unmute" else "Mute",
@@ -454,7 +454,7 @@ fun PostScreen(
                         }
                     }
                     Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.34f)) {
-                        IconButton(onClick = viewModel::refresh) {
+                        IconButton(onClick = viewModel::refresh, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Rounded.Refresh, contentDescription = "Refresh details", tint = Color.White)
                         }
                     }
@@ -508,7 +508,7 @@ fun PostScreen(
                         Spacer(Modifier.height(8.dp))
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { viewModel.toggleLike(); haptics.toggle() }) {
+                        IconButton(onClick = { viewModel.toggleLike(); haptics.toggle() }, modifier = Modifier.size(48.dp)) {
                             Icon(
                                 if (value.isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                 contentDescription = "Like",
@@ -516,12 +516,12 @@ fun PostScreen(
                                 modifier = Modifier.size(26.dp),
                             )
                         }
-                        IconButton(onClick = { showComments = true }) {
+                        IconButton(onClick = { showComments = true }, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Rounded.ChatBubbleOutline, contentDescription = "Comments", modifier = Modifier.size(24.dp))
                         }
                         IconButton(onClick = {
                             context.shareText(value.code.instagramPostUrl(), "Share post")
-                        }) {
+                        }, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Rounded.Share, contentDescription = "Share", modifier = Modifier.size(24.dp))
                         }
                         Spacer(Modifier.weight(1f))
@@ -531,7 +531,7 @@ fun PostScreen(
                             } else {
                                 viewModel.download()
                             }
-                        }) {
+                        }, modifier = Modifier.size(48.dp)) {
                             when {
                                 downloadProgress != null -> CircularProgressIndicator(
                                     progress = { downloadProgress!!.fraction },
@@ -546,14 +546,14 @@ fun PostScreen(
                                 else -> Icon(Icons.Rounded.Download, contentDescription = "Save offline")
                             }
                         }
-                        IconButton(onClick = { saveToGallery() }) {
+                        IconButton(onClick = { saveToGallery() }, modifier = Modifier.size(48.dp)) {
                             Icon(
                                 Icons.Rounded.PhotoLibrary,
                                 contentDescription = "Save to gallery",
                                 modifier = Modifier.size(24.dp),
                             )
                         }
-                        IconButton(onClick = { viewModel.toggleSave(); haptics.toggle() }) {
+                        IconButton(onClick = { viewModel.toggleSave(); haptics.toggle() }, modifier = Modifier.size(48.dp)) {
                             Icon(
                                 if (value.isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                                 contentDescription = "Bookmark",
@@ -723,7 +723,7 @@ fun PostScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    IconButton(onClick = { showComments = false }) {
+                    IconButton(onClick = { showComments = false }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.ArrowBack, contentDescription = "Close comments")
                     }
                 }
