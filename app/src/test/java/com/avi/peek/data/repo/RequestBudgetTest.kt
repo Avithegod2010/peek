@@ -49,11 +49,17 @@ class RequestBudgetTest {
     @Test
     fun pauseFlagTurnsOverExactlyAtTheDeadline() {
         val now = System.currentTimeMillis()
+        // The past and equal deadlines only get safer as the clock advances, so
+        // they can be asserted against a sample taken before the check.
         assertFalse("no pause recorded", RequestBudgetState(pauseUntil = 0L).paused)
         assertFalse("deadline already reached", RequestBudgetState(pauseUntil = now).paused)
         assertFalse("deadline in the past", RequestBudgetState(pauseUntil = now - 1).paused)
-        assertTrue("deadline one tick away", RequestBudgetState(pauseUntil = now + 1).paused)
-        assertTrue(RequestBudgetState(pauseUntil = now + minute).paused)
+        // `paused` is `pauseUntil > System.currentTimeMillis()`, read fresh inside
+        // RequestBudgetState, which takes no clock. A deadline one millisecond
+        // ahead therefore loses the race whenever the scheduler stalls between
+        // this sample and that read -- untestable without an injectable clock --
+        // so the forward case uses a bound no scheduling delay can cross.
+        assertTrue("deadline a minute ahead", RequestBudgetState(pauseUntil = now + minute).paused)
     }
 
     @Test
