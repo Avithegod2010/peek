@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="nav_home">الرئيسية</string>
     <string name="nav_reels">ريلز</string>
     <string name="nav_explore">استكشاف</string>
@@ -137,7 +137,10 @@
     <string name="profile_menu_pin">تثبيت في الأعلى</string>
     <string name="profile_menu_unpin">إلغاء تثبيت الملف الشخصي</string>
     <string name="profile_menu_remove">إزالة من Peek</string>
-    <plurals name="profile_stat_posts">
+        <!-- The count is rendered beside this label, so the noun carries agreement
+         but the string carries no format argument. Lint reads that as a
+         likely mistake; it is deliberate. -->
+    <plurals name="profile_stat_posts" tools:ignore="ImpliedQuantity">
         <item quantity="zero">منشور</item>
         <item quantity="one">منشور</item>
         <item quantity="two">منشوران</item>
@@ -145,7 +148,7 @@
         <item quantity="many">منشورًا</item>
         <item quantity="other">منشور</item>
     </plurals>
-    <plurals name="profile_stat_followers">
+        <plurals name="profile_stat_followers" tools:ignore="ImpliedQuantity">
         <item quantity="zero">متابع</item>
         <item quantity="one">متابع</item>
         <item quantity="two">متابعان</item>

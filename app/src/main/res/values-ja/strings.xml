@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="nav_home">ホーム</string>
     <string name="nav_reels">リール</string>
     <string name="nav_explore">探索</string>
@@ -137,10 +137,13 @@
     <string name="profile_menu_pin">上部に固定</string>
     <string name="profile_menu_unpin">固定を解除</string>
     <string name="profile_menu_remove">Peek から削除</string>
-    <plurals name="profile_stat_posts">
+        <!-- The count is rendered beside this label, so the noun carries agreement
+         but the string carries no format argument. Lint reads that as a
+         likely mistake; it is deliberate. -->
+    <plurals name="profile_stat_posts" tools:ignore="ImpliedQuantity">
         <item quantity="other">投稿</item>
     </plurals>
-    <plurals name="profile_stat_followers">
+        <plurals name="profile_stat_followers" tools:ignore="ImpliedQuantity">
         <item quantity="other">フォロワー</item>
     </plurals>
     <plurals name="profile_download_button">
