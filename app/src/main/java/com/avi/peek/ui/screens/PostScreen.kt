@@ -101,6 +101,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.remote.MediaChild
 import com.avi.peek.data.remote.ScrapedComment
+import com.avi.peek.data.repo.VisibilityPolicy
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.SimpleViewModelFactory
 import com.avi.peek.ui.components.Avatar
@@ -218,7 +219,7 @@ fun PostScreen(
         return
     }
 
-    if (value.isPrivate && settings.privateContentHidden && !privateRevealed) {
+    if (!VisibilityPolicy.canShow(value.isPrivate, privateRevealed, settings.privateContentHidden)) {
         Box(
             Modifier.fillMaxSize().background(Color.Black),
             contentAlignment = Alignment.Center,

@@ -45,6 +45,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.avi.peek.data.repo.VisibilityPolicy
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.Avatar
 import com.avi.peek.ui.components.EmptyState
@@ -136,7 +137,7 @@ class RecapViewModel : ViewModel() {
     private val hidden = kotlinx.coroutines.flow.combine(
         repo.settingsFlow,
         PrivateAccess.revealed,
-    ) { settings, revealed -> settings.privateContentHidden && !revealed }
+    ) { settings, revealed -> VisibilityPolicy.panicLocksPrivate(settings.privateContentHidden, revealed) }
 
     val following = kotlinx.coroutines.flow.combine(repo.following, hidden) { profiles, hide ->
         if (hide) profiles.count { !it.isPrivate } else profiles.size

@@ -10,6 +10,7 @@ import com.avi.peek.data.local.SessionHealth
 import com.avi.peek.data.local.ProfileWithMedia
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.data.repo.ProfileDownloadState
+import com.avi.peek.data.repo.VisibilityPolicy
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.util.PrivateAccess
 import com.avi.peek.util.userMessage
@@ -110,7 +111,7 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         val profile = value?.profile
         val private = profile?.isPrivate == true
         val media = value?.media.orEmpty()
-        val hidden = private && currentSettings.privateContentHidden && !revealed
+        val hidden = !VisibilityPolicy.canShow(private, revealed, currentSettings.privateContentHidden)
         if (!private || (media.isNotEmpty() && !hidden)) {
             return@combine ProfileDiagnosis()
         }

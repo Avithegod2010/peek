@@ -113,9 +113,15 @@ class PeekRepository(
     val downloadProgress: StateFlow<Map<String, DownloadProgress>> = _downloadProgress.asStateFlow()
 
     private val privateVisible: Flow<Boolean> = combine(
-        settings.settings.map { !it.privateContentHidden }.distinctUntilChanged(),
+        settings.settings.map { it.privateContentHidden }.distinctUntilChanged(),
         PrivateAccess.revealed,
-    ) { notHidden, revealed -> notHidden || revealed }.distinctUntilChanged()
+    ) { hidden, revealed ->
+        VisibilityPolicy.canShow(
+            isPrivate = true,
+            privateContentRevealed = revealed,
+            privateContentHidden = hidden,
+        )
+    }.distinctUntilChanged()
 
     private fun Flow<List<MediaEntity>>.visibleOnly(): Flow<List<MediaEntity>> =
         combine(this, privateVisible) { items, visible ->
@@ -684,7 +690,15 @@ class PeekRepository(
 
         try {
             val profiles = secureProfiles.following()
-                .filter { !currentSettings.privateContentHidden || !it.isPrivate }
+                // Background sync never honours a temporary reveal: while panic
+                // mode is on it leaves private profiles alone.
+                .filter {
+                    VisibilityPolicy.canShow(
+                        isPrivate = it.isPrivate,
+                        privateContentRevealed = false,
+                        privateContentHidden = currentSettings.privateContentHidden,
+                    )
+                }
             if (profiles.isEmpty()) {
                 _syncState.value = SyncState(running = false, finishedAt = System.currentTimeMillis())
                 return@withContext SyncReport(emptyMap(), 0)
