@@ -165,7 +165,7 @@ fun SessionAuditScreen(
             subtitle = "What Peek knows about this Instagram session",
             onBack = onBack,
             actions = {
-                androidx.compose.material3.IconButton(onClick = viewModel::refresh) {
+                androidx.compose.material3.IconButton(onClick = viewModel::refresh, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Refresh, contentDescription = "Refresh")
                 }
             },

@@ -121,7 +121,7 @@ fun StoriesScreen(
             subtitle = if (seenKey in seen) "Stories · seen locally" else "Stories · new",
             onBack = onBack,
             actions = {
-                IconButton(onClick = { context.openInstagram("stories/$username/") }) {
+                IconButton(onClick = { context.openInstagram("stories/$username/") }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.OpenInNew, contentDescription = "Open on Instagram")
                 }
             },
@@ -242,6 +242,7 @@ fun StoriesScreen(
                             IconButton(
                                 enabled = pager.currentPage > 0,
                                 onClick = { scope.launch { pager.animateScrollToPage((pager.currentPage - 1).coerceAtLeast(0)) } },
+                                modifier = Modifier.size(48.dp),
                             ) { Icon(Icons.Rounded.ChevronLeft, contentDescription = "Previous", tint = Color.White) }
                         }
                         Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.5f)) {
@@ -260,6 +261,7 @@ fun StoriesScreen(
                                         pager.animateScrollToPage((pager.currentPage + 1).coerceAtMost(items.lastIndex))
                                     }
                                 },
+                                modifier = Modifier.size(48.dp),
                             ) { Icon(Icons.Rounded.ChevronRight, contentDescription = "Next", tint = Color.White) }
                         }
                     }

@@ -207,7 +207,7 @@ fun VaultManagerScreen(
             subtitle = "${entries.size} files · ${total.fileSize()} sealed on this device",
             onBack = onBack,
             actions = {
-                androidx.compose.material3.IconButton(onClick = viewModel::refresh) {
+                androidx.compose.material3.IconButton(onClick = viewModel::refresh, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Storage, contentDescription = "Refresh")
                 }
             },

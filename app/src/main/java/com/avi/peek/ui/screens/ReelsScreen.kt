@@ -183,6 +183,7 @@ fun ReelsScreen(
                                 )
                             }
                         },
+                        modifier = Modifier.size(48.dp),
                     ) {
                         Icon(
                             Icons.Rounded.PictureInPictureAlt,
@@ -194,7 +195,7 @@ fun ReelsScreen(
                 Spacer(Modifier.width(6.dp))
             }
             Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.3f)) {
-                IconButton(onClick = { muted = !muted; haptics.tap() }) {
+                IconButton(onClick = { muted = !muted; haptics.tap() }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         if (muted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
                         contentDescription = if (muted) "Unmute" else "Mute",
@@ -204,7 +205,7 @@ fun ReelsScreen(
             }
             Spacer(Modifier.width(6.dp))
             Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.3f)) {
-                IconButton(onClick = viewModel::refresh) {
+                IconButton(onClick = viewModel::refresh, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Refresh, contentDescription = "Refresh", tint = Color.White)
                 }
             }

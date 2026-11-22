@@ -441,7 +441,7 @@ fun ProfileScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.32f)) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
             }
@@ -459,7 +459,7 @@ fun ProfileScreen(
             Spacer(Modifier.weight(1f))
             Box {
                 Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.32f)) {
-                    IconButton(onClick = { menuOpen = true }) {
+                    IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.MoreVert, contentDescription = "More", tint = Color.White)
                     }
                 }
@@ -1141,7 +1141,7 @@ private fun SelectionTopBar(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onClose) {
+        IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
             Icon(Icons.Rounded.Close, contentDescription = "Clear selection")
         }
         Text("$count selected", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
