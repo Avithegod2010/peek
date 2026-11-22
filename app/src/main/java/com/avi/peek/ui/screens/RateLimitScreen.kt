@@ -38,12 +38,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.avi.peek.data.repo.RequestBudgetState
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.relativeTime
 import kotlinx.coroutines.launch
 
 @Composable
 fun RateLimitScreen(onBack: () -> Unit) {
+    // Request outcomes name profiles and endpoints; treat them as private.
+    SecureScreen()
     val events by ServiceLocator.requestLog.events.collectAsStateWithLifecycle()
     val paused by ServiceLocator.downloadQueue.pausedAll.collectAsStateWithLifecycle()
     val settings by ServiceLocator.settings.settings.collectAsStateWithLifecycle(initialValue = null)
