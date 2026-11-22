@@ -29,6 +29,31 @@ not match the recorded checksum.
    ./gradlew testDebugUnitTest assembleDebug compileDebugAndroidTestKotlin lintDebug --no-daemon
    ```
 
+### A warm cache will lie to you
+
+`--write-verification-metadata` only records artifacts Gradle actually verifies, and Gradle
+verifies POM/`.module` metadata **on first download only**. On a machine that already has the
+artifact cached, those files are never re-verified, so the local run looks complete while the
+committed file is missing entries. The omission then surfaces on CI, whose cache is cold, as:
+
+```
+Dependency verification failed for configuration 'classpath'
+   - guava-parent-33.3.1-jre.pom (com.google.guava:guava-parent:33.3.1-jre) from repository MavenRepo
+```
+
+This has hit both `classpath` and `debugUnitTestCompileClasspath`. The reliable fix is to let a
+cold runner do the recording:
+
+```bash
+gh workflow run security-metadata.yml --ref <your-branch>
+gh run download <run-id> -n dependency-metadata -D /tmp/metadata
+cp /tmp/metadata/gradle/verification-metadata.xml gradle/verification-metadata.xml
+```
+
+Pass the **branch** ref, not `main`, or the artifact will not know about the dependency you just
+added. Take the file verbatim; do not hand-write checksums and do not reach for
+`--refresh-dependencies`.
+
 The **Dependency metadata** GitHub Actions workflow can generate the same file
 and a `release-dependencies.txt` inventory without committing anything. It also
 runs `assembleRelease` to prove the release configuration resolves against the
