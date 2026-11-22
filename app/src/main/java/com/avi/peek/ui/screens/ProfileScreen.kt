@@ -97,6 +97,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -104,6 +106,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.avi.peek.R
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.ProfileEntity
 import com.avi.peek.data.local.ProfileWithMedia
@@ -196,7 +199,7 @@ fun ProfileScreen(
         if (granted && pending.isNotEmpty()) {
             viewModel.saveCodesToGallery(pending)
         } else if (!granted) {
-            viewModel.postMessage("Allow storage access to save to the gallery")
+            viewModel.postMessage(context.getString(R.string.profile_gallery_permission))
         }
     }
     val htmlArchiveLauncher = rememberLauncherForActivityResult(
@@ -312,7 +315,10 @@ fun ProfileScreen(
                                 haptics.confirm()
                             },
                             onShare = {
-                                context.shareText(data!!.profile.username.instagramWebUrl(), "Share profile")
+                                context.shareText(
+                                    data!!.profile.username.instagramWebUrl(),
+                                    context.getString(R.string.profile_share_profile),
+                                )
                             },
                             onMenu = { menuOpen = true },
                             onRefresh = viewModel::refresh,
@@ -351,10 +357,10 @@ fun ProfileScreen(
                                     (diagnosis.detail?.let { "\n\n$it" } ?: ""),
                                 icon = if (hidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Lock,
                                 actionLabel = when {
-                                    hidden -> "Unlock private content"
-                                    diagnosis.reason == ProfileLockReason.SIGNED_OUT -> "Sign in to Instagram"
-                                    diagnosis.reason == ProfileLockReason.SESSION_EXPIRED -> "Reconnect session"
-                                    else -> "Refresh"
+                                    hidden -> stringResource(R.string.profile_unlock_private)
+                                    diagnosis.reason == ProfileLockReason.SIGNED_OUT -> stringResource(R.string.profile_sign_in)
+                                    diagnosis.reason == ProfileLockReason.SESSION_EXPIRED -> stringResource(R.string.profile_reconnect_session)
+                                    else -> stringResource(R.string.profile_refresh)
                                 },
                                 onAction = {
                                     when {
@@ -362,8 +368,13 @@ fun ProfileScreen(
                                             PrivateAccess.reveal()
                                             scope.launch {
                                                 runCatching { ServiceLocator.repository.openPrivateVault() }
-                                                    .onSuccess { viewModel.postMessage("Private content revealed") }
-                                                    .onFailure { viewModel.postMessage(it.message ?: "Couldn't open the private vault") }
+                                                    .onSuccess { viewModel.postMessage(context.getString(R.string.profile_private_revealed)) }
+                                                    .onFailure {
+                                                        viewModel.postMessage(
+                                                            it.message
+                                                                ?: context.getString(R.string.profile_private_vault_error),
+                                                        )
+                                                    }
                                             }
                                         }
                                         diagnosis.reason == ProfileLockReason.SIGNED_OUT ||
@@ -378,16 +389,16 @@ fun ProfileScreen(
                         item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                             EmptyState(
                                 title = when (tab) {
-                                    ProfileTab.SAVED -> "Nothing saved yet"
-                                    ProfileTab.REELS -> "No reels cached"
-                                    else -> "No posts cached"
+                                    ProfileTab.SAVED -> stringResource(R.string.profile_empty_saved_title)
+                                    ProfileTab.REELS -> stringResource(R.string.profile_empty_reels_title)
+                                    else -> stringResource(R.string.profile_empty_posts_title)
                                 },
                                 message = when (tab) {
-                                    ProfileTab.SAVED -> "Tap the bookmark on any post to keep it here."
-                                    else -> "Pull to refresh and Peek will cache the latest public posts."
+                                    ProfileTab.SAVED -> stringResource(R.string.profile_empty_saved_body)
+                                    else -> stringResource(R.string.profile_empty_posts_body)
                                 },
                                 icon = Icons.Rounded.Refresh,
-                                actionLabel = "Refresh",
+                                actionLabel = stringResource(R.string.profile_refresh),
                                 onAction = viewModel::refresh,
                                 modifier = Modifier.padding(vertical = 30.dp),
                             )
@@ -442,7 +453,7 @@ fun ProfileScreen(
         ) {
             Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.32f)) {
                 IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = stringResource(R.string.profile_back), tint = Color.White)
                 }
             }
             Spacer(Modifier.weight(1f))
@@ -460,7 +471,7 @@ fun ProfileScreen(
             Box {
                 Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.32f)) {
                     IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = "More", tint = Color.White)
+                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.profile_more), tint = Color.White)
                     }
                 }
                 ProfileMenu(
@@ -469,10 +480,13 @@ fun ProfileScreen(
                     profile = profile,
                     onCopy = {
                         context.copyText(username)
-                        viewModel.postMessage("Username copied")
+                        viewModel.postMessage(context.getString(R.string.profile_username_copied))
                     },
                     onShare = {
-                        context.shareText(username.instagramWebUrl(), "Share profile")
+                        context.shareText(
+                            username.instagramWebUrl(),
+                            context.getString(R.string.profile_share_profile),
+                        )
                     },
                     onInstagram = { context.openInstagram(username) },
                     onRefresh = viewModel::refresh,
@@ -540,12 +554,11 @@ fun ProfileScreen(
         val totalPosts = data?.profile?.postCount?.takeIf { it > 0 } ?: loadedCount.toLong()
         AlertDialog(
             onDismissRequest = { showDownloadDialog = false },
-            title = { Text("Download @$username") },
+            title = { Text(stringResource(R.string.profile_download_title, username)) },
             text = {
                 Column {
                     Text(
-                        "Peek will walk every timeline page it can reach, starting with the " +
-                            "${loadedCount.coerceAtLeast(1)} loaded here, then save every photo and video for offline use.",
+                        stringResource(R.string.profile_download_body, loadedCount.coerceAtLeast(1)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -560,7 +573,7 @@ fun ProfileScreen(
                         Checkbox(checked = alsoGallery, onCheckedChange = { alsoGallery = it })
                         Spacer(Modifier.width(4.dp))
                         Column {
-                            Text("Also copy to gallery", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.profile_download_also_gallery), style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 "Pictures/Peek and Movies/Peek",
                                 style = MaterialTheme.typography.labelSmall,
@@ -570,7 +583,7 @@ fun ProfileScreen(
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "Peek loads pages one at a time and can still be stopped by Instagram rate limits. A large profile can take several minutes and use a lot of storage and data.",
+                        stringResource(R.string.profile_download_warning),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -580,7 +593,7 @@ fun ProfileScreen(
                             viewModel.downloadNewPosts(alsoGallery)
                             showDownloadDialog = false
                         },
-                    ) { Text("Download only new posts") }
+                    ) { Text(stringResource(R.string.profile_download_only_new)) }
                 }
             },
             confirmButton = {
@@ -590,10 +603,10 @@ fun ProfileScreen(
                         showDownloadDialog = false
                     },
                     enabled = totalPosts > 0 && bulkDownload?.running != true,
-                ) { Text("Download all") }
+                ) { Text(stringResource(R.string.profile_download_all)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDownloadDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDownloadDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -601,12 +614,12 @@ fun ProfileScreen(
     if (showCollectionPicker) {
         AlertDialog(
             onDismissRequest = { showCollectionPicker = false },
-            title = { Text("Add to collection") },
+            title = { Text(stringResource(R.string.profile_add_to_collection)) },
             text = {
                 Column {
                     if (collections.isEmpty()) {
                         Text(
-                            "No collections yet. Name one below.",
+                            stringResource(R.string.profile_no_collections),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -635,7 +648,7 @@ fun ProfileScreen(
                     OutlinedTextField(
                         value = newCollectionName,
                         onValueChange = { newCollectionName = it },
-                        label = { Text("New collection") },
+                        label = { Text(stringResource(R.string.profile_new_collection)) },
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                     )
@@ -650,20 +663,30 @@ fun ProfileScreen(
                         selectedCodes = emptySet()
                         showCollectionPicker = false
                     },
-                ) { Text("Create & add") }
+                ) { Text(stringResource(R.string.profile_create_and_add)) }
             },
-            dismissButton = { TextButton(onClick = { showCollectionPicker = false }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = { showCollectionPicker = false }) { Text(stringResource(R.string.common_cancel)) }
+            },
         )
     }
 
     if (showArchiveChoice) {
         AlertDialog(
             onDismissRequest = { showArchiveChoice = false },
-            title = { Text("Export ${selectedCodes.size} selected posts") },
+            title = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.profile_export_selected,
+                        selectedCodes.size,
+                        selectedCodes.size,
+                    ),
+                )
+            },
             text = {
                 Column {
                     Text(
-                        "A private offline archive. HTML embeds locally downloaded images; JSON keeps metadata and links.",
+                        stringResource(R.string.profile_export_selected_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -676,7 +699,7 @@ fun ProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                    ) { Text("Export HTML") }
+                    ) { Text(stringResource(R.string.profile_export_html)) }
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
@@ -686,11 +709,11 @@ fun ProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                    ) { Text("Export JSON") }
+                    ) { Text(stringResource(R.string.profile_export_json)) }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showArchiveChoice = false }) { Text("Cancel") }
+                TextButton(onClick = { showArchiveChoice = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -698,11 +721,11 @@ fun ProfileScreen(
     if (showProfileArchiveChoice) {
         AlertDialog(
             onDismissRequest = { showProfileArchiveChoice = false },
-            title = { Text("Export @$username") },
+            title = { Text(stringResource(R.string.profile_export_title, username)) },
             text = {
                 Column {
                     Text(
-                        "A private archive of this profile's cached posts. HTML embeds locally downloaded images; JSON keeps captions, dates and links.",
+                        stringResource(R.string.profile_export_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -713,7 +736,7 @@ fun ProfileScreen(
                                 checked = archiveOnlyNew,
                                 onCheckedChange = { archiveOnlyNew = it },
                             )
-                            Text("Only posts added since the last export", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.profile_export_only_new), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -724,7 +747,7 @@ fun ProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                    ) { Text("Export HTML") }
+                    ) { Text(stringResource(R.string.profile_export_html)) }
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
@@ -733,11 +756,11 @@ fun ProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                    ) { Text("Export JSON") }
+                    ) { Text(stringResource(R.string.profile_export_json)) }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showProfileArchiveChoice = false }) { Text("Cancel") }
+                TextButton(onClick = { showProfileArchiveChoice = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -842,9 +865,13 @@ private fun ProfileHeader(
                 horizontalArrangement = Arrangement.spacedBy(28.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                HeaderStat(if (profile.postCount > 0) profile.postCount else media.size.toLong(), "posts")
-                HeaderStat(profile.followerCount, "followers")
-                HeaderStat(profile.followingCount, "following")
+                val postTotal = if (profile.postCount > 0) profile.postCount else media.size.toLong()
+                HeaderStat(postTotal, pluralStringResource(R.plurals.profile_stat_posts, postTotal.toInt()))
+                HeaderStat(
+                    profile.followerCount,
+                    pluralStringResource(R.plurals.profile_stat_followers, profile.followerCount.toInt()),
+                )
+                HeaderStat(profile.followingCount, stringResource(R.string.profile_stat_following))
             }
             Spacer(Modifier.height(16.dp))
             if (profile.biography.isNotBlank()) {
@@ -891,20 +918,20 @@ private fun ProfileHeader(
                     OutlinedButton(onClick = onFollow, shape = RoundedCornerShape(18.dp)) {
                         Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Following")
+                        Text(stringResource(R.string.profile_following))
                     }
                 } else {
                     Button(onClick = onFollow, shape = RoundedCornerShape(18.dp)) {
                         Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Follow locally")
+                        Text(stringResource(R.string.profile_follow))
                     }
                 }
                 OutlinedButton(onClick = onShare, shape = RoundedCornerShape(18.dp)) {
-                    Icon(Icons.Rounded.Share, contentDescription = "Share", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.profile_share), modifier = Modifier.size(18.dp))
                 }
                 OutlinedButton(onClick = onMenu, shape = RoundedCornerShape(18.dp)) {
-                    Icon(Icons.Rounded.MoreVert, contentDescription = "More", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.profile_more), modifier = Modifier.size(18.dp))
                 }
             }
             Spacer(Modifier.height(9.dp))
@@ -917,7 +944,7 @@ private fun ProfileHeader(
                 if (bulkDownload?.running == true && bulkDownload.preparing) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(7.dp))
-                    Text("Loading posts · ${bulkDownload.prepared}")
+                    Text(stringResource(R.string.profile_download_loading, bulkDownload.prepared))
                 } else if (bulkDownload?.running == true) {
                     CircularProgressIndicator(
                         progress = {
@@ -928,19 +955,23 @@ private fun ProfileHeader(
                         strokeWidth = 2.dp,
                     )
                     Spacer(Modifier.width(7.dp))
-                    Text("Downloading ${bulkDownload.downloaded + bulkDownload.failed}/${bulkDownload.total}")
+                    Text(
+                        stringResource(
+                            R.string.profile_downloading,
+                            bulkDownload.downloaded + bulkDownload.failed,
+                            bulkDownload.total,
+                        ),
+                    )
                 } else {
                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(7.dp))
                     Text(
                         if (media.isEmpty()) {
-                            "No posts to save yet"
+                            stringResource(R.string.profile_download_no_posts)
+                        } else if (profile.hasMorePosts) {
+                            stringResource(R.string.profile_download_button_loaded, media.size)
                         } else {
-                            "Download profile · ${media.size} " + when {
-                                profile.hasMorePosts -> "loaded"
-                                media.size == 1 -> "post"
-                                else -> "posts"
-                            }
+                            pluralStringResource(R.plurals.profile_download_button, media.size, media.size)
                         },
                     )
                 }
@@ -959,7 +990,11 @@ private fun ProfileHeader(
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Loading every reachable page · ${bulkDownload.prepared} posts found",
+                                pluralStringResource(
+                                    R.plurals.profile_download_pages_found,
+                                    bulkDownload.prepared,
+                                    bulkDownload.prepared,
+                                ),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -973,20 +1008,28 @@ private fun ProfileHeader(
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Downloading profile · ${bulkDownload.downloaded + bulkDownload.failed}/${bulkDownload.total}",
+                                stringResource(
+                                    R.string.profile_downloading_profile,
+                                    bulkDownload.downloaded + bulkDownload.failed,
+                                    bulkDownload.total,
+                                ),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             if (bulkDownload.saveToGallery) {
                                 Text(
-                                    "Gallery copies: ${bulkDownload.galleryFiles} files so far",
+                                    pluralStringResource(
+                                        R.plurals.profile_download_gallery_files,
+                                        bulkDownload.galleryFiles,
+                                        bulkDownload.galleryFiles,
+                                    ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         } else if (bulkDownload.error != null) {
                             Text(
-                                "Profile download failed",
+                                stringResource(R.string.profile_download_failed),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.error,
@@ -996,28 +1039,52 @@ private fun ProfileHeader(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            TextButton(onClick = onClearBulk) { Text("Dismiss") }
+                            TextButton(onClick = onClearBulk) { Text(stringResource(R.string.common_dismiss)) }
                         } else {
                             Text(
-                                "Profile download complete",
+                                stringResource(R.string.profile_download_complete),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                "${bulkDownload.downloaded} posts saved offline" +
-                                    if (bulkDownload.failed > 0) " · ${bulkDownload.failed} failed" else "",
+                                if (bulkDownload.failed > 0) {
+                                    pluralStringResource(
+                                        R.plurals.profile_download_saved_with_failures,
+                                        bulkDownload.downloaded,
+                                        bulkDownload.downloaded,
+                                        bulkDownload.failed,
+                                    )
+                                } else {
+                                    pluralStringResource(
+                                        R.plurals.profile_download_saved,
+                                        bulkDownload.downloaded,
+                                        bulkDownload.downloaded,
+                                    )
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (bulkDownload.failed > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             if (bulkDownload.saveToGallery) {
                                 Text(
-                                    "${bulkDownload.galleryFiles} files copied to your gallery" +
-                                        if (bulkDownload.galleryFailures > 0) " · ${bulkDownload.galleryFailures} gallery errors" else "",
+                                    if (bulkDownload.galleryFailures > 0) {
+                                        pluralStringResource(
+                                            R.plurals.profile_download_gallery_copied_with_errors,
+                                            bulkDownload.galleryFiles,
+                                            bulkDownload.galleryFiles,
+                                            bulkDownload.galleryFailures,
+                                        )
+                                    } else {
+                                        pluralStringResource(
+                                            R.plurals.profile_download_gallery_copied,
+                                            bulkDownload.galleryFiles,
+                                            bulkDownload.galleryFiles,
+                                        )
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            TextButton(onClick = onClearBulk) { Text("Dismiss") }
+                            TextButton(onClick = onClearBulk) { Text(stringResource(R.string.common_dismiss)) }
                         }
                     }
                 }
@@ -1035,9 +1102,9 @@ private fun ProfileHeader(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         when {
-                            media.isNotEmpty() -> "Private account · visible to your session"
-                            signedIn -> "Private account · not visible to this session"
-                            else -> "Private account · sign in to view"
+                            media.isNotEmpty() -> stringResource(R.string.profile_private_visible)
+                            signedIn -> stringResource(R.string.profile_private_not_visible)
+                            else -> stringResource(R.string.profile_private_sign_in)
                         },
                         style = MaterialTheme.typography.labelSmall,
                     )
@@ -1046,7 +1113,7 @@ private fun ProfileHeader(
             if (profile.lastFetchedAt > 0) {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "Updated ${(profile.lastFetchedAt / 1000).relativeTime()}",
+                    text = stringResource(R.string.profile_updated, (profile.lastFetchedAt / 1000).relativeTime()),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
@@ -1081,7 +1148,7 @@ private fun ProfileHeader(
                         )
                         Spacer(Modifier.height(5.dp))
                         Text(
-                            highlight.title.ifBlank { "Highlight" },
+                            highlight.title.ifBlank { stringResource(R.string.profile_highlight) },
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -1095,7 +1162,7 @@ private fun ProfileHeader(
         if (relatedCreators.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             SectionHeader(
-                title = "More like this",
+                title = stringResource(R.string.profile_more_like_this),
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(9.dp))
@@ -1142,11 +1209,15 @@ private fun SelectionTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
-            Icon(Icons.Rounded.Close, contentDescription = "Clear selection")
+            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.profile_clear_selection))
         }
-        Text("$count selected", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(
+            pluralStringResource(R.plurals.profile_selected, count, count),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = onSelectAll) { Text("Select all") }
+        TextButton(onClick = onSelectAll) { Text(stringResource(R.string.profile_select_all)) }
     }
 }
 
@@ -1169,10 +1240,10 @@ private fun SelectionActionBar(
         shadowElevation = 14.dp,
     ) {
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            SelectionAction(Icons.Rounded.Download, "Offline", onDownload, Modifier.weight(1f))
-            SelectionAction(Icons.Rounded.PhotoLibrary, "Gallery", onGallery, Modifier.weight(1f))
-            SelectionAction(Icons.Rounded.CollectionsBookmark, "Collect", onCollection, Modifier.weight(1f))
-            SelectionAction(Icons.Rounded.Archive, "Archive", onArchive, Modifier.weight(1f))
+            SelectionAction(Icons.Rounded.Download, stringResource(R.string.profile_action_offline), onDownload, Modifier.weight(1f))
+            SelectionAction(Icons.Rounded.PhotoLibrary, stringResource(R.string.profile_action_gallery), onGallery, Modifier.weight(1f))
+            SelectionAction(Icons.Rounded.CollectionsBookmark, stringResource(R.string.profile_action_collect), onCollection, Modifier.weight(1f))
+            SelectionAction(Icons.Rounded.Archive, stringResource(R.string.profile_action_archive), onArchive, Modifier.weight(1f))
         }
     }
 }
@@ -1214,7 +1285,7 @@ private fun ProfileTools(
                 value = query,
                 onValueChange = onQuery,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Search this profile") },
+                placeholder = { Text(stringResource(R.string.profile_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 singleLine = true,
                 shape = RoundedCornerShape(18.dp),
@@ -1228,7 +1299,7 @@ private fun ProfileTools(
                 ) {
                     Icon(
                         Icons.Rounded.Tune,
-                        contentDescription = "Profile filters",
+                        contentDescription = stringResource(R.string.profile_filters),
                         tint = if (filters.activeCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(13.dp).size(21.dp),
                     )
@@ -1254,14 +1325,14 @@ private fun ProfileTools(
         if (newCount > 0) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                 Text(
-                    "$newCount new since your last visit",
+                    pluralStringResource(R.plurals.profile_new_since_visit, newCount, newCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = onShowNew) { Text("Show") }
-                TextButton(onClick = onMarkSeen) { Text("Mark seen") }
+                TextButton(onClick = onShowNew) { Text(stringResource(R.string.profile_show)) }
+                TextButton(onClick = onMarkSeen) { Text(stringResource(R.string.feed_mark_seen)) }
             }
         }
         if (filters.activeCount > 0) {
@@ -1273,8 +1344,8 @@ private fun ProfileTools(
                 if (filters.type != ProfileMediaType.ALL) ProfileFilterBadge(filters.type.label)
                 if (filters.date != ProfileDateRange.ANY) ProfileFilterBadge(filters.date.label)
                 if (filters.sort != ProfileSort.NEWEST) ProfileFilterBadge(filters.sort.label)
-                if (filters.onlyNew) ProfileFilterBadge("New only")
-                TextButton(onClick = onClearFilters) { Text("Clear") }
+                if (filters.onlyNew) ProfileFilterBadge(stringResource(R.string.profile_new_only))
+                TextButton(onClick = onClearFilters) { Text(stringResource(R.string.profile_filter_clear)) }
             }
         }
     }
@@ -1312,10 +1383,10 @@ private fun ProfileFilterSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 26.dp),
         ) {
-            Text("Filter this profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.profile_filter_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
 
-            Text("Media", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.profile_filter_media), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ProfileMediaType.entries.forEach { type ->
                     ProfileFilterPill(type.label, draft.type == type) { draft = draft.copy(type = type) }
@@ -1323,7 +1394,7 @@ private fun ProfileFilterSheet(
             }
             Spacer(Modifier.height(14.dp))
 
-            Text("Date", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.profile_filter_date), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ProfileDateRange.entries.forEach { range ->
                     ProfileFilterPill(range.label, draft.date == range) { draft = draft.copy(date = range) }
@@ -1331,7 +1402,7 @@ private fun ProfileFilterSheet(
             }
             Spacer(Modifier.height(14.dp))
 
-            Text("Sort", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.profile_filter_sort), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ProfileSort.entries.forEach { sort ->
                     ProfileFilterPill(sort.label, draft.sort == sort) { draft = draft.copy(sort = sort) }
@@ -1341,8 +1412,8 @@ private fun ProfileFilterSheet(
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Only new since last visit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text("Uses your local visit mark", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.profile_filter_only_new), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.profile_filter_only_new_hint), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(checked = draft.onlyNew, onCheckedChange = { draft = draft.copy(onlyNew = it) })
                 }
@@ -1353,12 +1424,12 @@ private fun ProfileFilterSheet(
                     onClick = { onApply(ProfileFilters()) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(16.dp),
-                ) { Text("Reset") }
+                ) { Text(stringResource(R.string.profile_filter_reset)) }
                 Button(
                     onClick = { onApply(draft) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(16.dp),
-                ) { Text("Apply") }
+                ) { Text(stringResource(R.string.profile_filter_apply)) }
             }
         }
     }
@@ -1398,7 +1469,7 @@ private fun LoadMoreFooter(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(9.dp))
-                Text("Loading older posts…", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.profile_loading_more), style = MaterialTheme.typography.labelMedium)
             }
         } else {
             OutlinedButton(
@@ -1408,12 +1479,16 @@ private fun LoadMoreFooter(
             ) {
                 Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("Load more posts")
+                Text(stringResource(R.string.profile_load_more))
             }
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            if (total > 0) "Showing $loaded of ${total.compactCount()}" else "Showing $loaded posts",
+            if (total > 0) {
+                stringResource(R.string.profile_showing_of, loaded, total.compactCount())
+            } else {
+                pluralStringResource(R.plurals.profile_showing, loaded, loaded)
+            },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1438,9 +1513,9 @@ private fun ProfileTabs(tab: ProfileTab, onTab: (ProfileTab) -> Unit) {
             .background(MaterialTheme.colorScheme.surfaceContainer),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        ProfileTabButton("Posts", tab == ProfileTab.POSTS, Modifier.weight(1f)) { onTab(ProfileTab.POSTS) }
-        ProfileTabButton("Reels", tab == ProfileTab.REELS, Modifier.weight(1f)) { onTab(ProfileTab.REELS) }
-        ProfileTabButton("Saved", tab == ProfileTab.SAVED, Modifier.weight(1f)) { onTab(ProfileTab.SAVED) }
+        ProfileTabButton(stringResource(R.string.profile_tab_posts), tab == ProfileTab.POSTS, Modifier.weight(1f)) { onTab(ProfileTab.POSTS) }
+        ProfileTabButton(stringResource(R.string.nav_reels), tab == ProfileTab.REELS, Modifier.weight(1f)) { onTab(ProfileTab.REELS) }
+        ProfileTabButton(stringResource(R.string.profile_tab_saved), tab == ProfileTab.SAVED, Modifier.weight(1f)) { onTab(ProfileTab.SAVED) }
     }
 }
 
@@ -1479,50 +1554,58 @@ private fun ProfileMenu(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
-            text = { Text("Refresh profile") },
+            text = { Text(stringResource(R.string.profile_menu_refresh)) },
             leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
             onClick = { onDismiss(); onRefresh() },
         )
         DropdownMenuItem(
-            text = { Text("Profile storage") },
+            text = { Text(stringResource(R.string.profile_menu_storage)) },
             leadingIcon = { Icon(Icons.Rounded.Storage, contentDescription = null) },
             onClick = { onDismiss(); onStorage() },
         )
         DropdownMenuItem(
-            text = { Text("Export profile archive") },
+            text = { Text(stringResource(R.string.profile_menu_export)) },
             leadingIcon = { Icon(Icons.Rounded.Archive, contentDescription = null) },
             onClick = { onDismiss(); onArchive() },
         )
         DropdownMenuItem(
-            text = { Text("Share") },
+            text = { Text(stringResource(R.string.profile_share)) },
             leadingIcon = { Icon(Icons.Rounded.Share, contentDescription = null) },
             onClick = { onDismiss(); onShare() },
         )
         DropdownMenuItem(
-            text = { Text("Copy username") },
+            text = { Text(stringResource(R.string.profile_menu_copy)) },
             leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
             onClick = { onDismiss(); onCopy() },
         )
         DropdownMenuItem(
-            text = { Text("Open on Instagram") },
+            text = { Text(stringResource(R.string.profile_menu_instagram)) },
             leadingIcon = { Icon(Icons.Rounded.OpenInNew, contentDescription = null) },
             onClick = { onDismiss(); onInstagram() },
         )
         DropdownMenuItem(
-            text = { Text(if (profile?.isPinned == true) "Unpin profile" else "Pin to top") },
+            text = {
+                Text(
+                    if (profile?.isPinned == true) {
+                        stringResource(R.string.profile_menu_unpin)
+                    } else {
+                        stringResource(R.string.profile_menu_pin)
+                    },
+                )
+            },
             leadingIcon = { Icon(Icons.Rounded.PushPin, contentDescription = null) },
             onClick = { onDismiss(); onPin() },
         )
         HorizontalDivider()
         if (profile?.isFollowed == true) {
             DropdownMenuItem(
-                text = { Text("Unfollow locally") },
+                text = { Text(stringResource(R.string.profile_unfollow)) },
                 leadingIcon = { Icon(Icons.Rounded.PersonRemove, contentDescription = null) },
                 onClick = { onDismiss(); onUnfollow() },
             )
         }
         DropdownMenuItem(
-            text = { Text("Remove from Peek") },
+            text = { Text(stringResource(R.string.profile_menu_remove)) },
             leadingIcon = { Icon(Icons.Rounded.DeleteOutline, contentDescription = null) },
             onClick = { onDismiss(); onRemove() },
         )

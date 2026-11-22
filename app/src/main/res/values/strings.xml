@@ -37,6 +37,141 @@
     <string name="feed_mark_seen">Mark seen</string>
     <string name="stories_no_stories">No viewable stories</string>
     <string name="common_cancel">Cancel</string>
+    <string name="common_dismiss">Dismiss</string>
+    <string name="profile_back">Back</string>
+    <string name="profile_more">More</string>
+    <string name="profile_share">Share</string>
+    <string name="profile_share_profile">Share profile</string>
+    <string name="profile_following">Following</string>
+    <string name="profile_follow">Follow locally</string>
+    <string name="profile_unfollow">Unfollow locally</string>
+    <string name="profile_refresh">Refresh</string>
+    <string name="profile_username_copied">Username copied</string>
+    <string name="profile_gallery_permission">Allow storage access to save to the gallery</string>
+    <string name="profile_highlight">Highlight</string>
+    <string name="profile_more_like_this">More like this</string>
+    <string name="profile_updated">Updated %1$s</string>
+    <string name="profile_empty_saved_title">Nothing saved yet</string>
+    <string name="profile_empty_reels_title">No reels cached</string>
+    <string name="profile_empty_posts_title">No posts cached</string>
+    <string name="profile_empty_saved_body">Tap the bookmark on any post to keep it here.</string>
+    <string name="profile_empty_posts_body">Pull to refresh and Peek will cache the latest public posts.</string>
+    <string name="profile_unlock_private">Unlock private content</string>
+    <string name="profile_sign_in">Sign in to Instagram</string>
+    <string name="profile_reconnect_session">Reconnect session</string>
+    <string name="profile_private_revealed">Private content revealed</string>
+    <string name="profile_private_vault_error">Couldn\'t open the private vault</string>
+    <string name="profile_private_visible">Private account · visible to your session</string>
+    <string name="profile_private_not_visible">Private account · not visible to this session</string>
+    <string name="profile_private_sign_in">Private account · sign in to view</string>
+    <string name="profile_download_title">Download @%1$s</string>
+    <string name="profile_download_body">Peek will walk every timeline page it can reach, starting with the %1$d loaded here, then save every photo and video for offline use.</string>
+    <string name="profile_download_also_gallery">Also copy to gallery</string>
+    <string name="profile_download_warning">Peek loads pages one at a time and can still be stopped by Instagram rate limits. A large profile can take several minutes and use a lot of storage and data.</string>
+    <string name="profile_download_only_new">Download only new posts</string>
+    <string name="profile_download_all">Download all</string>
+    <string name="profile_download_no_posts">No posts to save yet</string>
+    <string name="profile_download_loading">Loading posts · %1$d</string>
+    <string name="profile_downloading">Downloading %1$d/%2$d</string>
+    <string name="profile_downloading_profile">Downloading profile · %1$d/%2$d</string>
+    <string name="profile_download_button_loaded">Download profile · %1$d loaded</string>
+    <string name="profile_download_failed">Profile download failed</string>
+    <string name="profile_download_complete">Profile download complete</string>
+    <string name="profile_add_to_collection">Add to collection</string>
+    <string name="profile_no_collections">No collections yet. Name one below.</string>
+    <string name="profile_new_collection">New collection</string>
+    <string name="profile_create_and_add">Create &amp; add</string>
+    <string name="profile_export_html">Export HTML</string>
+    <string name="profile_export_json">Export JSON</string>
+    <string name="profile_export_title">Export @%1$s</string>
+    <string name="profile_export_selected_body">A private offline archive. HTML embeds locally downloaded images; JSON keeps metadata and links.</string>
+    <string name="profile_export_body">A private archive of this profile\'s cached posts. HTML embeds locally downloaded images; JSON keeps captions, dates and links.</string>
+    <string name="profile_export_only_new">Only posts added since the last export</string>
+    <string name="profile_clear_selection">Clear selection</string>
+    <string name="profile_select_all">Select all</string>
+    <string name="profile_action_offline">Offline</string>
+    <string name="profile_action_gallery">Gallery</string>
+    <string name="profile_action_collect">Collect</string>
+    <string name="profile_action_archive">Archive</string>
+    <string name="profile_search_placeholder">Search this profile</string>
+    <string name="profile_filters">Profile filters</string>
+    <string name="profile_show">Show</string>
+    <string name="profile_new_only">New only</string>
+    <string name="profile_filter_clear">Clear</string>
+    <string name="profile_filter_title">Filter this profile</string>
+    <string name="profile_filter_media">Media</string>
+    <string name="profile_filter_date">Date</string>
+    <string name="profile_filter_sort">Sort</string>
+    <string name="profile_filter_only_new">Only new since last visit</string>
+    <string name="profile_filter_only_new_hint">Uses your local visit mark</string>
+    <string name="profile_filter_reset">Reset</string>
+    <string name="profile_filter_apply">Apply</string>
+    <string name="profile_loading_more">Loading older posts…</string>
+    <string name="profile_load_more">Load more posts</string>
+    <string name="profile_showing_of">Showing %1$d of %2$s</string>
+    <string name="profile_tab_posts">Posts</string>
+    <string name="profile_tab_saved">Saved</string>
+    <string name="profile_stat_following">following</string>
+    <string name="profile_menu_refresh">Refresh profile</string>
+    <string name="profile_menu_storage">Profile storage</string>
+    <string name="profile_menu_export">Export profile archive</string>
+    <string name="profile_menu_copy">Copy username</string>
+    <string name="profile_menu_instagram">Open on Instagram</string>
+    <string name="profile_menu_pin">Pin to top</string>
+    <string name="profile_menu_unpin">Unpin profile</string>
+    <string name="profile_menu_remove">Remove from Peek</string>
+    <plurals name="profile_stat_posts">
+        <item quantity="one">post</item>
+        <item quantity="other">posts</item>
+    </plurals>
+    <plurals name="profile_stat_followers">
+        <item quantity="one">follower</item>
+        <item quantity="other">followers</item>
+    </plurals>
+    <plurals name="profile_download_button">
+        <item quantity="one">Download profile · %1$d post</item>
+        <item quantity="other">Download profile · %1$d posts</item>
+    </plurals>
+    <plurals name="profile_download_pages_found">
+        <item quantity="one">Loading every reachable page · %1$d post found</item>
+        <item quantity="other">Loading every reachable page · %1$d posts found</item>
+    </plurals>
+    <plurals name="profile_download_gallery_files">
+        <item quantity="one">Gallery copies: %1$d file so far</item>
+        <item quantity="other">Gallery copies: %1$d files so far</item>
+    </plurals>
+    <plurals name="profile_download_saved">
+        <item quantity="one">%1$d post saved offline</item>
+        <item quantity="other">%1$d posts saved offline</item>
+    </plurals>
+    <plurals name="profile_download_saved_with_failures">
+        <item quantity="one">%1$d post saved offline · %2$d failed</item>
+        <item quantity="other">%1$d posts saved offline · %2$d failed</item>
+    </plurals>
+    <plurals name="profile_download_gallery_copied">
+        <item quantity="one">%1$d file copied to your gallery</item>
+        <item quantity="other">%1$d files copied to your gallery</item>
+    </plurals>
+    <plurals name="profile_download_gallery_copied_with_errors">
+        <item quantity="one">%1$d file copied to your gallery · %2$d gallery errors</item>
+        <item quantity="other">%1$d files copied to your gallery · %2$d gallery errors</item>
+    </plurals>
+    <plurals name="profile_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <plurals name="profile_new_since_visit">
+        <item quantity="one">%1$d new since your last visit</item>
+        <item quantity="other">%1$d new since your last visit</item>
+    </plurals>
+    <plurals name="profile_export_selected">
+        <item quantity="one">Export %1$d selected post</item>
+        <item quantity="other">Export %1$d selected posts</item>
+    </plurals>
+    <plurals name="profile_showing">
+        <item quantity="one">Showing %1$d post</item>
+        <item quantity="other">Showing %1$d posts</item>
+    </plurals>
     <string name="shortcut_security">Security center</string>
     <string name="shortcut_security_long">Open the Peek security center</string>
     <string name="shortcut_private">Private feed</string>
