@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Peek</string>
     <string name="app_tagline">Instagram, without the noise.</string>
     <string name="disclaimer">Peek is an unofficial, local-only viewer. It is not affiliated with Instagram or Meta. Only public profiles can be viewed. Content belongs to its respective owners.</string>
@@ -120,11 +120,14 @@
     <string name="profile_menu_pin">Pin to top</string>
     <string name="profile_menu_unpin">Unpin profile</string>
     <string name="profile_menu_remove">Remove from Peek</string>
-    <plurals name="profile_stat_posts">
+        <!-- The count is rendered beside this label, so the noun carries agreement
+         but the string carries no format argument. Lint reads that as a
+         likely mistake; it is deliberate. -->
+    <plurals name="profile_stat_posts" tools:ignore="ImpliedQuantity">
         <item quantity="one">post</item>
         <item quantity="other">posts</item>
     </plurals>
-    <plurals name="profile_stat_followers">
+        <plurals name="profile_stat_followers" tools:ignore="ImpliedQuantity">
         <item quantity="one">follower</item>
         <item quantity="other">followers</item>
     </plurals>
