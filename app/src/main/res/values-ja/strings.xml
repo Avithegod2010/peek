@@ -54,4 +54,126 @@
     <string name="widget_search">検索</string>
     <string name="widget_saved">保存済み</string>
     <string name="widget_circle">ホーム</string>
+    <string name="common_dismiss">閉じる</string>
+    <string name="profile_back">戻る</string>
+    <string name="profile_more">その他</string>
+    <string name="profile_share">共有</string>
+    <string name="profile_share_profile">プロフィールを共有</string>
+    <string name="profile_following">フォロー中</string>
+    <string name="profile_follow">ローカルでフォロー</string>
+    <string name="profile_unfollow">ローカルのフォローを解除</string>
+    <string name="profile_refresh">更新</string>
+    <string name="profile_username_copied">ユーザー名をコピーしました</string>
+    <string name="profile_gallery_permission">ギャラリーに保存するにはストレージへのアクセスを許可してください</string>
+    <string name="profile_highlight">ハイライト</string>
+    <string name="profile_more_like_this">似た投稿を見る</string>
+    <string name="profile_updated">%1$s に更新</string>
+    <string name="profile_empty_saved_title">まだ保存されたものはありません</string>
+    <string name="profile_empty_reels_title">キャッシュされたリールはありません</string>
+    <string name="profile_empty_posts_title">キャッシュされた投稿はありません</string>
+    <string name="profile_empty_saved_body">投稿のブックマークをタップすると、ここに保存されます。</string>
+    <string name="profile_empty_posts_body">下に引いて更新すると、Peek が最新の公開投稿をキャッシュします。</string>
+    <string name="profile_unlock_private">プライベートコンテンツのロックを解除</string>
+    <string name="profile_sign_in">Instagram にサインイン</string>
+    <string name="profile_reconnect_session">セッションを接続し直す</string>
+    <string name="profile_private_revealed">プライベートコンテンツを表示しました</string>
+    <string name="profile_private_vault_error">プライベートボルトを開けませんでした</string>
+    <string name="profile_private_visible">非公開アカウント · このセッションで表示可能</string>
+    <string name="profile_private_not_visible">非公開アカウント · このセッションでは表示できません</string>
+    <string name="profile_private_sign_in">非公開アカウント · サインインして表示</string>
+    <string name="profile_download_title">@%1$s をダウンロード</string>
+    <string name="profile_download_body">Peek は到達できるタイムラインのページを、ここで読み込んだ %1$d 件から順にたどり、すべての写真と動画をオフライン用に保存します。</string>
+    <string name="profile_download_also_gallery">ギャラリーにもコピー</string>
+    <string name="profile_download_warning">Peek はページを 1 枚ずつ読み込むため、Instagram のレート制限で止まることがあります。大きなプロフィールでは数分かかり、ストレージとデータを多く消費します。</string>
+    <string name="profile_download_only_new">新しい投稿だけをダウンロード</string>
+    <string name="profile_download_all">すべてダウンロード</string>
+    <string name="profile_download_no_posts">保存できる投稿はまだありません</string>
+    <string name="profile_download_loading">投稿を読み込み中 · %1$d</string>
+    <string name="profile_downloading">ダウンロード中 %1$d/%2$d</string>
+    <string name="profile_downloading_profile">プロフィールをダウンロード中 · %1$d/%2$d</string>
+    <string name="profile_download_button_loaded">プロフィールをダウンロード · %1$d 件読み込み済み</string>
+    <string name="profile_download_failed">プロフィールのダウンロードに失敗しました</string>
+    <string name="profile_download_complete">プロフィールのダウンロードが完了しました</string>
+    <string name="profile_add_to_collection">コレクションに追加</string>
+    <string name="profile_no_collections">コレクションはまだありません。下で名前を付けてください。</string>
+    <string name="profile_new_collection">新しいコレクション</string>
+    <string name="profile_create_and_add">作成して追加</string>
+    <string name="profile_export_html">HTML でエクスポート</string>
+    <string name="profile_export_json">JSON でエクスポート</string>
+    <string name="profile_export_title">@%1$s をエクスポート</string>
+    <string name="profile_export_selected_body">プライベートなオフラインアーカイブです。HTML にはローカルに保存した画像があり、JSON にはメタデータとリンクが残ります。</string>
+    <string name="profile_export_body">このプロフィールでキャッシュされた投稿のプライベートなアーカイブです。HTML にはローカルの画像があり、JSON にはキャプション、日付、リンクが残ります。</string>
+    <string name="profile_export_only_new">前回のエクスポート以降に追加された投稿のみ</string>
+    <string name="profile_clear_selection">選択をクリア</string>
+    <string name="profile_select_all">すべて選択</string>
+    <string name="profile_action_offline">オフライン</string>
+    <string name="profile_action_gallery">ギャラリー</string>
+    <string name="profile_action_collect">コレクション</string>
+    <string name="profile_action_archive">アーカイブ</string>
+    <string name="profile_search_placeholder">このプロフィールを検索</string>
+    <string name="profile_filters">プロフィールのフィルター</string>
+    <string name="profile_show">表示</string>
+    <string name="profile_new_only">新着のみ</string>
+    <string name="profile_filter_clear">クリア</string>
+    <string name="profile_filter_title">このプロフィールを絞り込む</string>
+    <string name="profile_filter_media">メディア</string>
+    <string name="profile_filter_date">日付</string>
+    <string name="profile_filter_sort">並び順</string>
+    <string name="profile_filter_only_new">前回の訪問以降の新着のみ</string>
+    <string name="profile_filter_only_new_hint">ローカルの訪問記録を使用します</string>
+    <string name="profile_filter_reset">リセット</string>
+    <string name="profile_filter_apply">適用</string>
+    <string name="profile_loading_more">過去の投稿を読み込み中…</string>
+    <string name="profile_load_more">さらに投稿を読み込む</string>
+    <string name="profile_showing_of">%2$s 中 %1$d 件を表示</string>
+    <string name="profile_tab_posts">投稿</string>
+    <string name="profile_tab_saved">保存済み</string>
+    <string name="profile_stat_following">フォロー中</string>
+    <string name="profile_menu_refresh">プロフィールを更新</string>
+    <string name="profile_menu_storage">プロフィールのストレージ</string>
+    <string name="profile_menu_export">プロフィールのアーカイブをエクスポート</string>
+    <string name="profile_menu_copy">ユーザー名をコピー</string>
+    <string name="profile_menu_instagram">Instagram で開く</string>
+    <string name="profile_menu_pin">上部に固定</string>
+    <string name="profile_menu_unpin">固定を解除</string>
+    <string name="profile_menu_remove">Peek から削除</string>
+    <plurals name="profile_stat_posts">
+        <item quantity="other">投稿</item>
+    </plurals>
+    <plurals name="profile_stat_followers">
+        <item quantity="other">フォロワー</item>
+    </plurals>
+    <plurals name="profile_download_button">
+        <item quantity="other">プロフィールをダウンロード · %1$d 件の投稿</item>
+    </plurals>
+    <plurals name="profile_download_pages_found">
+        <item quantity="other">到達できるページを読み込み中 · %1$d 件の投稿を見つけました</item>
+    </plurals>
+    <plurals name="profile_download_gallery_files">
+        <item quantity="other">ギャラリーへのコピー: 現在 %1$d ファイル</item>
+    </plurals>
+    <plurals name="profile_download_saved">
+        <item quantity="other">%1$d 件の投稿をオフライン保存しました</item>
+    </plurals>
+    <plurals name="profile_download_saved_with_failures">
+        <item quantity="other">%1$d 件の投稿をオフライン保存 · %2$d 件失敗</item>
+    </plurals>
+    <plurals name="profile_download_gallery_copied">
+        <item quantity="other">%1$d ファイルをギャラリーにコピーしました</item>
+    </plurals>
+    <plurals name="profile_download_gallery_copied_with_errors">
+        <item quantity="other">%1$d ファイルをギャラリーにコピー · %2$d 件のギャラリーエラー</item>
+    </plurals>
+    <plurals name="profile_selected">
+        <item quantity="other">%1$d 件選択中</item>
+    </plurals>
+    <plurals name="profile_new_since_visit">
+        <item quantity="other">前回の訪問以降の新着 %1$d 件</item>
+    </plurals>
+    <plurals name="profile_export_selected">
+        <item quantity="other">選択した %1$d 件の投稿をエクスポート</item>
+    </plurals>
+    <plurals name="profile_showing">
+        <item quantity="other">%1$d 件の投稿を表示中</item>
+    </plurals>
 </resources>

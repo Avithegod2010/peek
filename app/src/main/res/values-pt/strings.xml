@@ -54,4 +54,139 @@
     <string name="widget_search">Pesquisar</string>
     <string name="widget_saved">Guardados</string>
     <string name="widget_circle">Início</string>
+    <string name="common_dismiss">Dispensar</string>
+    <string name="profile_back">Voltar</string>
+    <string name="profile_more">Mais</string>
+    <string name="profile_share">Partilhar</string>
+    <string name="profile_share_profile">Partilhar perfil</string>
+    <string name="profile_following">A seguir</string>
+    <string name="profile_follow">Seguir localmente</string>
+    <string name="profile_unfollow">Deixar de seguir localmente</string>
+    <string name="profile_refresh">Atualizar</string>
+    <string name="profile_username_copied">Nome de utilizador copiado</string>
+    <string name="profile_gallery_permission">Permite o acesso ao armazenamento para guardar na galeria</string>
+    <string name="profile_highlight">Destaque</string>
+    <string name="profile_more_like_this">Mais como isto</string>
+    <string name="profile_updated">Atualizado %1$s</string>
+    <string name="profile_empty_saved_title">Ainda nada guardado</string>
+    <string name="profile_empty_reels_title">Sem reels em cache</string>
+    <string name="profile_empty_posts_title">Sem publicações em cache</string>
+    <string name="profile_empty_saved_body">Toca no marcador de qualquer publicação para a guardar aqui.</string>
+    <string name="profile_empty_posts_body">Desliza para atualizar e o Peek guarda em cache as publicações públicas mais recentes.</string>
+    <string name="profile_unlock_private">Desbloquear conteúdo privado</string>
+    <string name="profile_sign_in">Iniciar sessão no Instagram</string>
+    <string name="profile_reconnect_session">Reconectar sessão</string>
+    <string name="profile_private_revealed">Conteúdo privado revelado</string>
+    <string name="profile_private_vault_error">Não foi possível abrir o cofre privado</string>
+    <string name="profile_private_visible">Conta privada · visível para a tua sessão</string>
+    <string name="profile_private_not_visible">Conta privada · não visível para esta sessão</string>
+    <string name="profile_private_sign_in">Conta privada · inicia sessão para ver</string>
+    <string name="profile_download_title">Descarregar @%1$s</string>
+    <string name="profile_download_body">O Peek vai percorrer todas as páginas da cronologia que conseguir, começando pelas %1$d carregadas aqui, e depois guarda todas as fotos e vídeos para uso offline.</string>
+    <string name="profile_download_also_gallery">Copiar também para a galeria</string>
+    <string name="profile_download_warning">O Peek carrega as páginas uma a uma e os limites do Instagram ainda podem travá-lo. Um perfil grande pode demorar vários minutos e gastar muito armazenamento e dados.</string>
+    <string name="profile_download_only_new">Descarregar apenas publicações novas</string>
+    <string name="profile_download_all">Descarregar tudo</string>
+    <string name="profile_download_no_posts">Ainda não há publicações para guardar</string>
+    <string name="profile_download_loading">A carregar publicações · %1$d</string>
+    <string name="profile_downloading">A descarregar %1$d/%2$d</string>
+    <string name="profile_downloading_profile">A descarregar perfil · %1$d/%2$d</string>
+    <string name="profile_download_button_loaded">Descarregar perfil · %1$d carregadas</string>
+    <string name="profile_download_failed">Falha ao descarregar o perfil</string>
+    <string name="profile_download_complete">Descarga do perfil concluída</string>
+    <string name="profile_add_to_collection">Adicionar à coleção</string>
+    <string name="profile_no_collections">Ainda não há coleções. Dá um nome abaixo.</string>
+    <string name="profile_new_collection">Nova coleção</string>
+    <string name="profile_create_and_add">Criar e adicionar</string>
+    <string name="profile_export_html">Exportar HTML</string>
+    <string name="profile_export_json">Exportar JSON</string>
+    <string name="profile_export_title">Exportar @%1$s</string>
+    <string name="profile_export_selected_body">Um arquivo privado offline. O HTML inclui as imagens descarregadas localmente; o JSON guarda metadados e ligações.</string>
+    <string name="profile_export_body">Um arquivo privado das publicações em cache deste perfil. O HTML inclui as imagens descarregadas localmente; o JSON guarda legendas, datas e ligações.</string>
+    <string name="profile_export_only_new">Apenas publicações adicionadas desde a última exportação</string>
+    <string name="profile_clear_selection">Limpar seleção</string>
+    <string name="profile_select_all">Selecionar tudo</string>
+    <string name="profile_action_offline">Offline</string>
+    <string name="profile_action_gallery">Galeria</string>
+    <string name="profile_action_collect">Colecionar</string>
+    <string name="profile_action_archive">Arquivar</string>
+    <string name="profile_search_placeholder">Pesquisar neste perfil</string>
+    <string name="profile_filters">Filtros do perfil</string>
+    <string name="profile_show">Mostrar</string>
+    <string name="profile_new_only">Apenas novas</string>
+    <string name="profile_filter_clear">Limpar</string>
+    <string name="profile_filter_title">Filtrar este perfil</string>
+    <string name="profile_filter_media">Conteúdo</string>
+    <string name="profile_filter_date">Data</string>
+    <string name="profile_filter_sort">Ordem</string>
+    <string name="profile_filter_only_new">Apenas novas desde a última visita</string>
+    <string name="profile_filter_only_new_hint">Usa a tua marca de visita local</string>
+    <string name="profile_filter_reset">Repor</string>
+    <string name="profile_filter_apply">Aplicar</string>
+    <string name="profile_loading_more">A carregar publicações antigas…</string>
+    <string name="profile_load_more">Carregar mais publicações</string>
+    <string name="profile_showing_of">A mostrar %1$d de %2$s</string>
+    <string name="profile_tab_posts">Publicações</string>
+    <string name="profile_tab_saved">Guardadas</string>
+    <string name="profile_stat_following">a seguir</string>
+    <string name="profile_menu_refresh">Atualizar perfil</string>
+    <string name="profile_menu_storage">Armazenamento do perfil</string>
+    <string name="profile_menu_export">Exportar arquivo do perfil</string>
+    <string name="profile_menu_copy">Copiar nome de utilizador</string>
+    <string name="profile_menu_instagram">Abrir no Instagram</string>
+    <string name="profile_menu_pin">Fixar no topo</string>
+    <string name="profile_menu_unpin">Desafixar perfil</string>
+    <string name="profile_menu_remove">Remover do Peek</string>
+    <plurals name="profile_stat_posts">
+        <item quantity="one">publicação</item>
+        <item quantity="other">publicações</item>
+    </plurals>
+    <plurals name="profile_stat_followers">
+        <item quantity="one">seguidor</item>
+        <item quantity="other">seguidores</item>
+    </plurals>
+    <plurals name="profile_download_button">
+        <item quantity="one">Descarregar perfil · %1$d publicação</item>
+        <item quantity="other">Descarregar perfil · %1$d publicações</item>
+    </plurals>
+    <plurals name="profile_download_pages_found">
+        <item quantity="one">A carregar todas as páginas acessíveis · %1$d publicação encontrada</item>
+        <item quantity="other">A carregar todas as páginas acessíveis · %1$d publicações encontradas</item>
+    </plurals>
+    <plurals name="profile_download_gallery_files">
+        <item quantity="one">Cópias na galeria: %1$d ficheiro até agora</item>
+        <item quantity="other">Cópias na galeria: %1$d ficheiros até agora</item>
+    </plurals>
+    <plurals name="profile_download_saved">
+        <item quantity="one">%1$d publicação guardada offline</item>
+        <item quantity="other">%1$d publicações guardadas offline</item>
+    </plurals>
+    <plurals name="profile_download_saved_with_failures">
+        <item quantity="one">%1$d publicação guardada offline · %2$d falhou</item>
+        <item quantity="other">%1$d publicações guardadas offline · %2$d falharam</item>
+    </plurals>
+    <plurals name="profile_download_gallery_copied">
+        <item quantity="one">%1$d ficheiro copiado para a tua galeria</item>
+        <item quantity="other">%1$d ficheiros copiados para a tua galeria</item>
+    </plurals>
+    <plurals name="profile_download_gallery_copied_with_errors">
+        <item quantity="one">%1$d ficheiro copiado para a tua galeria · %2$d erros de galeria</item>
+        <item quantity="other">%1$d ficheiros copiados para a tua galeria · %2$d erros de galeria</item>
+    </plurals>
+    <plurals name="profile_selected">
+        <item quantity="one">%1$d selecionada</item>
+        <item quantity="other">%1$d selecionadas</item>
+    </plurals>
+    <plurals name="profile_new_since_visit">
+        <item quantity="one">%1$d nova desde a tua última visita</item>
+        <item quantity="other">%1$d novas desde a tua última visita</item>
+    </plurals>
+    <plurals name="profile_export_selected">
+        <item quantity="one">Exportar %1$d publicação selecionada</item>
+        <item quantity="other">Exportar %1$d publicações selecionadas</item>
+    </plurals>
+    <plurals name="profile_showing">
+        <item quantity="one">A mostrar %1$d publicação</item>
+        <item quantity="other">A mostrar %1$d publicações</item>
+    </plurals>
 </resources>
