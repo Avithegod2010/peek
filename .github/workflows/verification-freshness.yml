@@ -1,0 +1,76 @@
+name: Verification metadata freshness
+
+# A warm Gradle cache never re-verifies POM/module metadata it already holds, so a
+# developer's `--write-verification-metadata` run can look complete while the
+# committed file is missing entries that only a cold cache asks for. That omission
+# then shows up as a red build on CI, after the push, with no local way to see it.
+#
+# This job is the cold cache. It regenerates the metadata from scratch and fails if
+# the committed file disagrees, so the trap is caught on the pull request that
+# introduces it instead of on main afterwards.
+on:
+  pull_request:
+    paths:
+      - 'gradle/verification-metadata.xml'
+      - 'gradle/wrapper/**'
+      - 'gradle/libs.versions.toml'
+      - '**/build.gradle.kts'
+      - '.github/workflows/verification-freshness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Regenerate checksums on a cold cache
+        run: |
+          chmod +x gradlew
+          ./gradlew \
+            --write-verification-metadata sha256 \
+            :app:assembleDebug \
+            :app:assembleRelease \
+            :app:testDebugUnitTest \
+            :app:compileDebugAndroidTestKotlin \
+            :app:lintDebug \
+            --no-daemon --stacktrace
+
+      - name: Fail if the committed metadata is stale
+        run: |
+          if git diff --quiet -- gradle/verification-metadata.xml; then
+            echo "Verification metadata is complete for a cold cache."
+            exit 0
+          fi
+
+          echo "::error::gradle/verification-metadata.xml is stale: a cold runner recorded checksums the committed file does not have."
+          {
+            echo "### Verification metadata is stale"
+            echo
+            echo "A cold-cache regeneration produced entries the committed file is missing."
+            echo "Your local \`--write-verification-metadata\` run could not see them, because Gradle"
+            echo "only verifies POM/module metadata on first download."
+            echo
+            echo "Fix it on your branch, not by editing checksums by hand:"
+            echo
+            echo '```'
+            echo "gh workflow run security-metadata.yml --ref $(git rev-parse --abbrev-ref HEAD)"
+            echo "gh run download <run-id> -n dependency-metadata -D /tmp/metadata"
+            echo "cp /tmp/metadata/gradle/verification-metadata.xml gradle/verification-metadata.xml"
+            echo '```'
+            echo
+            echo "Then commit the artifact verbatim."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "--- entries the cold cache needs that are not committed ---"
+          git --no-pager diff -U0 -- gradle/verification-metadata.xml | grep -E '^\+' | grep -vE '^\+\+\+' | head -40
+          exit 1

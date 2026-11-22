@@ -54,6 +54,11 @@ Pass the **branch** ref, not `main`, or the artifact will not know about the dep
 added. Take the file verbatim; do not hand-write checksums and do not reach for
 `--refresh-dependencies`.
 
+CI enforces this: `verification-freshness.yml` runs on any pull request that touches Gradle files,
+regenerates the metadata on a cold runner, and fails if the committed file disagrees — naming the
+entries the cold cache needed and linking the fix above. That is the guard against rediscovering
+this on `main` after a merge.
+
 The **Dependency metadata** GitHub Actions workflow can generate the same file
 and a `release-dependencies.txt` inventory without committing anything. It also
 runs `assembleRelease` to prove the release configuration resolves against the
