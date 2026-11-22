@@ -21,9 +21,23 @@ Covers:
 top of the existing Robolectric runner — and compares each render pixel-for-pixel
 with the PNGs committed in `app/src/test/screenshots`.
 
+**The committed PNGs are recorded on Linux, and CI is their only authority.**
+Roborazzi rasterises through real Skia under `@GraphicsMode(NATIVE)`, and Windows
+and Linux turn the same composable into slightly different pixels — font metrics
+and rasterisation differ. A golden recorded on a Windows laptop therefore fails on
+the Linux runner, and vice versa. So:
+
+- the tests skip themselves unless `CI` is set in the environment. A local Windows
+  run reports them as **skipped**, never failed and never passed — a local Windows
+  run cannot validate these baselines;
+- CI (`ubuntu-latest`) is where they are verified;
+- to record or re-record them, run the `screenshot-record.yml` workflow
+  (`workflow_dispatch` on GitHub, Actions → *Record screenshot baselines* → Run
+  workflow) and download the `screenshot-baselines` artifact. Commit those PNGs.
+
 ```bash
-./gradlew :app:testDebugUnitTest                    # verify (what CI runs)
-./gradlew :app:testDebugUnitTest -Proborazzi.test.record=true   # re-record
+# What CI runs - verifies the Linux-recorded goldens
+./gradlew :app:testDebugUnitTest
 ```
 
 Verification is the default: `app/build.gradle.kts` sets `roborazzi.test.verify`
@@ -32,6 +46,10 @@ for every unit-test run and only flips to record when
 baseline. A mismatch fails the test and writes the diff to
 `app/build/outputs/roborazzi/*_compare.png`; commit the updated PNGs alongside
 the code change so reviewers can see the visual delta.
+
+Do not record the PNGs on Windows. The `-Proborazzi.test.record=true` flag is
+honoured only where the assumption passes, so a local Windows record run leaves
+the committed files untouched.
 
 Covered today (light and/or dark): `SimpleTopBar` with a back button and subtitle,
 `EmptyState` with an action button, and the `SectionHeader` + `AddPeopleHint`

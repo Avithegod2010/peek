@@ -25,6 +25,7 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.roborazziSystemPropertyTaskType
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,6 +36,9 @@ import org.robolectric.annotation.GraphicsMode
  * Golden-image tests for the shared UI: the real composables are rendered by
  * Robolectric's native graphics stack at a fixed 360x640dp phone window, then
  * compared pixel-for-pixel with the PNGs committed in `app/src/test/screenshots`.
+ *
+ * The committed PNGs are recorded on the Linux CI runner and that environment is
+ * the source of truth. They are skipped everywhere else (see [screenshot]).
  *
  * Recording is opt-in (`-Proborazzi.test.record=true`); a plain
  * `./gradlew :app:testDebugUnitTest` verifies. Nothing here needs a device, a
@@ -143,6 +147,15 @@ class ScreenshotBaselineTest {
     }
 
     private fun screenshot(name: String, content: @Composable () -> Unit) {
+        // The committed goldens were recorded on the Linux CI runner. Windows and
+        // Linux rasterise the same composable to different pixels (font metrics and
+        // Skia rasterisation differ), so a local Windows run can only produce a
+        // false mismatch. Skip instead - CI verifies and records these.
+        assumeTrue(
+            "Screenshot baselines are recorded and verified on Linux CI; " +
+                "Windows and Linux rasterise differently",
+            System.getenv("CI") != null,
+        )
         // Roborazzi no-ops when no task type is set, which would let these
         // tests pass without touching an image at all.
         assertTrue(
