@@ -31,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,12 +45,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.avi.peek.data.local.PeekSettings
 import com.avi.peek.ui.components.findActivity
+import com.avi.peek.util.AppLockState
 import com.avi.peek.ui.theme.PeekTheme
-
-/** Unlock lives only for this process, so a cold start always asks again. */
-private object AppUnlock {
-    var unlocked: Boolean = false
-}
 
 // Stable framework error codes; the constants are hidden from the public SDK stubs.
 private const val ERROR_HW_UNAVAILABLE = 1
@@ -59,7 +56,10 @@ private const val ERROR_UNSUPPORTED = 18
 
 @Composable
 fun AppLockGate(settings: PeekSettings, content: @Composable () -> Unit) {
-    var unlocked by remember { mutableStateOf(!settings.appLock || AppUnlock.unlocked) }
+    // The unlock is owned by AppLockState so the process lifecycle can revoke it
+    // (PeekProcessObserver.onStop) and this gate re-renders locked by itself.
+    val unlockedByUser by AppLockState.unlocked.collectAsState()
+    val unlocked = !settings.appLock || unlockedByUser
     var error by remember { mutableStateOf<String?>(null) }
     var triedBiometric by remember { mutableStateOf(false) }
     var cancellation by remember { mutableStateOf<CancellationSignal?>(null) }
@@ -67,8 +67,7 @@ fun AppLockGate(settings: PeekSettings, content: @Composable () -> Unit) {
     val activity = context.findActivity()
 
     fun unlock() {
-        AppUnlock.unlocked = true
-        unlocked = true
+        AppLockState.unlock()
     }
 
     val credentialLauncher = rememberLauncherForActivityResult(
@@ -80,11 +79,6 @@ fun AppLockGate(settings: PeekSettings, content: @Composable () -> Unit) {
         } else {
             error = "Peek stayed locked."
         }
-    }
-
-    fun applyUnlockState(value: Boolean) {
-        AppUnlock.unlocked = value
-        unlocked = value
     }
 
     fun openDeviceCredential() {
@@ -157,9 +151,9 @@ fun AppLockGate(settings: PeekSettings, content: @Composable () -> Unit) {
     }
 
     LaunchedEffect(settings.appLock) {
-        if (!settings.appLock) {
-            applyUnlockState(true)
-        } else if (!unlocked && !triedBiometric) {
+        // Prompt when the lock is switched on, and never re-latch "unlocked" here:
+        // a disabled lock is already open via the derived `unlocked` above.
+        if (settings.appLock && !unlocked && !triedBiometric) {
             openBiometric()
         }
     }
