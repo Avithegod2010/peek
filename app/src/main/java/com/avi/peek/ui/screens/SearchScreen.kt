@@ -83,6 +83,7 @@ import com.avi.peek.ui.components.Avatar
 import com.avi.peek.ui.components.EmptyState
 import com.avi.peek.ui.components.LocalSnackbarHostState
 import com.avi.peek.ui.components.MediaGridItem
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.ShimmerBox
 import com.avi.peek.ui.components.VerifiedBadge
 import com.avi.peek.ui.components.categoryIcon
@@ -100,6 +101,9 @@ fun SearchScreen(
         factory = SimpleViewModelFactory { SearchViewModel(initialQuery) },
     ),
 ) {
+    // Search history is private metadata: keep it out of screenshots and the
+    // recents thumbnail, like the security center and vault already are.
+    SecureScreen()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
     val cachedMedia by viewModel.cachedMedia.collectAsStateWithLifecycle()

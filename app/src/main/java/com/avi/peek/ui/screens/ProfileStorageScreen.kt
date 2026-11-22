@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.avi.peek.data.repo.ProfileStorage
 import com.avi.peek.di.ServiceLocator
 import com.avi.peek.ui.components.LocalSnackbarHostState
+import com.avi.peek.ui.components.SecureScreen
 import com.avi.peek.ui.components.SimpleTopBar
 import com.avi.peek.util.fileSize
 import com.avi.peek.util.relativeTime
@@ -54,6 +55,8 @@ fun ProfileStorageScreen(
     username: String,
     onBack: () -> Unit,
 ) {
+    // Per-profile storage names private accounts; keep it off captures.
+    SecureScreen()
     val snackbar = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
     var storage by remember { mutableStateOf<ProfileStorage?>(null) }
