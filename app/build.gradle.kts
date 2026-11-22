@@ -14,6 +14,11 @@ val peekKeystorePassword = System.getenv("PEEK_KEYSTORE_PASSWORD")
 val peekKeyAlias = System.getenv("PEEK_KEY_ALIAS") ?: "peek-release"
 val peekKeyPassword = System.getenv("PEEK_KEY_PASSWORD") ?: peekKeystorePassword
 
+// Golden-image tests render Compose on the JVM (Roborazzi over Robolectric).
+// Recording is opt-in; a plain `testDebugUnitTest` verifies the committed PNGs.
+val recordScreenshotBaselines =
+    providers.gradleProperty("roborazzi.test.record").orNull?.toBoolean() ?: false
+
 android {
     namespace = "com.avi.peek"
     compileSdk = 36
@@ -89,6 +94,12 @@ android {
             // 512 MB unit-test heap is not enough for it.
             all {
                 it.maxHeapSize = "1g"
+                // Roborazzi decides what to do from system properties and does
+                // nothing at all when they are absent, so verification is the
+                // default: a stray run can never quietly rewrite a baseline.
+                it.systemProperty("roborazzi.test.record", recordScreenshotBaselines.toString())
+                it.systemProperty("roborazzi.test.verify", (!recordScreenshotBaselines).toString())
+                it.systemProperty("roborazzi.compare.output.dir", "build/outputs/roborazzi")
             }
         }
     }
@@ -153,6 +164,12 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.18.1")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
+    // Renders Compose to a PNG on the JVM and compares it with the goldens
+    // committed under app/src/test/screenshots. 1.60.0 is the last release
+    // compiled with Kotlin 2.0 metadata, which the 2.1 toolchain here can read;
+    // 1.61+ ships 2.3 metadata and fails to compile against Kotlin 2.1.20.
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.60.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.60.0")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
