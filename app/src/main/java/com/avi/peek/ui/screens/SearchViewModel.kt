@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.avi.peek.data.directory.CreatorCategory
 import com.avi.peek.data.directory.CreatorDirectory
-import com.avi.peek.data.directory.PopularCreator
 import com.avi.peek.data.local.MediaEntity
 import com.avi.peek.data.local.ProfileEntity
 import com.avi.peek.data.local.SavedSearch
@@ -381,6 +380,4 @@ class SearchViewModel(initialQuery: String = "") : ViewModel() {
             submit(saved.query)
         }
     }
-
-    fun localMatch(query: String): List<PopularCreator> = CreatorDirectory.search(query, 4)
 }

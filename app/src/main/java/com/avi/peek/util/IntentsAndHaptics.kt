@@ -111,11 +111,6 @@ class PeekHaptics(
         vibrate(effect)
     }
 
-    fun longPress() {
-        if (!enabled) return
-        vibrate(VibrationEffect.createWaveform(longArrayOf(0, 14, 36, 20), -1))
-    }
-
     fun heart() {
         if (!enabled) return
         vibrate(VibrationEffect.createWaveform(longArrayOf(0, 16, 28, 28), -1))

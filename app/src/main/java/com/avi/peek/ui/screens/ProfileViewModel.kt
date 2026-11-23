@@ -530,10 +530,6 @@ class ProfileViewModel(private val username: String) : ViewModel() {
         }
     }
 
-    fun clearSelection() {
-        // Selection is intentionally screen state; this hook documents the action.
-    }
-
     fun follow() {
         viewModelScope.launch {
             try {

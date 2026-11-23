@@ -430,30 +430,6 @@ fun HeartBurst(trigger: Int, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AddPeopleHint(modifier: Modifier = Modifier) {
-    Row(
-        modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            androidx.compose.material.icons.Icons.Rounded.Lock,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(
-            "Local follows by default. Optional Instagram sign-in, no Peek account, no noise.",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 fun ProvideSnackbar(host: SnackbarHostState, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalSnackbarHostState provides host, content = content)
 }
