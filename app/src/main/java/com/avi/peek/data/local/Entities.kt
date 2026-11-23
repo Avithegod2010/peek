@@ -124,8 +124,6 @@ data class MediaEntity(
             localJson.decodeFromString(ListSerializer(String.serializer()), it)
         }
     }.getOrNull().orEmpty()
-
-    val displayThumb: String? get() = displayUrl
 }
 
 @Entity(

@@ -161,12 +161,6 @@ class DownloadQueue(
         scope.launch { pendingStore.remove(code) }
     }
 
-    fun clearFinished() {
-        val done = _tasks.value.filter { it.status == DownloadStatus.DONE }.map { it.code }
-        _tasks.update { it.filterNot { task -> task.status == DownloadStatus.DONE } }
-        scope.launch { done.forEach { pendingStore.remove(it) } }
-    }
-
     fun clearPersistentQueue() {
         scope.launch { pendingStore.clear() }
     }

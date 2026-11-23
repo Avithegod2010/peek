@@ -140,9 +140,6 @@ interface MediaDao {
     @Query("SELECT * FROM media WHERE code = :code LIMIT 1")
     suspend fun get(code: String): MediaEntity?
 
-    @Query("SELECT * FROM media WHERE productType IN ('clips', 'reels') AND COALESCE(videoUrl, '') != '' ORDER BY COALESCE(takenAt, 0) DESC")
-    fun observeCachedReels(): Flow<List<MediaEntity>>
-
     @Upsert
     suspend fun upsert(media: MediaEntity)
 

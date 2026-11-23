@@ -316,8 +316,6 @@ class PeekRepository(
         return cacheAndFollow(scraped)
     }
 
-    suspend fun followScraped(scraped: ScrapedProfile): CacheResult = cacheAndFollow(scraped)
-
     /**
      * Loads a profile for the Explore directory/search without following it.
      * The profile (and its first page of media) is cached so opening it later is instant.
@@ -346,11 +344,6 @@ class PeekRepository(
         secureProfiles.setFollowed(normalized, true, System.currentTimeMillis())
         settings.setLastFullSync(System.currentTimeMillis())
         true
-    }
-
-    suspend fun cachedProfile(username: String): ProfileEntity? = withContext(Dispatchers.IO) {
-        val normalized = GuestInstagramClient.normalizeUsername(username) ?: return@withContext null
-        secureProfiles.get(normalized)
     }
 
     private suspend fun cacheAndFollow(scraped: ScrapedProfile): CacheResult {
@@ -762,10 +755,6 @@ class PeekRepository(
             }
             syncMutex.unlock()
         }
-    }
-
-    suspend fun markPostViewed(profileUsername: String) {
-        secureProfiles.setViewed(profileUsername, System.currentTimeMillis())
     }
 
     suspend fun toggleLike(code: String): Boolean {
