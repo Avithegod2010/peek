@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -268,10 +267,3 @@ class BackupManager(
         .replace(">", "&gt;")
         .replace("\"", "&quot;")
 }
-
-private val jsonList = Json { ignoreUnknownKeys = true }
-
-@Suppress("unused")
-private fun parseArchive(text: String): List<ArchivePost> = runCatching {
-    jsonList.decodeFromString(ListSerializer(ArchivePost.serializer()), text)
-}.getOrDefault(emptyList())
