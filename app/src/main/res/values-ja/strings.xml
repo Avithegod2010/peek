@@ -4,8 +4,6 @@
     <string name="nav_reels">リール</string>
     <string name="nav_explore">探索</string>
     <string name="nav_library">ライブラリ</string>
-    <string name="app_tagline">Instagramを、静かに。</string>
-    <string name="disclaimer">Peekは非公式のローカル専用ビューアです。InstagramやMetaとは提携していません。閲覧できるのは公開プロフィールのみです。コンテンツは各制作者に帰属します。</string>
     <string name="settings_appearance">外観</string>
     <string name="settings_sync">同期</string>
     <string name="settings_playback">再生</string>

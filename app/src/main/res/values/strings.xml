@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Peek</string>
-    <string name="app_tagline">Instagram, without the noise.</string>
-    <string name="disclaimer">Peek is an unofficial, local-only viewer. It is not affiliated with Instagram or Meta. Only public profiles can be viewed. Content belongs to its respective owners.</string>
     <string name="nav_home">Home</string>
     <string name="nav_reels">Reels</string>
     <string name="nav_explore">Explore</string>
