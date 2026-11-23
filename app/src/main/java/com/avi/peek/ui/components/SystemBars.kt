@@ -33,20 +33,3 @@ fun DarkSystemBars() {
         }
     }
 }
-
-@Composable
-fun LightSystemBars() {
-    val view = LocalView.current
-    val activity = view.context.findActivity() ?: return
-    DisposableEffect(Unit) {
-        val controller = WindowCompat.getInsetsController(activity.window, view)
-        val old = controller.isAppearanceLightStatusBars
-        val oldNav = controller.isAppearanceLightNavigationBars
-        controller.isAppearanceLightStatusBars = true
-        controller.isAppearanceLightNavigationBars = true
-        onDispose {
-            controller.isAppearanceLightStatusBars = old
-            controller.isAppearanceLightNavigationBars = oldNav
-        }
-    }
-}

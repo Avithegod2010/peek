@@ -43,7 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -427,9 +426,4 @@ fun HeartBurst(trigger: Int, modifier: Modifier = Modifier) {
                 },
         )
     }
-}
-
-@Composable
-fun ProvideSnackbar(host: SnackbarHostState, content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalSnackbarHostState provides host, content = content)
 }

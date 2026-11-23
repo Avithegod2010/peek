@@ -301,13 +301,6 @@ class PeekRepository(
         replies = replies,
     )
 
-    suspend fun lookup(raw: String): ScrapedProfile {
-        val username = GuestInstagramClient.normalizeUsername(raw)
-            ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
-        accountManager.ensureRestored()
-        return budgeted { client.fetchProfile(username) }
-    }
-
     suspend fun follow(rawOrUsername: String): CacheResult {
         val username = GuestInstagramClient.normalizeUsername(rawOrUsername)
             ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
