@@ -9,8 +9,5 @@ object VisibilityPolicy {
     fun canShow(isPrivate: Boolean, privateContentRevealed: Boolean): Boolean =
         !isPrivate || privateContentRevealed
 
-    fun filterMedia(isPrivate: Boolean, visible: Boolean): Boolean =
-        canShow(isPrivate, visible)
-
     fun privateFeedVisible(visible: Boolean): Boolean = visible
 }

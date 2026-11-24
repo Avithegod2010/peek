@@ -23,9 +23,3 @@ sealed interface SyncEvent {
     data class Failed(val message: String) : SyncEvent
     data object NoConnection : SyncEvent
 }
-
-data class NewPostNotice(
-    val username: String,
-    val count: Int,
-    val latestCode: String,
-)

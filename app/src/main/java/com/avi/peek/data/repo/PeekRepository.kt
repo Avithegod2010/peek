@@ -301,13 +301,6 @@ class PeekRepository(
         replies = replies,
     )
 
-    suspend fun lookup(raw: String): ScrapedProfile {
-        val username = GuestInstagramClient.normalizeUsername(raw)
-            ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
-        accountManager.ensureRestored()
-        return budgeted { client.fetchProfile(username) }
-    }
-
     suspend fun follow(rawOrUsername: String): CacheResult {
         val username = GuestInstagramClient.normalizeUsername(rawOrUsername)
             ?: throw GuestException(GuestErrorKind.NOT_FOUND, "Enter a valid Instagram username or link")
@@ -315,8 +308,6 @@ class PeekRepository(
         val scraped = budgeted { client.fetchProfile(username) }
         return cacheAndFollow(scraped)
     }
-
-    suspend fun followScraped(scraped: ScrapedProfile): CacheResult = cacheAndFollow(scraped)
 
     /**
      * Loads a profile for the Explore directory/search without following it.
@@ -346,11 +337,6 @@ class PeekRepository(
         secureProfiles.setFollowed(normalized, true, System.currentTimeMillis())
         settings.setLastFullSync(System.currentTimeMillis())
         true
-    }
-
-    suspend fun cachedProfile(username: String): ProfileEntity? = withContext(Dispatchers.IO) {
-        val normalized = GuestInstagramClient.normalizeUsername(username) ?: return@withContext null
-        secureProfiles.get(normalized)
     }
 
     private suspend fun cacheAndFollow(scraped: ScrapedProfile): CacheResult {
@@ -762,10 +748,6 @@ class PeekRepository(
             }
             syncMutex.unlock()
         }
-    }
-
-    suspend fun markPostViewed(profileUsername: String) {
-        secureProfiles.setViewed(profileUsername, System.currentTimeMillis())
     }
 
     suspend fun toggleLike(code: String): Boolean {

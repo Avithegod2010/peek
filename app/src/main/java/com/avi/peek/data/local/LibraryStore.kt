@@ -123,21 +123,6 @@ class LibraryStore(private val context: Context) {
         }
     }
 
-    suspend fun removeFromCollection(id: String, code: String) {
-        context.peekLibraryData.edit { prefs ->
-            val next = readCollections(prefs[collectionsKey]).map { collection ->
-                if (collection.id != id) collection
-                else collection.copy(
-                    codes = collection.codes - code,
-                    coverCode = if (collection.coverCode == code) {
-                        collection.codes.firstOrNull { it != code }
-                    } else collection.coverCode,
-                )
-            }
-            prefs[collectionsKey] = json.encodeToString(collectionSerializer, next)
-        }
-    }
-
     suspend fun renameCollection(id: String, name: String) {
         val clean = name.trim().take(60)
         if (clean.isBlank()) return
@@ -223,20 +208,6 @@ class LibraryStore(private val context: Context) {
             prefs[seenHighlightsKey] = json.encodeToString(
                 stringListSerializer,
                 (current + id).toList(),
-            )
-        }
-    }
-
-    suspend fun clearHighlightSeen(id: String) {
-        context.peekLibraryData.edit { prefs ->
-            val current = runCatching {
-                prefs[seenHighlightsKey]?.let {
-                    json.decodeFromString(stringListSerializer, it).toSet()
-                } ?: emptySet()
-            }.getOrDefault(emptySet())
-            prefs[seenHighlightsKey] = json.encodeToString(
-                stringListSerializer,
-                (current - id).toList(),
             )
         }
     }

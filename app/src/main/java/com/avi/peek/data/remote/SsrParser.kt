@@ -433,13 +433,6 @@ class SsrParser(
             date.atTime(LocalTime.NOON).toEpochSecond(ZoneOffset.UTC)
         }.getOrNull()
     }
-
-    /** Extracts the signed, short-lived cover URL from a share/embed page as a fallback. */
-    fun parseOpenGraphImage(html: String): String? {
-        val match = Regex("<meta[^>]+property=\"og:image\"[^>]+content=\"([^\"]+)\"")
-            .find(html) ?: return null
-        return match.groupValues.getOrNull(1)?.replace("&amp;", "&")
-    }
 }
 
 internal fun JsonObject.string(key: String): String? {

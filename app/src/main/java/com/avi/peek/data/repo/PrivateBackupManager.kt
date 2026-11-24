@@ -8,7 +8,6 @@ import com.avi.peek.data.local.SecureMediaDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.Base64
@@ -60,8 +59,6 @@ class PrivateBackupManager(
 ) {
     private val mediaDao = SecureMediaDao(db.media())
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-    private val mediaSerializer = ListSerializer(PrivateMediaRecord.serializer())
-    private val fileSerializer = ListSerializer(PrivateFileRecord.serializer())
     private val vaultRoot = File(context.filesDir, "private_vault")
 
     suspend fun exportTo(uri: Uri, passphrase: String): Int = withContext(Dispatchers.IO) {

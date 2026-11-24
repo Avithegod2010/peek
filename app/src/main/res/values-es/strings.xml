@@ -4,8 +4,6 @@
     <string name="nav_reels">Reels</string>
     <string name="nav_explore">Explorar</string>
     <string name="nav_library">Biblioteca</string>
-    <string name="app_tagline">Instagram, sin el ruido.</string>
-    <string name="disclaimer">Peek es un visor no oficial y solo local. No está afiliado a Instagram ni a Meta. Solo se pueden ver perfiles públicos. El contenido pertenece a sus autores.</string>
     <string name="settings_appearance">Apariencia</string>
     <string name="settings_sync">Sincronización</string>
     <string name="settings_playback">Reproducción</string>
