@@ -3,13 +3,12 @@ package com.avi.peek
 import android.app.Application
 import android.os.StrictMode
 import android.util.Log
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.avi.peek.di.ServiceLocator
+import com.avi.peek.util.PeekProcessObserver
 import com.avi.peek.util.PrivateAccess
 import com.avi.peek.work.PeekNotifications
 import com.avi.peek.work.SyncScheduler
@@ -50,11 +49,10 @@ class PeekApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 runCatching { ServiceLocator.repository.sealPrivateVault() }
             }
         }
-        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStop(owner: LifecycleOwner) {
-                PrivateAccess.hide()
-            }
-        })
+        // ON_STOP is the only "Peek left the screen" signal that covers every
+        // exit (home, recents, screen off, another app). It re-seals revealed
+        // private content and re-arms the app lock.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(PeekProcessObserver())
         appScope.launch {
             ServiceLocator.settings.settings.collect { current ->
                 PrivateAccess.setAutoLockMinutes(current.privateAutoLockMinutes)
