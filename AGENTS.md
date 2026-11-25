@@ -48,7 +48,7 @@ Device-verification output (APKs, logs, screenshots, UI dumps from 2026-11-16) i
 - Per-operation `BiometricPrompt` + `CryptoObject` for the vault key (not done).
 - Golden-image screenshot baselines, MockWebServer pagination suite.
 - Localisation: ~193 hardcoded `Text("…")` calls remain outside the translated surfaces.
-- New release not cut since `v1.5.0`; the release workflow needs the four `PEEK_*` secrets added in GitHub before tagging.
+- Release procedure: `v1.6.0` was cut by bumping `versionCode`/`versionName`, pushing `main`, then pushing the tag — the workflow builds, signs and publishes. The four `PEEK_*` secrets are set on the repo from `C:\Users\Anish\.peek\peek-release.properties`.
 
 ## Session history and operating lessons
 
